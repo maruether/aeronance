@@ -1,0 +1,57 @@
+# EXTRA Flugzeugbau -- Liste der Service Bulletins und Service Letters.
+#
+# ---------------------------------------------------------------------------
+# Die EA-300-Reihe steht in Vereinen als Kunstflug- und Schleppmuster. Die
+# Uebersicht liegt frei; die Detaildokumente sind teilweise gesperrt (Handbuecher
+# mit Schloss-Icon und Anfrageformular), was hier nichts ausmacht: Die Uebersicht
+# IST das bindende Dokument.
+#
+# STAND 10.08.2022. Ob es eine neuere Ausgabe gibt, ist ohne Anfrage beim
+# Hersteller nicht feststellbar -- die Seite verlinkt diese.
+#
+# Das Datum steht in einer eigenen Spalte, die Ausgabe ("Issue B") eine Zeile
+# unter der Nummer. Die Musterspalten daneben sind eine Matrix aus
+# Werknummernbereichen und "-/-" fuer "trifft nicht zu".
+# ---------------------------------------------------------------------------
+
+name: extra
+label: 'EXTRA EA-300 (Uebersicht)'
+issuer: 'EXTRA Flugzeugbau'
+type: overview
+
+default_kind: sb
+subject_kind: aircraft_model
+number_prefix: false
+
+overview:
+  # "SB-300-1-91", "SL-300-2-05"
+  number_pattern: '#^S[BL]-\d{3}-\d+-\d{2}#'
+
+  # Nummer, Datum und Gegenstand laufen unter -layout als EIN Textlauf
+  # ("SB-300-1-92 27.03.92 Elevator Mass Balance") -- dieselbe Lage wie bei
+  # Piper. Das feste Raster trennt sie.
+  text_mode: '-fixed 2'
+
+  # Eine Zelle der Nummernspalte traegt nur "02" -- ein Ausgabestand, keine
+  # Nummer.
+  ignore: '#^\d{1,2}$#'
+
+  headings:
+    # Zuerst die Behoerdenspalte: Das Blatt fuehrt weiter rechts eine Spalte
+    # "Airworthiness Directive (AD)", deren Ueberschrift sonst die Nummernspalte
+    # an sich zieht -- der Leser meldete "Kopfzeile sagt 167, gezaehlt wurde 0".
+    # Die Reihenfolge in FIELDS loest das: eine vergebene Spalte wird nicht
+    # zweimal vergeben.
+    authority:
+      - 'airworthiness'
+    number:
+      - 'n°'
+    date:
+      - 'date'
+    title:
+      - 'subject'
+    subject:
+      - 'ea-300'
+
+  documents:
+    'EA-300': 'https://extraaircraft.com/wp-content/uploads/2024/02/03704A_2022_08_10.pdf'

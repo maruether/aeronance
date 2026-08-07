@@ -1,0 +1,408 @@
+List of Service Bulletins
+Type:                   G 109                                                                                                                                                           Ref. TCDS No.:   EASA.A.249 (LBA 817)
+Plot Filter:            approved                                                                                                                                                        List State:      10-Apr-2026
+
+                                                                                                       Category                                         Affected Models
+
+
+
+
+                                                                                                                       Recommended
+                                                                                                           Mandatory                 Optional           G109B
+                                                                                                                                                G 109
+         SB No. /                                                                                                                                                                          Associated
+          Issue
+                                                         Title                                     Alert                                                                   Issue date
+                                                                                                                                                                                          Change Note
+                                                                                                                                                                                                                       Remarks
+
+
+
+                        Änderung des Fluggewichtes von 810 kg auf 825 kg zur Erhöhung der
+                                                                                                                                                                                                         Alle Werk-Nr. außer 6001 und 6010
+817-1                   Zuladung                                                                                                                 X                        12-May-1981
+                                                                                                                                                                                                         All serial-no.s except 6001 and 6010
+                        Increase of max. weight from 810 kg to 825 kg
+                        Abweichungen gegenüber dem Gerätekennblatt Nr. 817 für Flugzeuge
+                                                                                                                                                                                                         Ab Werk-Nr 6011
+817-2                   mit holländischer Zulassung                                                                                              X                        27-Jul-1981
+                                                                                                                                                                                                         From serial-no 6011
+                        Special equipment of GROB 109 for the export to the Netherlands
+                                                                                                                                                                                                         wahlweise (ab 6052 serienmäßig)
+                        Einbau eines Dämpfers in die Bremsklappensteuerung
+817-3                                                                                                                                            X                        28-Sep-1981                    optional, standard equiment as of S/N
+                        Installation of a damper in the airbrake control system
+                                                                                                                                                                                                         6052
+                        Erweiterung des Flughandbuches G109, Ausgabe März 1981 auf
+                        Änderungsstand 01.10.81
+817-4                                                                                                                                            X                        1-Oct-1981
+                        Supplements of Flight Manual GROB G109, published March 1981 for
+                        revision dated 01.10.81
+                        Austausch von Handbüchern, Cockpit-Schildern und Symbolen beim
+                                                                                                                                                                                                         Genannte Werk-Nr. zwischen 6028
+                        Antrag auf Zulassung in USA
+817-5                                                                                                                                            X                        12-Jul-1982                    und 6135
+                        Exchange of manuals, cockpit placards and symbols for application of
+                                                                                                                                                                                                         Affected S/N between 6028 and 6135
+                        certification in USA.
+                        Austausch des Motorträgers                                                                                                                                                       Werk-Nr 6010 - 6073
+817-6                                                                                                                                            X                        14-May-1982
+                        Exchange of the engine mount                                                                                                                                                     S/N 6010 - 6073
+                        Ausgabe für USA vom 19.01.83
+817-8/2                                                                                                                                          X
+                        Edition for USA, dated 19.01.83
+                        Zulässiger Umbau der Kraftstoffanlage                                                                                                                                            Alle Werk-Nr. 6001 - 6159
+817-9                                                                                                                                            X                        30-Jun-1983
+                        Optional modification of the fuel system                                                                                                                                         All S/N 6001 - 6159
+                        Einschränkung des Schwerpunktbereiches und Verfahren zum                                                                                                                         Alle Werk-Nr. 6001 - 6159
+817-10                  Beenden des Trudelns                                                                                                     X                        2-May-1983                     All S/N 6001 - 6159
+                        Change of center of gravity and spin recovery                                                                                                                                    LTA / AD 83-104
+                                                                                                                                                                                                         Alle Werk-Nr. 6001 - 6159
+817-10/2                Change of center of gravity and spin recovery (US Edition)                                                               X                        2-May-1983                     All S/N 6001 - 6159
+                                                                                                                                                                                                         LTA / AD 83-104
+                        Einbau von Flugsicherungsausrüstung für kontrollierten Sichtflug
+                                                                                                                                                                                                         Alle Werk-Nr. 6001 - 6159
+817-11                  (CVFR) bei der GROB G109                                                                                                 X                        1-Sep-1983
+                                                                                                                                                                                                         All S/N 6001 - 6159
+                        CVFR-certification of GROB G109 (temporary only for Germany)
+
+                                                                                         List of SB_SL_Pubs_817, List of SB
+        Print Date: 15.04.2026                                                       #   GROB AIRCRAFT + HELSING + CONTRACTORS                                                                                                 page 1 of 6
+List of Service Bulletins
+Type:                   G 109                                                                                                                                                             Ref. TCDS No.:   EASA.A.249 (LBA 817)
+Plot Filter:            approved                                                                                                                                                          List State:      10-Apr-2026
+
+                                                                                                         Category                                         Affected Models
+
+
+
+
+                                                                                                                         Recommended
+                                                                                                             Mandatory                 Optional           G109B
+                                                                                                                                                  G 109
+         SB No. /                                                                                                                                                                            Associated
+          Issue
+                                                          Title                                      Alert                                                                   Issue date
+                                                                                                                                                                                            Change Note
+                                                                                                                                                                                                                         Remarks
+
+
+
+                        Einbau von Flugsicherungsausrüstung für kontrollierten Sichtflug
+                                                                                                                                                                                                           Alle Werk-Nr.ab 6200
+817-12                  (CVFR) bei der GROB G109B                                                                                                          X                26-Sep-1983
+                                                                                                                                                                                                           All S/N from 6200
+                        CVFR-certification of GROB G109B (temporary only for Germany)
+                        Austausch von Handbüchern und Cockpit-Schildern beim Antrag auf
+                                                                                                                                                                                                           Betroffene Werk-Nr.
+817-14                  US-Zulassung der G 109 B                                                                                                           X                2-Apr-1984
+                                                                                                                                                                                                           Affected S/N
+                        Manuals and cockpit placards for US-registered GROB G109B
+                        Änderungen am Motorsegler GROB G 109 für die Zulassung in
+                                                                                                                                                                                                           Werk-Nr. 6011 - 6159
+817-16                  Kanada                                                                                                                     X                        22-Oct-1984
+                                                                                                                                                                                                           S/N 6001 - 6159
+                        Modification of GROB G109 with Canadian registration
+                        Erweiterung des Flughandbuches GROB G109B                                                                                                                                          Alle Werk-Nr.ab 6200
+817-17                                                                                                                                                     X                10-Jan-1985
+                        Revision of the Flight Manual GROB G109B                                                                                                                                           All S/N from 6200
+                        Änderungen am Motorsegler GROB G 109 B für die Zulassung in
+                                                                                                                                                                                                           Alle Werk-Nr.ab 6200
+817-18                  Kanada                                                                                                                             X                6-May-1985
+                                                                                                                                                                                                           All S/N from 6200
+                        Modification of GROB G109B with Canadian registration
+                        Überprüfung und Austausch der Federbeine des Hauptfahrwerks bei                                                                                                                    Werk-Nr. 6001 - 6159 und 6200 -
+                        G109 und G109B                                                                                                                                                                     6317
+817-19                                                                                                                                             X X                      18-Mar-1985
+                        Inspection and exchange of main undercarriage legs of G109 and                                                                                                                     S/N 6001 - 6159 and 6200 - 6317
+                        G109B                                                                                                                                                                              LTA / AD 85-132
+                        Maßnahmen zur Verbesserung des Schwingungsverhaltens der
+                                                                                                                                                                                                           Werk-Nr. 6200 - 6434
+                        GROB G109B
+817-20                                                                                                                                                     X                29-Jan-1986                    S/N 6200 - 6434
+                        Measures for the improvement of the flutter behaviour of the GROB
+                                                                                                                                                                                                           LTA / AD 85-218/2
+                        G109B
+                        Änderungen am Motorsegler GROB G 109B für die Zulassung in
+                                                                                                                                                                                                           Alle Werk-Nr.ab 6200
+817-21                  Frankreich                                                                                                                         X                3-Feb-1986
+                                                                                                                                                                                                           All S/N from 6200
+                        Modification of GROB G109B for certification in France
+                        Erweiterung des Flug- und Wartungshandbuches und wahlweiser
+                                                                                                                                                                                                           Alle Werk-Nr. 6001 - 6159
+                        Einbau zusätzlicher Ausrüstung
+817-22                                                                                                                                             X                        1-May-1986                     All S/N 6001 - 6159
+                        Extension of Flight and Maintenance Manual G109 and optional
+                                                                                                                                                                                                           LTA / AD 86-219
+                        installation of additional equipment
+                                                                                                                                                                                                           Werk-Nr. 6001 - 6159 und 6200 -
+                        Überprüfung und Austausch des unteren Dichtringes im Brandhahn
+                                                                                                                                                                                                           6445
+817-23                  Inspection and exchange of the lower sealing ring in the fuel shut-off                                                     X X                      10-Jul-1987
+                                                                                                                                                                                                           S/N 6001 - 6159 and 6200 - 6445
+                        valve
+                                                                                                                                                                                                           LTA / AD 87-142
+                                                                                           List of SB_SL_Pubs_817, List of SB
+        Print Date: 15.04.2026                                                         #   GROB AIRCRAFT + HELSING + CONTRACTORS                                                                                                  page 2 of 6
+List of Service Bulletins
+Type:                   G 109                                                                                                                                                             Ref. TCDS No.:   EASA.A.249 (LBA 817)
+Plot Filter:            approved                                                                                                                                                          List State:      10-Apr-2026
+
+                                                                                                         Category                                         Affected Models
+
+
+
+
+                                                                                                                         Recommended
+                                                                                                             Mandatory                 Optional           G109B
+                                                                                                                                                  G 109
+         SB No. /                                                                                                                                                                            Associated
+          Issue
+                                                          Title                                      Alert                                                                   Issue date
+                                                                                                                                                                                            Change Note
+                                                                                                                                                                                                                           Remarks
+
+
+
+                                                                                                                                                                                                           Werk-Nr. 6001 - 6159 und 6200 -
+                        Austausch des Dichtkolbens im Brandhahn                                                                                                                                            6445
+817-23/1                                                                                                                                           X X                      1-Sep-1992
+                        Exchange of the sealing piston in the fuel shut-off valve                                                                                                                          S/N 6001 - 6159 and 6200 - 6445
+                                                                                                                                                                                                           LTA / AD 87-142/2
+                        Im Rahmen einer Änderung kann der Motorsegler G109 mit dem
+                        Flugmotor LIMBACH L2400 EB 1.A und dem Propeller MTV-1-A/L 160-
+                                                                                                                                                                                                           Alle Werk-Nr. 6001 - 6159
+817-24                  03 ausgerüstet werden                                                                                                      X                        20-Sep-1989
+                                                                                                                                                                                                           All S/N 6001 - 6159
+                        Approved installation of the LIMBACH L2400 EB 1.A engine in
+                        combination with the MÜHLBAUER propeller MTV-1-A
+                        Überprüfung und Austausch der beiden mittleren ruderseitigen                                                                                                                       Alle Werk-Nr. 6200 - 6445
+817-25                  Höhenruderlager                                                                                                                    X                9-Nov-1987                     All S/N 6200 - 6445
+                        Inspection and exchange of the two inner elevator hinges                                                                                                                           LTA / AD 88-50
+                        Im Rahmen einer Änderung kann der Motorsegler G109B mit einer
+                                                                                                                                                                                                           Alle Werk-Nr.ab 6200
+817-26                  lärmmindernden Auspuffanlage ausgestattet werden                                                                                   X                12-Dec-1989
+                                                                                                                                                                                                           All S/N from 6200
+                        Optional installation of a noise reduced exhaust system in the G109B
+                                                                                                                                                                                                           Alle Werk-Nr. 6001 - 6159
+                        Einbau einer Fußspitzenbremse                                                                                                                                                      nicht veröffentlicht
+817-27                                                                                                                                             X
+                        Installation of toe-operated brakes                                                                                                                                                All S/N 6001 - 6159
+                                                                                                                                                                                                           not published
+                                                                                                                                                                                                           Alle Werk-Nr.
+                        Erhöhung der Betriebszeit
+817-28/1                                                                                                                                           X X                      25-Nov-1991                    All S/N
+                        Extension of service life
+                                                                                                                                                                                                           LTA / AD 92-198
+                        Überprüfung und ggf. Ersatz von Stehbolzen in der Bolzenplatte der
+                                                                                                                                                                                                           Werk-Nr. 6200 - 6362
+                        Wurzelrippe
+817-29                                                                                                                                                     X                6-Aug-1990                     S/N 6200 - 6362
+                        Inspection and - if necessary - replacement of studs in the root rib stud
+                                                                                                                                                                                                           LTA / AD 90-315
+                        plate
+                        Einbau des Flugmotors L2400 EB 1.AA mit Propeller MTV-1-A/L 160-
+                        03 in G109B                                                                                                                                                                        Alle Werk-Nr.
+817-30                                                                                                                                                     X                26-Sep-1990
+                        Approved installation of the L2400 EB 1.AA engine in combination with                                                                                                              All S/N
+                        the MTV-1-A/L 160-03 propeller in the G109B
+                        Nachrüstung eines gedämpften Spornrades                                                                                                                                            Alle Werk-Nr.
+817-31                                                                                                                                             X X                      1-Jun-1993
+                        Installation of a cushioned tail wheel                                                                                                                                             All S/N
+                                                                                           List of SB_SL_Pubs_817, List of SB
+        Print Date: 15.04.2026                                                         #   GROB AIRCRAFT + HELSING + CONTRACTORS                                                                                                  page 3 of 6
+List of Service Bulletins
+Type:                   G 109                                                                                                                                                              Ref. TCDS No.:   EASA.A.249 (LBA 817)
+Plot Filter:            approved                                                                                                                                                           List State:      10-Apr-2026
+
+                                                                                                          Category                                         Affected Models
+
+
+
+
+                                                                                                                          Recommended
+                                                                                                              Mandatory                 Optional           G109B
+                                                                                                                                                   G 109
+         SB No. /                                                                                                                                                                             Associated
+          Issue
+                                                           Title                                      Alert                                                                   Issue date
+                                                                                                                                                                                             Change Note
+                                                                                                                                                                                                                          Remarks
+
+
+
+                                                                                                                                                                                                            Alle Werk-Nr.
+                        Überprüfung der Abgasanlage
+817-32                                                                                                                                              X X                      18-Sep-1992                    All S/N
+                        Inspection of the exhaust system
+                                                                                                                                                                                                            LTA / AD 92-359
+                                                                                                                                                                                                            Alle Werk-Nr. ab 6200
+                        Überprüfung der BENDIX-Zündmagneten am Flugmotor GROB G2500
+817-34/2                                                                                                                                                    X                17-Mar-1992                    All S/N from 6200
+                        Inspection of the BENDIX-magnetos on the GROB G2500 engine
+                                                                                                                                                                                                            LTA / AD 92-189
+                        Überprüfung der Entwässerungsbohrungen im Höhenruder (mit                                                                                                                           Alle Werk-Nr. ab 6200
+817-35                  Trimmruder)                                                                                                                         X                20-Jul-1992                    All S/N from 6200
+                        Inspection of the drain holes in the elevator (including trim tab)                                                                                                                  LTA / AD 92-350
+                                                                                                                                                                                                            Alle Werk-Nr.
+                        Überprüfung der Bremsklappenanschläge
+817-36                                                                                                                                              X X                      14-Sep-1992                    All S/N
+                        Inspection of the airbrake stops
+                                                                                                                                                                                                            LTA / AD 92-356
+                                                                                                                                                                                                            Alle Werk-Nr. 6001 - 6159
+                        Verbesserung des Schwingungsverhaltens der GROB G109
+817-38/2                                                                                                                                            X                        31-Mar-1995                    All S/N 6001 - 6159
+                        Improvement of the flutter behaviour of the GROB G109
+                                                                                                                                                                                                            LTA / AD 262/2
+                                                                                                                                                                                                            Alle Werk-Nr.
+                        Überprüfung der Hauptfahrwerksfederbeine
+817-39                                                                                                                                              X X                      4-Jan-1994                     All S/N
+                        Inspection of the main undercarriage legs
+                                                                                                                                                                                                            LTA / AD 94-004/2
+                        Verwendung des Flugmotors ROTAX 912 A3 in Verbindung mit dem
+                                                                                                                                                                                                            Alle Werk-Nr.
+                        Propeller HOFFMANN HO-V 352F-S170FQ
+817-42                                                                                                                                              X                        8-Aug-1997                     All S/N
+                        Installation of the engine ROTAX 912A3 in combination with propeller
+                                                                                                                                                                                                            German Language only
+                        HOFFMANN HO-V 352F-S170FQ
+                                                                                                                                                                                                            Veröffentlicht durch/
+817-43
+                                                                                                                                                                                                            Published by Fa. Korff
+                                                                                                                                                                                                            Veröffentlicht durch/
+817-44
+                                                                                                                                                                                                            Published by Fa. Korff
+                                                                                                                                                                                                            Alle Werk-Nr.
+                        Inspektion des Motorträgers auf Scheuerstellen
+817-45                                                                                                                                                      X                27-Jul-1995                    All S/N
+                        Inspection of the engine mounting frame for abrasion
+                                                                                                                                                                                                            LTA / AD 95-362
+                        Verwendung von bleifreiem Benzin                                                                                                                                                    Alle Werk-Nr.
+817-46/2                                                                                                                                                    X                6-May-1999
+                        Use of unleaded fuel                                                                                                                                                                All S/N
+                        Mode- S Transponder
+817-47                                                                                                                                              X X                      19-Sep-2005
+                        Mode - S Transponder
+                                                                                            List of SB_SL_Pubs_817, List of SB
+        Print Date: 15.04.2026                                                          #   GROB AIRCRAFT + HELSING + CONTRACTORS                                                                                                page 4 of 6
+List of Service Bulletins
+Type:                   G 109                                                                                                                                                               Ref. TCDS No.:   EASA.A.249 (LBA 817)
+Plot Filter:            approved                                                                                                                                                            List State:      10-Apr-2026
+
+                                                                                                           Category                                         Affected Models
+
+
+
+
+                                                                                                                           Recommended
+                                                                                                               Mandatory                 Optional           G109B
+                                                                                                                                                    G 109
+         SB No. /                                                                                                                                                                              Associated
+          Issue
+                                                           Title                                       Alert                                                                   Issue date
+                                                                                                                                                                                              Change Note
+                                                                                                                                                                                                                            Remarks
+
+
+
+                        Spornradeinbau
+817-48                                                                                                                                               X X                      13-Jul-2006
+                        Tail wheel installation
+                        G-Schalter
+817-49                                                                                                                                                       X                6-Apr-2006                     Only military use
+                        G-Switch
+                        Elektrische Versorgung (Relais 6ED)
+817-50                                                                                                                                                       X                14-Nov-2006
+                        DC- Generation (Relay 6ED)
+                        Mute Switch
+817-52/1                                                                                                                                                     X                7-Feb-2011                     Only military use
+                        Mute Switch
+                        Inspektion des rechten Steuerknüppels
+817-53                                                                                                                                               X X                       2-Jul-2007
+                        Inspection of the R/H control stick
+                        Alternativer Bremszylinder
+817-54                                                                                                                                                       X                27-May-2008
+                        Alternative brake cylinder
+                        Information über Revisionsstand von Flughandbuch und
+                        Wartungshandbuch
+MSB817-55/8                                                                                                                                          X X
+                        Information about revision status of Flight Manual and Maintenance
+                        Manual
+817-56                                                                                                                                                                                                       reserviert Fa. Korff
+817-57                                                                                                                                                                                                       reserviert Fa. Korff
+                        Überprüfung des SLW Nasenbleches auf Korrosion, zusätzliche
+                        Information
+MSB817-58/1                                                                                                      X                                   X X                      17-Feb-2015
+                        Inspection of the Vertical Stabilizer nose plate for corrosion, additional
+                        information
+                        Querruder-Restmomente
+MSB817-59                                                                                                        X                                           X                06.12 2011      MÄM817-023
+                        Aileron Residual Moments
+                        Einbau eines Zugangsdeckels im SLW
+MSB817-60                                                                                                        X                                   X X                      9-Dec-2011      MÄM817-026
+                        Installation of an access panel in the vertical stabilizer
+                        Alternativer Umschalter
+OSB817-61                                                                                                                                  X         X X                      13-Oct-2011     MÄM817-025
+                        Alternative Toggle switch
+                        Rücknahme der TM817-7 und TM817-13
+MSB817-62                                                                                                        X                                   X X                      26-Jan-2012
+                        Withdrawal of TM817-7 and TM817-13
+                        Inspektion der Seitenruderpedale
+MSB817-63                                                                                                        X                                   X X                      16-May-2012
+                        Inspection of Rudder Pedal
+
+
+                                                                                             List of SB_SL_Pubs_817, List of SB
+        Print Date: 15.04.2026                                                           #   GROB AIRCRAFT + HELSING + CONTRACTORS                                                                                                  page 5 of 6
+List of Service Bulletins
+Type:                   G 109                                                                                                                                                          Ref. TCDS No.:   EASA.A.249 (LBA 817)
+Plot Filter:            approved                                                                                                                                                       List State:      10-Apr-2026
+
+                                                                                                       Category                                        Affected Models
+
+
+
+
+                                                                                                                      Recommended
+                                                                                                          Mandatory                 Optional           G109B
+                                                                                                                                               G 109
+         SB No. /                                                                                                                                                                         Associated
+          Issue
+                                                        Title                                     Alert                                                                   Issue date
+                                                                                                                                                                                         Change Note
+                                                                                                                                                                                                                      Remarks
+
+
+
+                        Inspektion der Höhenruderstange
+MSB817-64/2                                                                                                 X                                   X X                      6-Sep-2012
+                        Inspection of the elevator rod
+MSB817-65               Inspection of Seat harness                                                          X                                           X                7-Aug-2012                     Only military use
+                        Einbausatz für Power FLARM
+OSB817-66                                                                                                                             X                 X                3-Apr-2014      OÄM817-039
+                        Installation provisions for Power FLARM
+                        Optionale Umrüstung auf LED Lichter
+OSB817-67                                                                                                                             X                 X                11-Jul-2014     OÄM817-038
+                        Optional Retrofit of LED Lights
+                        Neue Limits für Trim Tab
+MSB817-69                                                                                                   X                                           X                22-Apr-2016     MÄM817-047
+                        new limits for trim tab
+                        Inspektion des Spornbockes
+MSB817-70                                                                                                   X                                   X X                      21-Jul-2016      MCN 817-49
+                        Inspection of tail mounting bracket
+OSB817-71               Rotax 912iSc                                                                                                  X                 X                30-Sep-2021     OÄM 817-030
+OSB817-72               Garmin G3X Touch Installation                                                                                 X                 X                10-Apr-2026     OCN 817-054
+ASB817-73               Modification of engine mount attachment                                    X                                                    X                 3-Jun-2022          -      S/N 6221, 6525, 6552
+OSB817-74               Alternative Undercarriage Leg                                                                                           X                         3-Jul-2023                 All up to S/N 6500
+                                                                                                                                                                                                     all S/N equipped with Rotax Engine
+RSB817-75               Modified Throttle Cable                                                                          X                              X                11-Jul-2023     MCN 817-077
+                                                                                                                                                                                                     912iSc3
+MSB817-76               Special Inspection and Replacement of Fuel Shut-off Valve                           X                                   X X                      3-Nov-2025      MCN 817-087 S/N all
+RSB817-77               Modified oil cooler bracket                                                                      X                        X                      5-Jun-2024      MCN 817-089 only with Rotax OCN 817-030
+
+
+
+
+                                                                                        List of SB_SL_Pubs_817, List of SB
+        Print Date: 15.04.2026                                                      #   GROB AIRCRAFT + HELSING + CONTRACTORS                                                                                               page 6 of 6
+

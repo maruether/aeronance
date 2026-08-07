@@ -1,0 +1,100 @@
+# Continental Aerospace Technologies -- Service Bulletins.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE STILLE FALLE STEHT HIER GLEICH VORNE: Die sichtbare Tabelle der Seite,
+# <table id="bulletin-table">, enthält im HTML NUR einen <thead>. Als Tabelle
+# gelesen ist sie leer -- und eine leere Liste sieht aus wie ein Hersteller ohne
+# Veröffentlichungen. Gefüllt wird sie per WordPress-AJAX, ohne Nonce und ohne
+# Login.
+#
+# Die Antwort ist JSON, und die Zeilen DARIN sind eine Tabelle:
+#
+#   {"data": "<tr><td>…</td></tr>…", "load_more": true, "page": 2}
+#
+# Deshalb `endpoint.rows_html` -- kein eigener Modus, sondern der gewöhnliche
+# Tabellenleser auf dem Bruchstück im Umschlag.
+#
+# ZEHN JE SEITE, FEST. posts_per_page, per_page und limit wurden geprüft: Die
+# Antwort bleibt bei zehn. Gemessen sind es 498 Anweisungen über 51 Seiten --
+# also 51 Abrufe; deshalb die Pause zwischen den Seiten, es ist der Server eines
+# anderen.
+#
+# Das verlinkte Continental-INDEX.pdf ist mit Stand 2024-07-15 VERALTET
+# gegenüber der Live-Liste und deshalb ausdrücklich nicht die Quelle.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: continental
+label: 'Continental Aerospace (Service Bulletins)'
+issuer: 'Continental Aerospace Technologies'
+type: json
+
+default_kind: sb
+subject_kind: engine
+
+# "MSB23-01A", "CSB26-04" -- die Nummer trägt ihre Art selbst.
+number_prefix: false
+
+endpoint:
+  url: 'https://continental.aero/wp-admin/admin-ajax.php'
+
+  # POST, und das ist keine Stilfrage: Dieselbe Route beantwortet auch ein GET,
+  # IGNORIERT dabei aber den Seitenparameter -- jede Seite kommt als Seite eins
+  # zurück. Mit GET gelaufen hätte der Import nach zehn von 250 Bulletins
+  # aufgehört und dabei vollständig ausgesehen.
+  method: POST
+
+  query:
+    action: 'sbfilter'
+    search: ''
+    order: 'desc'
+    tab: ''
+    orderby: 'date_issued'
+
+  # Die Zeilen stecken als HTML im Feld `data`.
+  rows_html: 'data'
+
+page:
+  # Kein table_pattern nötig: Der Treiber legt den Rahmen selbst um das
+  # Bruchstück. Zeilen und Zellen sind gewöhnliches Markup.
+  table_pattern: '#<table>.*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 3
+
+  document_pattern: '#href="(https?://[^"]+\.pdf)"#i'
+
+  pagination:
+    parameter: 'paged'
+
+    # Gemessen: 499 eindeutige Nummern über 51 Seiten (Stand 31.07.2026). Die
+    # Grenze liegt mit Absicht deutlich darüber und ist ein Notnagel, kein
+    # Abbruchkriterium -- wird sie erreicht, MELDET der Treiber das und übernimmt
+    # nichts, statt eine gekürzte Liste als vollständig auszugeben.
+    max_pages: 120
+    delay_ms: 300
+
+# Bulletin # | Date | Title
+#
+# Das Datum kommt als ISO ("2026-06-30") -- das sauberste Format aller hier
+# geprüften Quellen.
+columns:
+  number: 0
+  date: 1
+  title: 2
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE VERBINDLICHKEIT STEHT IN DER NUMMER, und das ist am Dokument belegt:
+#
+#   MSB23-01A  -> "MANDATORY SERVICE BULLETIN … CATEGORY 1"
+#   CSB26-04   -> "CRITICAL SERVICE BULLETIN — COMPLIANCE NECESSARY TO
+#                  MAINTAIN SAFETY … CATEGORY 2"
+#
+# Beide sind verbindlich und damit ohnehin der Default. Ausgezählt über die
+# Präfixe: SB 107 · TM 37 · SIL 36 · CSB 23 · MSB 13 · SL 13 · E-SB 5 · SSI 5.
+#
+# KEINE optional_phrases: Continental schreibt nirgends "optional", und ein Wort
+# zu erfinden, das der Hersteller nicht benutzt, wäre genau die Entschärfung,
+# die wehtut. SIL (Service Information Letter) und SL sind Mitteilungen, keine
+# Anweisungen -- sie als optional zu führen wäre trotzdem eine Behauptung über
+# ihre Verbindlichkeit, die der Hersteller so nicht trifft.
+# ─────────────────────────────────────────────────────────────────────────────

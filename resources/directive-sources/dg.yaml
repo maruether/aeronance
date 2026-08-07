@@ -1,0 +1,211 @@
+# DG Aviation -- Technische Mitteilungen und Lufttüchtigkeitsanweisungen.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE ÜBERSICHT IST DIE QUELLE, nicht der Dokumentenbestand.
+#
+# Vorgabe: "die übersicht ist das bindende dokument, das haben alle hersteller.
+# die anderen files sind die details dazu."
+#
+# DG veröffentlicht je Muster ein Blatt "Uebersicht-Overview_TM-<Muster>": eine
+# Zeile je Anweisung, mit Ausgabedatum, Behördennummer, Betroffenheit nach
+# Werknummern und Dringlichkeit, und rechts der Spalte "Durchgeführt, Datum,
+# Unterschrift", in der ein Prüfer abzeichnet. Genau das ist die Liste.
+#
+# Der Dokumentenbestand daneben (1894 Dateien, unten beschrieben) ist etwas
+# anderes: dort liegen die TMs selbst, deutsch und englisch als getrennte
+# Dateien, ohne Ausgabedatum. Als Zeilenquelle war er zweimal falsch -- jede TM
+# kam doppelt (TM und TN), und ein Datum gab es nirgends. Als Anhang zu einer
+# Zeile ist er richtig, und dafür bleibt er hier stehen.
+#
+# Vollständigkeit heisst damit: EIN Dokument ganz gelesen. Was das
+# Nummernmuster nicht erkennt, meldet der Leser namentlich und der Abruf bricht
+# ab -- lieber keine Liste als eine stillschweigend verkürzte.
+#
+# Gemessen an den vier Blättern, die DG in vier verschiedenen Layouts setzt:
+#   DG-300      31 Zeilen, 0 verworfen
+#   DG-1000     64 Zeilen, 0 verworfen
+#   LS4         51 Zeilen, 0 verworfen
+#   General     14 Zeilen, 0 verworfen   (siehe dg-general.yaml)
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: dg
+label: 'DG Aviation (Übersicht)'
+issuer: 'DG Aviation'
+
+type: overview
+default_kind: tm
+subject_kind: aircraft_model
+
+overview:
+  # Wie eine Anweisungsnummer auf DG-Blättern aussieht.
+  #
+  # x-Modus, damit das Muster lesbar bleibt: es muss die Schreibweisen aus
+  # vierzig Jahren abdecken und darf gleichzeitig keine Jahreszahl und kein
+  # Datum für eine Nummer halten. Die erste Gruppe, die etwas fängt, IST die
+  # Nummer -- das Kürzel davor (TM/TN/SI/Service Info) gehört nicht dazu:
+  # dasselbe Blatt schreibt "DG-SS-01" und "TM DG-SS-05" für dieselbe Reihe,
+  # "1000/21" und "TM1000/22" für dieselbe. Kürzel ist Gattung, nicht Identität.
+  number_pattern: |-
+    ~^(?:
+          # Service Info: die Nummer steht meist eine Zeile tiefer und darf
+          # deshalb hier fehlen -- sie wird aus der ganzen Zelle nachgeholt.
+          # "Info" ohne "Service" kommt vor, wo pdftotext zwei Zellen der
+          # Kopfspalte zusammengezogen hat.
+          (?:Service\s+Info|SI|Info)(?=\s|$)\s*(\d{2,4}[-/]\d{1,4})?
+        |
+          # 359/1 · 413-01 · 1000/09 · TM1000/22 · TM4600-4 · 4001 · 4018a
+          # DG-G-01 · DG-SS-10 · LS-S-01 · TM DG-SS-05 · TM 359/17 Rev.1
+          #
+          # (?!19|20) hält Jahreszahlen heraus: "2016" und "2018" stehen allein
+          # in der Nummernspalte, wenn ein Datum zwischen Monat und Jahr
+          # umbricht, und ergaben zwei erfundene Anweisungen.
+          #
+          # "Rev." mit Punkt, "Revision" ohne: TM 359/17 Rev.1 ist ein eigenes
+          # Dokument mit eigener Zeile, "TM1000/36 Revision 4" dagegen dieselbe
+          # TM in neuer Ausgabe -- die Ausgabe gehört nicht in die Nummer, sonst
+          # legt jede Revision eine zweite Anweisung an.
+          (?:T[MN](?=[\s\d]))?\s*(
+              (?:\d{3,4}[-/]\d{1,3}|(?!19|20)\d{4})[a-z]?(?:\s+Rev\.\s*\d+)?
+            | [A-Z]{2}-[A-Z]{1,2}-\d{1,3}
+          )
+      )(?![\w./-])~x
+
+  # Wie DG seine Spalten überschreibt. Bruchstückweise verglichen, weil die
+  # Blätter sich unterscheiden: "TM-Nr. / TN no." und "TM-Nr. / TB no." sind
+  # dieselbe Spalte, und die allgemeinen TMs haben gar keine Behördenspalte.
+  headings:
+    authority: ['lba-lta', 'easa ad']
+    number: ['tm-nr']
+    subject: ['betrifft']
+    title: ['gegenstand']
+    compliance: ['dringlichkeit']
+
+  # Jede Zeile steht zweimal da, deutsch und darunter englisch. Der Titel kommt
+  # deshalb aus EINER Zeile -- sonst liest er sich "Einbau eines ELT-Notsenders
+  # Installation of an ELT" -- und der volle Text bleibt als Zusammenfassung.
+  bilingual: true
+
+  # Wo das Blatt aufhört, Tabelle zu sein: darunter stehen die allgemeinen TMs
+  # als Hinweis (die haben ein eigenes Blatt, siehe dg-general.yaml) und bei LS4
+  # fremde STCs. Beides sind keine Anweisungen dieses Musters, aber beides
+  # schreibt Text in die Nummernspalte.
+  ends_at: '/Wichtiger Hinweis|Optionale ergänzende/u'
+
+  # Was DG sonst noch unter die Nummer setzt. Bewusst kurz: jedes Wort hier ist
+  # eines, vor dem der Vollständigkeitsbericht nicht mehr warnen kann.
+  #   Solo, SB 4600-4  -- die Referenz des Motorenherstellers
+  #   Revision 2       -- die Ausgabe, nicht die Nummer
+  #   ergänzt          -- der Zusatz zu 359/21
+  #   01.a             -- der Ausgabestand unter dem Datum
+  ignore: '/^(Solo|SB\s|Rev(\.|ision)?\s*\d*$|ergänzt$|\d{2}\.[a-z]$)/ui'
+
+  # Die Blätter je Muster, ausgeschrieben.
+  #
+  # DG benennt seine Dateien nach nichts: die LS4 liegt unter
+  # "ls4_ls4-a_ls4-b-2", die DG-300 heisst im Blatt "DG single seaters", und das
+  # Suffix "-2" ist WordPress' Umgang mit doppelten Namen. Eine geratene Adresse
+  # wäre entweder ein 404 -- der aussieht wie "für Ihr Muster gibt es nichts" --
+  # oder das Blatt eines anderen Musters. Die Liste stammt aus DG's eigener
+  # Sitemap und ist mit einer Zeile zu erweitern, wenn DG ein Muster ergänzt.
+  #
+  # Die Adressen zeigen auf die Detailseite; der PDF-Link darauf steht in
+  # document_pattern. Das ist DG's dauerhafte Adresse -- die PDF-URL selbst
+  # enthält eine Datei-ID, die sich bei jedem Neu-Upload ändert.
+  documents:
+    'DG-100': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-100-1/'
+    'DG-200': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-200-2/'
+    'DG-300': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-300-2/'
+    'DG-400': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-400-2/'
+    'DG-500': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-500-2/'
+    'DG-500M': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-500m-2/'
+    'DG-600': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-600-2/'
+    'DG-600M': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-600m-2/'
+    'DG-800S': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-800s/'
+    'DG-800A': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-800a-bc/'
+    'DG-800B': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-800a-bc/'
+    'DG-808C': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-800a-bc/'
+    'DG-1000': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-1000-2/'
+    'LS1': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-ls1-0-d-e-f-2/'
+    'LS3': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-ls3_ls3-a_ls3-17-2/'
+    'LS4': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-ls4_ls4-a_ls4-b-2/'
+    'LS6': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-ls6_all-versions/'
+    'LS7': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-ls7_ls7-wl-2/'
+    'LS8': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-ls8_all-versions/'
+    'LS9': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-ls9/'
+    'LS10': 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-ls10-s_ls10-st/'
+
+  document_pattern: '#href="(https://www\.dg-aviation\.de/download/[^"]+\.pdf)"#i'
+
+bindingness:
+  # Aus den Blättern selbst gezogen, nicht ausgedacht: die Dringlichkeitsspalte
+  # ist Freitext, und alles, was hier NICHT steht, gilt als verbindlich. Falsch
+  # in Richtung verbindlich lässt eine Zeile auf der Liste stehen; falsch in
+  # Richtung optional lässt sie sich mit einem Satz abtun.
+  optional_phrases:
+    - wahlweise
+    - optional
+    - 'keine, wahlweise'
+    - 'kein / wahlweise'
+    - 'auf kundenwunsch'
+    - 'bei bedarf'
+    - 'nur export'
+    - 'bei herstellung'
+    - 'bei der herstellung'
+    - 'änderung in der serie'
+    - 'entfällt'
+    - 'on request'
+
+  # Eine Formulierung, die wahlweise UND einen harten Termin nennt, ist nicht
+  # wahlweise: "Optional als Nachrüstung, Maßnahme 2 bis 31.12.2015" ist echt.
+  mandatory_override: '/(vor dem nächsten (start|flug)|spätestens|bis zum \d|jahresnachprüfung|verbindlich)/u'
+
+authority_kind_pattern: '/EASA|AD/i'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DER DOKUMENTENBESTAND -- ab hier steht, wo die Dateien zu den Zeilen liegen.
+#
+# Nicht mehr die Zeilenquelle (siehe oben), aber die Grundlage für den nächsten
+# Schritt: jede Zeile der Übersicht auf ihr PDF verlinken. Die Beschreibung
+# bleibt hier stehen, weil sie teuer erarbeitet ist -- DG serviert 1894
+# Dokumente in Zehnerschritten über einen WordPress-Feed, und die Seiten
+# SORTIEREN SICH ZWISCHEN DEN ABRUFEN UM: gemessen über 15 Seiten kamen 12 von
+# 165 Einträgen doppelt, und jede Dublette auf einer Seite ist ein Dokument, das
+# von einer anderen gerutscht ist. Einmal durchblättern verliert Dokumente und
+# sieht aus wie ein vollständiger Lauf.
+#
+# Deshalb: die Liste so oft durchgehen, bis ein Durchlauf nichts Neues mehr
+# findet (page.pagination), und das Ergebnis gegen DG's eigene Sitemap zählen
+# (inventory). Erst das macht aus "sieht gut aus" ein "1894 von 1894".
+#
+# Nichts davon braucht einen Login. Der 404 des admin-ajax-Endpunkts ist eine
+# pauschale Sperre dieses Pfades, keine Bezahlschranke.
+# ─────────────────────────────────────────────────────────────────────────────
+
+page:
+  # orderby=ID ist nicht kosmetisch: ohne es sortiert der Feed nach dem
+  # Zeitstempel des Massenimports, und der ist bei hunderten Dateien gleich.
+  url: 'https://www.dg-aviation.de/feed/?post_type=wpfd_file&orderby=ID&order=asc'
+  type_parameter: 'wpfd-category'
+  pagination:
+    parameter: paged
+    max_pages: 260
+    max_passes: 4
+  row_pattern: '#<item>.*?</item>#is'
+
+types:
+  url: 'https://www.dg-aviation.de/wp-sitemap-taxonomies-wpfd-category-1.xml'
+  entry_pattern: '#<loc>\s*https?://[^<]*/wp-file-download/([^/<]+)/?\s*</loc>#i'
+
+inventory:
+  url: 'https://www.dg-aviation.de/wp-sitemap-posts-wpfd_file-1.xml'
+  entry_pattern: '#<loc>\s*([^<]*/wpfd_file/[^<]*)\s*</loc>#i'
+  item_pattern: '#<link>\s*([^<]+)\s*</link>#i'
+
+columns:
+  # Ab wann ein Dokument des Bestands zu einer Anweisung gehört. Nur etwa ein
+  # Drittel der Bibliothek sind TMs; der Rest sind Handbücher, deren Titel
+  # TM-Nummern enthalten ("MM DG-1000T Rev25 TM1000-52rev2 affected pages").
+  # Deshalb am Titelanfang verankert.
+  number: '#<title>\s*(T[MN]\s?[0-9][A-Za-z0-9._/-]*)#i'
+  title: '#<title>\s*(.*?)\s*</title>#is'
+  document: '#<link>\s*([^<]+)\s*</link>#i'

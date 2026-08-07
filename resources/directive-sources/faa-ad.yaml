@@ -1,0 +1,86 @@
+# FAA Airworthiness Directives -- über das Federal Register.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE ERSTE BEHÖRDLICHE QUELLE DIESES MODULS. Bisher kamen ADs nur zweiter Hand
+# herein, dort wo ein Hersteller in seiner eigenen Spalte eine zitiert. Für
+# US-Muster sind die eigentlichen verbindlichen Anweisungen aber FAA Airworthiness
+# Directives, die die EASA per Anerkennung übernimmt.
+#
+# WARUM NICHT drs.faa.gov: Das Dynamic Regulatory System ist eine Angular-Anwendung.
+# JEDE Route -- auch /browse/ADFRAWD -- liefert HTTP 200 mit derselben leeren
+# Hülle; ohne JavaScript gibt es keinen einzigen Datensatz. Ein Treiber darauf
+# meldete null Zeilen, und das sähe aus wie "die FAA hat nichts erlassen". Das
+# offizielle DRS-API gibt es, verlangt aber einen Schlüssel (Selbstbedienung,
+# 12 Monate gültig) -- kein Schlüssel liegt vor, also wird es nicht benutzt.
+#
+# Das Federal Register veröffentlicht dieselben Regeln als sauberes JSON, ohne
+# Schlüssel, mit Datum und PDF je Eintrag. Live geprüft: Piper 48 Treffer.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE GRENZE DIESER QUELLE, DEUTLICH GESAGT: Die Titel des Federal Register
+# nennen den HERSTELLER, nicht das Muster ("Airworthiness Directives; Piper
+# Aircraft, Inc. Airplanes"). Feiner als je Hersteller lässt sich also nicht
+# filtern -- eine PA-18 bekommt damit auch die ADs, die nur die PA-28 betreffen.
+#
+# Das ist Absicht und kein Mangel: Das Werkzeug neigt zum Ja (§4), und "nicht
+# zutreffend" ist eine Beurteilung, die ein Mensch einmal trifft und die dann
+# steht. Die Gegenrichtung -- eine zutreffende AD wegzufiltern, weil der
+# Suchbegriff zu eng war -- wäre still und gefährlich.
+#
+# `terms` steht ausgeschrieben da, statt aus dem Musternamen gebaut zu werden:
+# Ein geratener Suchbegriff schlägt nicht fehl, er liefert eine leere Liste --
+# und eine leere Liste von Lufttüchtigkeitsanweisungen liest sich wie "für Ihr
+# Flugzeug wurde nichts erlassen".
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: faa-ad
+label: 'FAA Airworthiness Directives (Federal Register)'
+issuer: 'FAA'
+type: json
+
+default_kind: ad
+subject_kind: aircraft_model
+
+# "2024-11143" ist die Dokumentnummer des Federal Register; die Art steht davor,
+# damit sie im Bestand nicht mit einer Herstellernummer verwechselt wird.
+number_prefix: true
+
+endpoint:
+  url: 'https://www.federalregister.gov/api/v1/documents.json'
+
+  query:
+    'conditions[agencies][]': 'federal-aviation-administration'
+
+    # Nur die endgültigen Regeln. PRORULE ist ein Entwurf und keine Anweisung --
+    # als offener Punkt geführt würde er eine Freigabe blockieren, obwohl noch
+    # gar nichts gilt.
+    'conditions[type][]': 'RULE'
+
+    'per_page': '1000'
+    'order': 'newest'
+
+  # Der Suchbegriff, den das Muster bekommt.
+  type_parameter: 'conditions[term]'
+
+  items: 'results'
+
+  # Je Muster der Hersteller, wie das Federal Register ihn schreibt. Nur was
+  # nachgeschlagen wurde, steht hier -- ein Eintrag mehr wäre eine Vermutung.
+  # IN ANFÜHRUNGSZEICHEN, und das ist keine Kosmetik: Ohne sie sucht das Federal
+  # Register die Wörter einzeln im Volltext. Gemessen für die PA-18:
+  # 178 Treffer ohne, 48 mit -- der Unterschied sind Regeln, die "airworthiness",
+  # "directives" und "Piper" irgendwo enthalten, ohne Piper-ADs zu sein.
+  terms:
+    'PA-18': '"Airworthiness Directives; Piper Aircraft"'
+    'PA-25': '"Airworthiness Directives; Piper Aircraft"'
+    'PA-28': '"Airworthiness Directives; Piper Aircraft"'
+    'PA-32': '"Airworthiness Directives; Piper Aircraft"'
+    'Citabria': '"Airworthiness Directives; American Champion Aircraft"'
+    'Scout': '"Airworthiness Directives; American Champion Aircraft"'
+    'Decathlon': '"Airworthiness Directives; American Champion Aircraft"'
+
+columns:
+  number: 'document_number'
+  title: 'title'
+  date: 'publication_date'
+  document: 'pdf_url'

@@ -1,0 +1,103 @@
+# Allstar PZL Glider (SZD) -- Index of General Service Bulletins.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# KEIN MUSTER, UND DESHALB EINE EIGENE DATEI.
+#
+# Neben den Musterblättern führt SZD ein Blatt "INDEX OF GENERAL SERVICE
+# BULLETINS": Anweisungen, die nicht an einem Baumuster hängen, sondern an
+# einem BAUTEIL, das in vielen SZD-Segelflugzeugen steckt -- Anschnallgurte
+# (J5.00.00), Steuerseile, die Schleppkupplung SZD-III A-56. Es liegt in jedem
+# Musterordner als dieselbe Datei; hier steht die aus dem Perkoz-Ordner.
+#
+# Es braucht eine eigene Datei, weil das Nummernformat ein anderes ist: die
+# Nummer trägt hier die BAUTEILGRUPPE im Namen ("BK-001/77/Seat belts/J5.00.00",
+# "BE-007/94 Control cables"). Das Muster der Musterblätter erkennt das nicht,
+# und ein gemeinsames Muster wäre für beide zu weit.
+#
+# 13 Zeilen, 0 verworfen -- gegen das Blatt gezählt.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# ZWEI OFFENE PUNKTE, BEIDE NICHT AUS DIESER DATEI ZU LÖSEN:
+#
+#  1. general: true bedeutet in diesem System "ein ANGEBOT, keine Pflicht" --
+#     eine allgemeine Zeile erscheint in der Übersicht eines Flugzeugs erst,
+#     wenn sie dort durchgeführt wurde. Für DG's allgemeine TMs (genehmigte
+#     Verfahren) stimmt das. Für DIESES Blatt ist es fraglich: elf der
+#     dreizehn Zeilen stehen unter "Mandatory", darunter BE-007/94 zur
+#     Lebensdauer von Steuerseilen. Wer sie als Angebot führt, nimmt sie aus
+#     der Liste der offenen Punkte heraus. Bitte fachlich entscheiden.
+#
+#  2. Dieselbe Zeilengrenzen-Schwäche wie bei szd.yaml (dort ausführlich
+#     beschrieben, samt dem Grund, warum overview.numbers_centred_in_row hier
+#     noch nicht geht): Nummer und Zeilenzahl stimmen, title/compliance laufen
+#     in die Nachbarzeile über. Auf diesem Blatt kostet der neue Modus sogar
+#     eine ganze Zeile -- 12 statt 13 -- weil die Bauteilgruppe unter der
+#     Nummer ("Control cables") dann zur Nachbarzeile wandert.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: szd-general
+label: 'Allstar PZL Glider — Allgemeine SB (Index)'
+issuer: 'Allstar PZL Glider'
+
+type: overview
+default_kind: sb
+subject_kind: aircraft_model
+
+overview:
+  # Wie eine allgemeine SB-Nummer aussieht:
+  #   BK-001/77/Seat belts/J5.00.00 · BI-002/80/Seat belts/J5.00.00
+  #   BE-03/J5/81/Seat belts/J5.00.00 · BE-006/93/J5/Seat belts/J5.00.00
+  #   BR-001/SZD-III.A-56/88 · BE-007/94 Control cables
+  #   BE-002/SZD-III.A-56/97 · BE-001/SZD/2011 · SIL-001/SZD/2012
+  #   BE-001/SZD/2023
+  #
+  # Gefangen wird nur der KENNZEICHNENDE TEIL, mitgelesen (und damit aus dem
+  # Vollständigkeitsbericht herausgehalten) wird der Rest. Das ist die
+  # Schreibweise des Herstellers selbst: dieses Blatt verweist in der Spalte
+  # "Compliance" auf "BK-001/77" -- ohne "Seat belts/J5.00.00". Die
+  # Bauteilgruppe ist Zusatz, nicht Identität.
+  #
+  # \s+ als Trenner, weil die Nummer im Zellenumbruch bricht und der Leser die
+  # Hälften mit einem Leerzeichen zusammensetzt: "BE-002/SZD-III." und
+  # "A-56/97" ergeben "BE-002/SZD-III. A-56/97". Auch hier bleibt das
+  # Leerzeichen im Ergebnis stehen (siehe szd.yaml).
+  number_pattern: |-
+    ~^((?:BE|BK|BI|BR|SIL)-\d{1,3}
+       (?:(?:\s*/\s*|\s+)(?:SZD[A-Za-z0-9.\-]*|J\d+|[A-Z]{1,3}-\d{1,3}|\d{2,4}))*
+      )
+      (?:\s*/?\s*(?:[A-Za-z][A-Za-z0-9./\- ]*)?)?$~x
+
+  headings:
+    number: ['sb no']
+    subject: ['vrs']
+    title: ['subject']
+    compliance: ['compliance']
+    # Keine Behördenspalte: die Spalte "Notes" ist auf diesem Blatt leer.
+
+  bilingual: false
+  blank_separates_rows: true
+  ends_at: '/END OF RECORD/'
+
+  # Der Briefkopf und die Abschnittsüberschrift, die in die Nummernspalte
+  # fallen. Das Blatt hat nur eine Seite, deshalb wiederholt sich nichts davon
+  # oft genug, um von selbst als Seitenmöbel erkannt zu werden.
+  ignore: |-
+    /^(?:
+        Allstar | Sp\. | ul\. | P-4 | INDEX | SERVICE\s+BULLETINS | Updated:
+      | (?:PL|EN|DE)\s*[–-]
+     )/ux
+
+  # Ein Blatt für alles -- es gibt kein Muster, nach dem zu fragen wäre.
+  # Abgerufen und geprüft (200, application/pdf).
+  url: 'https://www.szdallstar.com/media/technische-mitteilungen/szd-54-2-perkoz/index-of-general-service-bulletins-szd-en.pdf'
+
+bindingness:
+  optional_phrases:
+    - 'user’s decision'
+    - "user's decision"
+    - 'user’s choice'
+    - "user's choice"
+    - 'user’s request'
+    - "user's request"
+    - 'information'
+  mandatory_override: '/(mandatory|obligatory|immediately|before next flight|upon receipt)/i'

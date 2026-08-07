@@ -1,0 +1,104 @@
+# EASA Airworthiness Directives -- ueber das Safety Publications Tool.
+#
+# ---------------------------------------------------------------------------
+# DIE ZWEITE BEHOERDLICHE QUELLE, und die, auf die es hier fachlich ankommt: Fuer
+# europaeisch zugelassene Muster ist die EASA-AD die verbindliche Anweisung. Bis
+# hierher kam sie nur ZWEITER HAND herein -- dort, wo ein Hersteller in seiner
+# eigenen Spalte eine zitiert.
+#
+# KEIN LOGIN, KEIN SCHLUESSEL. ad.easa.europa.eu/search/ beantwortet einen
+# gewoehnlichen GET mit der vollstaendigen Ergebnistabelle (class="ad-list").
+# Das Formular der Seite postet zwar, aber dieselben Parameter als Query-String
+# liefern Zeichen fuer Zeichen dasselbe -- geprueft.
+#
+# GESUCHT WIRD MIT EINEM BEGRIFF, nicht mit einer Musterkennung, die die Behoerde
+# vergibt. Deshalb dieselbe Zuordnung wie bei faa-ad.yaml: je Muster ein
+# ausgeschriebener Suchbegriff. Ein geratener liefert keine Fehlermeldung,
+# sondern eine leere Liste -- und eine leere Liste von
+# Lufttuechtigkeitsanweisungen liest sich wie "fuer Ihr Flugzeug wurde nichts
+# erlassen".
+#
+# OHNE Begriff antwortet das Werkzeug mit ALLEN Anweisungen. Der Treiber lehnt
+# ein unbekanntes Muster deshalb namentlich ab, statt ungefiltert zu fragen:
+# Tausende fremder ADs kaemen als unbeurteilte Zeilen herein, und unbeurteilt
+# blockiert die Freigabe.
+# ---------------------------------------------------------------------------
+
+name: easa-ad
+label: 'EASA Airworthiness Directives'
+issuer: 'EASA'
+type: table
+
+default_kind: ad
+subject_kind: aircraft_model
+number_prefix: false
+
+page:
+  # Die Seitenzahl steht im PFAD, nicht im Query-String -- und der Filter bleibt
+  # dabei erhalten (geprueft: "Displaying records 21 to 40 out of a total of 57").
+  # Als Query-Parameter angehaengt kaeme immer Seite eins zurueck, und die Liste
+  # bræche still bei 20 von 57 ab.
+  url: 'https://ad.easa.europa.eu/search/page-{page}/?fi_action=simple&fi_keyword={term}'
+
+  pagination:
+    parameter: 'page'
+    max_pages: 60
+    delay_ms: 300
+
+  table_pattern: '#<table[^>]*class="ad-list".*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 7
+
+  # Die Kopfzeile traegt sieben Zellen wie eine Datenzeile und rutscht sonst als
+  # Anweisung namens "Number" durch.
+  ignore: '#^Number$#'
+
+  # Das Dokument selbst liegt als blob unter der Zeile.
+  document_pattern: '#href="(https://ad\.easa\.europa\.eu/blob/[^"]+)"#i'
+
+# AD-Nr. | Issued by | Ausgabedatum | Subject | Approval Holder / Type | wirksam ab | Anhang
+columns:
+  number: 0
+  date: 2
+  title: 3
+  affected: 4
+
+# Je Muster der Begriff, mit dem die Behoerde ihn findet. Nur was nachgeschlagen
+# wurde, steht hier -- ein Eintrag mehr waere eine Vermutung.
+endpoint:
+  terms:
+    'ASK 21': 'Schleicher'
+    'ASK 23': 'Schleicher'
+    'ASW 19': 'Schleicher'
+    'ASH 25': 'Schleicher'
+    'SF 25': 'Scheibe'
+    'SF 28': 'Scheibe'
+    'Bergfalke': 'Scheibe'
+    'DG-300': 'DG Flugzeugbau'
+    'DG-1000': 'DG Flugzeugbau'
+    'LS4': 'DG Flugzeugbau'
+    'Discus': 'Schempp-Hirth'
+    'Duo Discus': 'Schempp-Hirth'
+    'Ventus': 'Schempp-Hirth'
+    'Arcus': 'Schempp-Hirth'
+    'G 109': 'Grob'
+    'G 115': 'Grob'
+    'G 103': 'Grob'
+    'G 102': 'Grob'
+    # NICHT "Robin": das trifft Robinson-Hubschrauber, und ein DR400-Halter
+    # bekaeme R44-Anweisungen. Gegengeprueft -- "CEAPR" liefert 89 Treffer,
+    # ausschliesslich Robin-Muster.
+    'DR400': 'CEAPR'
+    'DR300': 'CEAPR'
+    'AT01': 'Aquila'
+    'HK36': 'Diamond'
+    'DA40': 'Diamond'
+    'DA42': 'Diamond'
+    'S10': 'Stemme'
+    'S12': 'Stemme'
+    'Antares': 'Lange'
+    'Taifun': 'Valentin'
+    'EA-300': 'Extra'
+    'Z142': 'Zlin'
+    'Z242': 'Zlin'

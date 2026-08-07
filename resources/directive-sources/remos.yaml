@@ -1,0 +1,70 @@
+# REMOS -- Service Bulletins
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# EINE REINE LINKLISTE, und die Seite gibt nicht mehr her als das. Jede
+# Anweisung steht als
+#
+#   <p><a href=".../SB-013-aircraft-battery.pdf"><strong>SB-013-aircraft-battery</strong></a></p>
+#
+# Nummer und Gegenstand stecken zusammen im Linktext, mit Bindestrichen
+# verbunden. Sonst nichts: kein Ausgabedatum, keine Dringlichkeit, keine
+# Musterangabe.
+#
+# DAS DATUM BLEIBT DESHALB LEER. Aus dem Pfad ("/2017/03/") liesse es sich
+# scheinbar gewinnen -- das ist aber das Datum, an dem WordPress die Datei
+# hochgeladen hat, nicht das der Ausgabe. Fünfzehn der neunzehn liegen unter
+# demselben Monat, was genau das belegt: es ist das Datum der Migration.
+# Ein Datum zu bauen, das aussieht wie eine Herstellerangabe und keine ist,
+# wäre schlechter als keines.
+#
+# DER TITEL IST DER STRING DES HERSTELLERS, Bindestriche inklusive
+# ("aircraft-battery"). Sie zu Leerzeichen zu machen wäre Kosmetik an fremdem
+# Text; lesbar ist er so oder so, und suchen lässt er sich damit auch.
+#
+# ROTAX IM NAMEN heisst nicht Rotax als Herausgeber: "SB-012-ROTAX-modification-
+# CHT" ist REMOS' eigene Anweisung, die eine Rotax-Änderung an ihren Flugzeugen
+# vorschreibt, mit REMOS' eigener Nummer. Anders als bei Aquila, das fremde
+# Anweisungen unter deren Originalnummern führt -- deshalb hier kein
+# secondary_list.
+#
+# ZWEI GATTUNGEN AUF EINER SEITE, und die zweite wäre fast verlorengegangen:
+#
+#   SB-001 … SB-013   Service Bulletins    13
+#   SD-001 … SD-006   Service Directives    6
+#
+# Ein Muster nur auf SB- liess die sechs SD stillschweigend liegen -- und bei
+# REMOS ist die Directive die schärfere der beiden Gattungen. Ein Verein hätte
+# eine vollständig aussehende Liste bekommen, in der genau die verbindlichen
+# Dokumente fehlen. Das Muster nimmt deshalb beide Präfixe; welches es ist,
+# steht in der Nummer und damit vor den Augen dessen, der sie abhakt.
+#
+# GEZÄHLT: 19 Dokumente. Der Vollständigkeitsbericht muss leer bleiben.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: remos
+label: 'REMOS (Service Bulletins und Directives)'
+issuer: 'REMOS AG'
+type: list
+
+default_kind: sb
+subject_kind: aircraft_model
+
+page:
+  url: 'https://remos.com/service-bulletins/'
+
+  # Der Link selbst ist die Zeile. Das <strong> steht mal innerhalb, mal
+  # ausserhalb des <a> -- am Anker festgemacht ist beides derselbe Fall.
+  row_pattern: '#<a[^>]*href="[^"]*\.pdf"[^>]*>.*?</a>#is'
+
+columns:
+  # "SB-013-aircraft-battery" -- die Nummer ist der Teil vor dem Gegenstand.
+  # Aus dem LINKTEXT und nicht aus dem Dateinamen, obwohl beide hier gleich
+  # lauten: der Dateiname ist die Ablage des Herstellers. Zieht er sie um,
+  # änderte sich sonst die Nummer im Bestand und dieselbe Anweisung läge
+  # zweimal da.
+  number: '#>(?:\s*<strong>)?\s*((?:SB|SD)-\d+)#i'
+
+  # Was hinter der Nummer steht, ohne sie zu wiederholen.
+  title: '#>(?:\s*<strong>)?\s*(?:SB|SD)-\d+-([^<]+?)\s*(?:</strong>)?\s*</a>#i'
+
+  document: '#href="([^"]+\.pdf)"#i'

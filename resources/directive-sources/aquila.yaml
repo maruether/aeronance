@@ -1,0 +1,83 @@
+# AQUILA Aviation -- alles, was die AT01 betrifft.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Die AT01 ist als Schulflugzeug breit vertreten. AQUILA Aviation International
+# GmbH, Schoenhagen, existiert unveraendert -- kein Musterhalterwechsel. Das
+# Blatt traegt Ausgabe B.32 vom 24.09.2025.
+#
+# DIES IST KEINE REINE HERSTELLERLISTE. Aquila fuehrt darin alles, was die AT01
+# betrifft: eigene TMs, Rotax, MT-Propeller, Garmin, EASA-ADs -- quer durch das
+# Dokument verschachtelt, nicht in einem abtrennbaren Block. Und sie benutzen
+# dabei die ORIGINALNUMMERN: 67 der 74 rotaxartigen Nummern stehen zeichengleich
+# auch in rotax.yaml.
+#
+# ALLES KOMMT HEREIN. Vorgabe: "ich haette lieber eine nicht mehr gueltige tm,
+# die ich als alt abhaken kann wie eine zu wenig." Sieben Nummern stehen nur
+# hier und nicht mehr in Rotax' Dokumentensuche -- vermutlich zurueckgezogen,
+# fuer alte Werknummern aber weiter gueltig. Genau die haette ein Ausschluss
+# der Zulieferabschnitte verloren.
+#
+# Die 67 Dopplungen sind bekannt und beabsichtigt, bis der Abgleich ueber den
+# Herausgeber steht (siehe docs/LTA-TM.md).
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: aquila
+label: 'AQUILA AT01 (Übersicht)'
+issuer: 'AQUILA Aviation'
+type: overview
+default_kind: tm
+subject_kind: aircraft_model
+number_prefix: false
+
+# Aquilas Blatt ist eine ZWEITE Liste fremder Dokumente: 67 der 74 rotaxartigen
+# Nummern stehen zeichengleich auch in rotax.yaml. Wo eine andere Quelle das
+# Dokument schon führt, bleibt es dort -- was nur hier steht (die sieben
+# zurückgezogenen Rotax-Bulletins), wird weiter angelegt.
+secondary_list: true
+overview:
+  number_pattern: '#^(AT01-\d+|A?SB-91[24]i?-\d+|SL-91[24]-\d+|ROTAX-SB|MT-SB|SIB-?\d|IB\d+|SB\d+|SB-\d+|LTA-\d|EASA\s*AD\d)#i'
+
+  # Was Aquila sonst in die Nummernspalte schreibt und was keine Nummer ist:
+  #
+  #   Deckblatt        "Verzeichnis der gültigen", "Seite / page", 1-6, A1-A5
+  #   Werknummern      "147;", "187 - 190", "4.923.308", "Bis / up to", "355ff"
+  #   Behördenbezug    "EASA AD" und die Nummer darunter ("2004 -6339R1")
+  #
+  # Der Behördenbezug ist der wichtigste Fall: Er steht INNERHALB der Zelle von
+  # AT01-002, nicht daneben. Als Nummer gelesen eröffnet er einen zweiten
+  # Eintrag und zerreißt den ersten.
+  # Dazu der Fließtext des Deckblatts, der in der Nummernspalte beginnt: Aquila
+  # erklärt dort auf zwei Sprachen, was die Liste enthält.
+  ignore: '#^(Nachfolgend|die zum|Ausgabe,|wesentliche|übernommen|In the|to the|this|any previous|was not|Seite$|- deleted|Verzeichnis|Seite\s*/|[0-9]{1,2}$|A[0-9]{1,2}$|B/C$|EASA$|EASA\s+AD$|EASA\s+AD\s+(Alle|\d{3}\s*[–-])|Alle mit|SIB\s|LTA-TM|[0-9]{4}\s*-\s*[0-9]{0,4}|[0-9]{1,3}[;,]|[0-9]{1,3}\s*[-–]\s*[0-9]{1,3}|[0-9]\.[0-9]{3}\.[0-9]{3}|Neubau|new A/C|Bis\s*/|Ab\s*/|siehe|GARMIN|[0-9]{3}ff|- deleted -|AQUILA)#i'
+  headings_centred: true
+
+  # Die Spalten driften zwischen den Seiten -- deshalb je Seite messen statt
+  # einmal fuers Dokument.
+  columns_per_page: true
+
+  # Aquilas Spalten driften zwischen den Seiten; die "---" der
+  # Baureihen-Unterspalten ("trifft nicht zu") landen dadurch im Titel.
+  title_strip: '#\s*(?:[-–—]{2,}\s*)+$#u'
+  numbers_centred_in_row: true
+  bilingual: true
+  headings:
+    number: ['sb-no', 'tm nr']
+    subject: ['affected model']
+    title: ['beschreibung']
+    # Das Datum ist zugeordnet, seit die Spalten je Seite gemessen werden.
+    #
+    # Vorher war es unbrauchbar: Der Leser griff Revisionsdaten vom Deckblatt ab.
+    # Jetzt gegengezaehlt gegen das Blatt -- 39 von 40 vergleichbaren Zeilen
+    # stimmen. Die eine Ausnahme ist AT01-001, die auf derselben Seite wie das
+    # "Verzeichnis der gueltigen Seiten" steht und dessen Datum mitnimmt
+    # (gelesen 07.05.2021, im Blatt 14.07.2014).
+    #
+    # 240 richtige Daten wegzuwerfen, um diesen einen zu vermeiden, waere der
+    # schlechtere Tausch -- benannt und per Test festgehalten statt versteckt.
+    date: ['datum']
+    compliance: ['bemerkungen']
+  documents:
+    'AT01': 'https://www.aquila-aviation.de/wp-content/uploads/2025/09/LSB_AT01_001_B32_Liste_der_SB.pdf'
+bindingness:
+  recommended_phrases: ['recommended', 'empfohlen']
+  optional_phrases: ['optional']

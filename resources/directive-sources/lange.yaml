@@ -1,0 +1,54 @@
+# Lange Aviation -- Service Bulletins und Technische Mitteilungen.
+#
+# ---------------------------------------------------------------------------
+# Lange fuehrt alle Muster in EINER Tabelle und trennt sie durch eine Zeile aus
+# zwei Zellen: "E1-Antares (Antares 20E)", darunter deren TMs, dann
+# "Antares 23T", und so weiter.
+#
+# Diese Trennzeilen fallen durch min_cells -- zu Recht, sie sind keine
+# Anweisungen. Mit ihnen fiel aber die einzige Aussage darueber, zu welchem
+# Muster die Zeilen darunter gehoeren: 19 Notes der 20E und drei der 23E kamen
+# ununterscheidbar an. page.section_pattern liest die Zeile aus, bevor sie
+# verworfen wird.
+#
+# KEIN AUSGABEDATUM. Die Tabelle hat keine Datumsspalte -- Nr., Beschreibung,
+# Betreff und Link, mehr gibt es nicht. Dieselbe Lage wie bei Lindner und
+# Stemme: Feld leer lassen.
+# ---------------------------------------------------------------------------
+
+name: lange
+label: 'Lange Aviation (Antares)'
+issuer: 'Lange Aviation'
+type: table
+
+default_kind: tm
+subject_kind: aircraft_model
+number_prefix: false
+
+page:
+  url: 'https://www.lange-aviation.com/service/service-bulletins-und-technische-mitteilungen/'
+
+  table_pattern: '#<table[^>]*id="tablepress-3".*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 4
+
+  # Die Musterzeile. Sie steht allein und nennt nur den Namen.
+  section_pattern: '#^\s*((?:E1-)?Antares[^\r\n]*?)\s*$#i'
+
+  document_pattern: '#href="([^"]+\.pdf[^"]*)"#i'
+
+# Nr. | Beschreibung | Betreff | Link
+#
+# "Betreff" traegt zweierlei: den Werknummernbereich ("01 bis 36E34") ODER das
+# Wort "Optional". Beides zeigt auf dieselbe Spalte -- als Betroffenheit und als
+# Dringlichkeit -, weil Lange dort beides schreibt.
+columns:
+  number: 0
+  title: 1
+  affected: 2
+  compliance: 2
+
+bindingness:
+  optional_phrases:
+    - optional

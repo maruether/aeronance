@@ -1,0 +1,41 @@
+# Aviat Aircraft -- Service Bulletins für die Husky.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Die Husky ist eine verbreitete Schleppmaschine. Aviat ist die einzige der
+# geprüften US-Quellen mit einer echten HTML-Tabelle, frei und ohne Login.
+#
+# KEIN DATUM. Die Tabelle führt Bulletin#, Betreff, Muster und Werknummern --
+# keine Datumsspalte. Dieselbe Lage wie bei Lindner und Stemme: Feld leer lassen.
+#
+# Die Verbindlichkeit steht im TITEL ("Mandatory Service Bulletin No. 33"),
+# nicht in einer Spalte. Sie von dort zu lesen wäre möglich, aber die Gegenprobe
+# fehlt: Ein Bulletin ohne das Wort ist deshalb nicht automatisch freiwillig.
+# Es bleibt alles verbindlich.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: aviat-husky
+label: 'Aviat Husky (Service Bulletins)'
+issuer: 'Aviat Aircraft'
+type: table
+
+default_kind: sb
+subject_kind: aircraft_model
+
+page:
+  url: 'https://aviataircraft.com/husky-service-bulletins/'
+
+  # Auf der Seite stehen zwei Tabellen: Bulletins und darunter Service Letters.
+  # Nur die erste ist gewollt -- das nicht-gierige Muster endet am ersten
+  # </table>.
+  table_pattern: '#<table[^>]*>.*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 4
+
+  document_pattern: '#href="([^"]+\.pdf)"#i'
+
+# Bulletin# | Subject | Model | Serial #
+columns:
+  number: 0
+  title: 1
+  affected: 2

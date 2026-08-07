@@ -1,0 +1,63 @@
+# MT-Propeller -- Service Bulletins.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# MT hängt an einem großen Teil der hier gefahrenen Motorsegler und
+# Motorflugzeuge. Drei Schwesterseiten mit identischer Struktur:
+#
+#   /en/entw/serviced.htm   Service Bulletins      (diese Datei)
+#   /en/entw/serv_le.htm    Service Letters
+#   /en/entw/serv_in.htm    Service Instructions
+#
+# Nur die Bulletins sind hier abgebildet. Bei den Service Instructions fehlen
+# die PDF-Links fast vollständig (1 von 79 vorhanden) -- gelistet, aber nicht
+# öffentlich herunterladbar; eine Quelle, die zu 99 % auf nichts zeigt, ist als
+# Anweisungsliste schlechter als keine.
+#
+# Der Bereich /service ("Service Docs for Stations") antwortet HTTP 401 mit
+# Basic-Auth. Nicht versucht, nicht nötig -- die Bulletins liegen frei.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: mt-propeller
+label: 'MT-Propeller (Service Bulletins)'
+issuer: 'MT-Propeller'
+type: table
+
+default_kind: sb
+subject_kind: propeller
+
+page:
+  url: 'https://www.mt-propeller.com/en/entw/serviced.htm'
+
+  table_pattern: '#<table[^>]*summary="this table contains all MT-Propeller Service Bulletins".*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 3
+
+  # Die Links stehen relativ ("../../pdf/..."); der Treiber macht sie gegen die
+  # Seitenadresse absolut.
+  document_pattern: '#href="([^"]+\.pdf)"#i'
+
+  # Die erste Zeile der Tabelle ist die LISTE der Bulletins, nicht eines. Sie
+  # als Anweisung zu führen erzeugt einen offenen Punkt, den niemand durchführen
+  # kann.
+  ignore: '/^list\b/i'
+
+# No. | Content | Date of Revision
+columns:
+  number: 0
+  title: 1
+  date: 2
+
+# Die Nummernzelle trägt die Dateigröße mit ("1R12 (.pdf, 1550k)"). Die gehört
+# nicht zur Nummer -- und sie ist INSTABIL: Bei jeder Revision ändert sich die
+# Größe, die Nummer wechselte mit, und der Import legte eine zweite Anweisung an
+# statt die erste zu aktualisieren.
+number_strip: '/\s*\(\.pdf[^)]*\)\s*$/i'
+
+# Das Datum steht als "June 10, 2026" -- eindeutig, weil ein Monatsname nicht
+# mit einem Tag verwechselt werden kann.
+#
+# Die Inhaltsspalte ist ZWEISPRACHIG in einer Zelle (deutsch und englisch
+# hintereinander) und trägt die Behördennummer im Klartext: "(LTA # 89-108)",
+# "(EASA AD No. 2006-0345)". Sieben Zeilen der Bulletin-Tabelle haben eine.
+authority_kind_pattern: '/EASA|AD|LTA/i'

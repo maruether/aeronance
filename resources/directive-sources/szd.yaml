@@ -1,0 +1,273 @@
+# Allstar PZL Glider (SZD) -- Index of Service Publications, ein Blatt je Muster.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE ÜBERSICHT IST DIE QUELLE. Bei SZD heisst sie "INDEX OF SERVICE
+# PUBLICATIONS" und liegt öffentlich, ohne Login, auf der Musterseite
+# (/en/service/technical-documentation/<muster>).
+#
+# Der erste nicht-deutsche Fall, und er ist in drei Punkten anders:
+#
+#  1. KEINE PRÜFERSPALTE. Die deutschen Blätter tragen rechts ein Feld
+#     "Durchgeführt, Datum, Unterschrift" bzw. "Prüfvermerk"; SZD nicht. Das
+#     Feld bleibt leer -- eine Spalte weniger, kein Problem.
+#
+#  2. KEINE AUSGABEDATUMSSPALTE. Das Blatt nennt nirgends ein Ausgabedatum;
+#     das Jahr steckt nur in der Nummer ("BE-063/SZD-50-3/2014"). issued_at
+#     bleibt deshalb null. Ein Datum aus der Nummer zu bauen wäre geraten.
+#
+#  3. HANDBÜCHER UND ANWEISUNGEN IM SELBEN DOKUMENT. Jedes Blatt beginnt mit
+#     einem Abschnitt "MANUALS" (Flughandbuch, Instrukcja Obsługi Technicznej,
+#     Ersatzteilkatalog, ...) und erst danach kommt "SERVICE BULLETINS". Das
+#     ist die Gefahr dieses Herstellers -- wie bei DG, wo nur ein Drittel der
+#     Bibliothek TMs sind.
+#
+#     Abgegrenzt wird über DREI unabhängige Merkmale, nicht über eine Vermutung:
+#       - Die beiden Abschnitte haben VERSCHIEDENE KÖPFE. Der Handbuchteil
+#         überschreibt "Issued by / Author | Document | Vrs. | Date of Issue |
+#         Current Revision", der Anweisungsteil "SB No. | Vrs. | S/N | Subject |
+#         Compliance | Notes". Der Leser sucht eine Kopfzeile, die eine
+#         Nummern- UND eine Gegenstandsspalte hat -- "Document" ist keine von
+#         beiden, also ist der Handbuchkopf keine Tabellenkopfzeile.
+#       - Kein Handbuch trägt eine SB-Nummer. Das Nummernmuster unten verlangt
+#         BE/BK/BI/BR/SIL/A + Zahl; "Flight Manual" und "Rev. 5, Oct. 1993"
+#         erfüllen das nicht, und keine Handbuchzeile wurde je als Anweisung
+#         gelesen.
+#       - Was der Handbuchteil trotzdem in die Nummernspalte schreibt, ist der
+#         HERAUSGEBER ("PD-PS „PZL Bielsko”", "Allstar PZL Glider"). Genau das
+#         steht unten unter ignore, namentlich und sonst nichts.
+#
+# Gegengezählt gegen die Blätter, Zeile für Zeile:
+#   SZD-48-3 Jantar Std. 3   16 Zeilen, 0 verworfen
+#   SZD-50-3 Puchacz         71 Zeilen, 0 verworfen
+#   SZD-51-1 Junior          14 Zeilen, 0 verworfen
+#   SZD-54-2 Perkoz           6 Zeilen, 0 verworfen
+#   SZD-55-1 Nexus           12 Zeilen, 0 verworfen
+#   SZD-59/-1 Acro           11 Zeilen, 0 verworfen
+#   General                  13 Zeilen, 0 verworfen  (siehe szd-general.yaml)
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE ZEILENGRENZEN -- GELÖST, UND ZWAR IM LESER.
+#
+# SZD setzt die Nummer SENKRECHT MITTIG in ihre Zeile und trennt die Zeilen
+# NICHT durch Leerzeilen (Puchacz: 12 von 70 Übergängen haben eine, Junior 0
+# von 13). Der Leser las einen Block ab der Nummernzeile -- bei Schleicher
+# richtig, weil dort Leerzeilen trennen, bei DG, weil die Nummer oben steht.
+# Hier lief dadurch jeder Titel in die Nachbarzeile, und aus übergelaufenem
+# Betroffenheitstext entstanden falsche Serienbereiche.
+#
+# overview.rows_tile_around_numbers liest die Anordnung als das, was sie ist:
+# Die Zeilen STOSSEN ANEINANDER und jede ist symmetrisch um ihre Nummer, also
+#
+#     Ende = 2 · Mitte − Anfang,   nächster Anfang = Ende + 1
+#
+# Nichts daran ist geschätzt; jede Grenze folgt aus der vorigen. Gegen das
+# Junior-Blatt von Hand nachgerechnet, alle 14 Zeilen, einschliesslich der
+# sieben- und dreizehnzeiligen. Die Titel sind auf allen sieben Blättern wieder
+# die Sätze des Herstellers.
+#
+# Dazu gehörten zwei Nebenbefunde, beide im Leser behoben:
+#   - Unter der Kopfzeile galten drei Zeilen bedingungslos als Seitenkopf. Bei
+#     SZD beginnt die erste Datenzeile zwei Zeilen darunter -- sie wurde als
+#     Seitenmöbel verworfen, und das war der Serienbereich der ersten Zeile.
+#   - "Jantar Standard-3" steht unter jeder Nummer, sechzehnmal, erste Spalte:
+#     nach der Wiederholungsregel Seitenmöbel. Es steht aber unten unter
+#     ignore, ist also erklärtermassen Zeileninhalt. Von der Spec benannte
+#     Nicht-Nummern gelten seither nicht mehr als Möbel.
+#
+# WAS BLEIBT, und es ist eine Messgrenze und keine Zeilengrenze: pdftotext
+# setzt "Vrs." und "S/N" zwei bis vier Zeichen auseinander, beide sind DIESELBE
+# gemessene Spalte. Der Sprachmarker steht deshalb im Serientext ("From S/N
+# B-903 to B-EN 907"). Mit headings_centred und subject: ['s/n'] versucht --
+# das verschiebt den Marker nur nach skipped(). Im Test angepinnt.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: szd
+label: 'Allstar PZL Glider (Index)'
+issuer: 'Allstar PZL Glider'
+
+type: overview
+
+# Was eine Zeile IST, wenn sie die Nummer des Herstellers trägt. SZD nennt sie
+# "Service Bulletin"; BE/BK/BI/BR sind polnische Kürzel derselben Gattung
+# (biuletyn), SIL ein Service Information Letter. Gattung ist nicht Identität
+# -- siehe Nummernmuster.
+default_kind: sb
+subject_kind: aircraft_model
+
+overview:
+  # Wie eine SB-Nummer auf SZD-Blättern aussieht.
+  #
+  # x-Modus, weil das Muster vier Jahrzehnte Schreibweisen abdecken muss:
+  #   BE-01/79 · BE-02/50-3/79 · BK-04/50-3/81 · BI-27/50-3/84 · BR-39/50-3/89
+  #   A-047/50-3/94 · BE-001/85 · BE-014/22 · BE-020/83 · BI-41/90
+  #   BE-01-55-1-89 · BE/R-10-55-1-96 · BE-012/55-1/2012 · BK-01-59-95
+  #   BE-048/SZD-50-3/2000 · BE-049/SZD-50-3-2000 · SIL-001/SZD/2012
+  #
+  # Die Kürzel sind Bestandteil der Nummer, nicht Gattungsmarker davor: BE und
+  # BK zählen EINE gemeinsame Reihe durch (…BE-03/81, BK-04/81, BE-05/81…), es
+  # gibt also kein "BE-04" neben "BK-04". Anders als bei DG, wo "TM" und "TN"
+  # dieselbe Anweisung bezeichnen.
+  #
+  # Der Schwanz muss mit, denn die Zählung beginnt in den ersten Jahren neu:
+  # BE-01/79 und BE-01/50-3/80 sind zwei verschiedene Anweisungen. "BE-01"
+  # allein wäre eine Kollision.
+  #
+  # \s* an den Trennern, weil eine Nummer im Zellenumbruch bricht: das Blatt
+  # setzt "BE-048/" und "SZD-50-3/2000" auf zwei Zeilen. Der Leser fügt beide
+  # Hälften mit einem Leerzeichen zusammen (nur ein Bindestrich am Ende klebt),
+  # also steht in der gelesenen Nummer dort, wo das Blatt umbricht, ein
+  # Leerzeichen: "BE-048/ SZD-50-3/2000". Das ist ein Artefakt des Umbruchs,
+  # keine erfundene Zeichenfolge -- korrigierbar nur im Leser (join()).
+  #
+  # Der zweite Zweig fängt die Zeile, deren Nummer erst darunter steht: Perkoz
+  # setzt "SIL-" allein in die Zelle und "001/SZD/2012" darunter. Er hat keine
+  # Fanggruppe, die Nummer kommt dann aus der ganzen Zelle -- wie bei DG's
+  # "Service Info".
+  number_pattern: |-
+    ~^(?:
+         ((?:BE/R|BE|BK|BI|BR|SIL|A)-\d{1,3}
+          (?:\s*[/-]\s*(?:SZD(?:-\d{1,3}(?:-\d{1,2})?)?|\d{1,4}(?:-\d{1,2})?))*
+          (?:\s*[/-])?
+          (?:\s+Rev(?:ision)?\.?\s*\d+)?)
+       |
+         (?:BE/R|BE|BK|BI|BR|SIL|A)-(?=\s|$)
+      )(?![\w.-])~x
+
+  headings:
+    # "SB No." auf fünf Blättern, "SN No." auf dem Junior -- ein Tippfehler des
+    # Herstellers, der genauso zur Kopfzeile gehört wie die richtige Fassung.
+    number: ['sb no', 'sn no']
+
+    # Absichtlich die Sprachspalte "Vrs." und nicht "S/N".
+    #
+    # Beides ist DIESELBE gelesene Spalte: pdftotext setzt "Vrs." und "S/N" nur
+    # zwei bis vier Zeichen auseinander, und die gemessenen Spalten fallen
+    # zusammen. Der Unterschied liegt im KOPF: auf dem Acro-Blatt steht "S/N"
+    # mittig über seiner Spalte (Zeichen 45) und damit näher an der
+    # Gegenstandsspalte als an der eigenen -- die Zuordnung landete dort, und
+    # die Werknummernbereiche ("B-2166 to B-2175") fielen in die NUMMERNSPALTE
+    # und wurden als verlorene Anweisungen gemeldet. "Vrs." steht links über
+    # seiner Spalte und trifft. Der Wert dieses Feldes ist dadurch "PL, EN"
+    # plus der Werknummerntext.
+    subject: ['vrs']
+
+    # Was SZD "Subject" nennt, nennen DG und Schleicher "Gegenstand".
+    title: ['subject']
+
+    # Dieselbe Spalte, die DG "Dringlichkeit" und Schleicher "Termin" nennt.
+    # "Compilance" ist der Tippfehler auf dem Junior-Blatt.
+    compliance: ['compliance', 'compilance']
+
+    # KEINE Behördenspalte, obwohl die Spalte "Notes" EASA- und FAA-AD-Nummern
+    # führt (Puchacz allein neun, u.a. "EASA AD 2006-0317").
+    #
+    # Sie ist nicht zuzuordnen: auf dem Jantar-, Junior- und Nexus-Blatt ist
+    # "Notes" durchgehend LEER, es gibt dort also keine gemessene Spalte, und
+    # die Überschrift rastet auf die Dringlichkeitsspalte ein -- beide Felder
+    # zeigten dann auf dieselbe Spalte, und jede Dringlichkeit mit einer Ziffer
+    # ("Mandatory after 1500 FH") wäre zur Behördennummer geworden. Eine
+    # Behördennummer macht eine Zeile verbindlich; das wäre eine erfundene
+    # Verbindlichkeit. Lieber das Feld leer.
+
+  # Einsprachig. Die Zeilen sind ENGLISCH; die Spalte "Vrs." sagt nur, in
+  # welchen Sprachen das Dokument dahinter existiert (PL/EN/DE), nicht dass die
+  # Zeile doppelt stünde.
+  bilingual: false
+
+  # Die Zeilen stossen aneinander und die Nummer steht mittig -- siehe den Kopf
+  # dieser Datei. numbers_centred_in_row ordnet Zellen der nächstgelegenen
+  # Nummer zu, rows_tile_around_numbers rechnet die Grenzen aus.
+  numbers_centred_in_row: true
+  rows_tile_around_numbers: true
+  blank_separates_rows: false
+
+  # SZD schliesst jedes Blatt mit "END OF RECORD". Darunter stehen nur noch die
+  # Sprachlegende und der Fusszeilenstand.
+  ends_at: '/END OF RECORD/'
+
+  # Was auf diesen Blättern ausser Nummern in der Nummernspalte steht.
+  # Namentlich und sonst nichts -- jedes Wort hier ist eines, vor dem der
+  # Vollständigkeitsbericht nicht mehr warnen kann:
+  #   MANUALS                      die Abschnittsüberschrift
+  #   Author / Issued (by)         der Kopf des Handbuchteils
+  #   Updated: …                   der Fusszeilenstand (nicht auf jeder Seite
+  #                                gleich, wird deshalb nicht als Seitenmöbel
+  #                                erkannt)
+  #   Allstar / Glider / PZL /     der Herausgeber im Handbuchteil, in allen
+  #   Bielsko / PD-PS / PD – PS    Schreibweisen der sechs Blätter
+  #   Napraw                       Rest von "Instrukcja Napraw", das der Umbruch
+  #                                in die Nummernspalte geschoben hat
+  #   PL – / EN – / DE –           die Sprachlegende unter der Tabelle
+  #   43-300 Bielsko-Biała         die Postanschrift. Sie fiel früher unbemerkt
+  #                                in eine Nachbarspalte; seit die Zuordnung
+  #                                mittig gesetzte Zellen richtig einordnet,
+  #                                landet sie in der Nummernspalte und muss
+  #                                benannt werden.
+  #   Jantar …                     das Muster, das SZD auf dem Jantar-Blatt
+  #                                UNTER die Nummer setzt. Es gehört nicht zur
+  #                                Nummer: das Blatt selbst zitiert seine
+  #                                Anweisungen als "BE-043/92 „Jantar”", also
+  #                                Nummer plus Muster.
+  # Keine dieser Zeichenfolgen kann eine SB-Nummer sein -- die beginnt immer
+  # mit BE/BK/BI/BR/SIL/A und einer Ziffer -- und eine erkannte Nummer geht
+  # dieser Liste ohnehin vor.
+  ignore: |-
+    /^(?:
+        MANUALS | Author | Issued | Updated:
+      | Allstar | Glider | Bielsko | [„“]?PZL | PD\s*[–-]\s*PS | Napraw
+      | \d{2}-\d{3}\s+Bielsko
+      | Jantar
+      | (?:PL|EN|DE)\s*[–-]
+     )/ux
+
+  # Die Blätter je Muster, ausgeschrieben -- und das ist hier keine Bequemlichkeit.
+  #
+  # Die Musterseiten verlinken RELATIV ("media/technische-mitteilungen/…") und
+  # setzen <base href="https://www.szdallstar.com/">; ein aus der Seite
+  # gefischter Link wäre ohne Host und damit unbrauchbar. Und geraten werden
+  # können die Adressen erst recht nicht: der Puchacz-Ordner heisst
+  # "szd-50-3-puchaz" (ein c fehlt), und die Acro-Datei heisst
+  # "index-of-service-publications-szd-59-szd-59-1-en.pdf". Eine geratene
+  # Adresse wäre ein 404 -- der aussieht wie "für dieses Muster gibt es nichts".
+  #
+  # Jede Adresse ist einmal abgerufen und geprüft (200, application/pdf).
+  # SZD-59 steht zusätzlich, weil das Blatt selbst "SZD-59 / SZD-59-1 Acro"
+  # überschrieben ist und beide Baureihen führt.
+  documents:
+    'SZD-48-3': 'https://www.szdallstar.com/media/technische-mitteilungen/szd-48-3-jantar/index-of-service-publications-szd-48-3-en.pdf'
+    'SZD-50-3': 'https://www.szdallstar.com/media/technische-mitteilungen/szd-50-3-puchaz/index-of-service-publications-szd-50-3-en.pdf'
+    'SZD-51-1': 'https://www.szdallstar.com/media/technische-mitteilungen/szd-51-1-junior/index-of-service-publications-szd-51-1-en.pdf'
+    'SZD-54-2': 'https://www.szdallstar.com/media/technische-mitteilungen/szd-54-2-perkoz/index-of-service-publications-szd-54-2-en.pdf'
+    'SZD-55-1': 'https://www.szdallstar.com/media/technische-mitteilungen/szd-55-1-nexus/index-of-service-publications-szd-55-1-en.pdf'
+    'SZD-59': 'https://www.szdallstar.com/media/technische-mitteilungen/szd-59-1-acro/index-of-service-publications-szd-59-szd-59-1-en.pdf'
+    'SZD-59-1': 'https://www.szdallstar.com/media/technische-mitteilungen/szd-59-1-acro/index-of-service-publications-szd-59-szd-59-1-en.pdf'
+
+bindingness:
+  # Aus der Spalte "Compliance" selbst gezogen, nicht ausgedacht. Alles, was
+  # hier NICHT steht, gilt als verbindlich -- eine unbekannte Formulierung
+  # lässt eine Zeile auf der Liste stehen statt sie abzutun.
+  #
+  # Beide Apostrophe, weil SZD auf den Musterblättern "User’s" schreibt und auf
+  # dem allgemeinen Blatt "user's".
+  #
+  # Bewusst NICHT dabei: "If necessary", "Replacing of pages in FM and TSM",
+  # "In case of crack found …". Das sind Bedingungen, keine Wahlfreiheiten --
+  # wer die Bedingung erfüllt, muss.
+  optional_phrases:
+    - 'user’s decision'
+    - "user's decision"
+    - 'user’s request'
+    - "user's request"
+    - 'user’s choice'
+    - "user's choice"
+    - 'information'
+
+  # Eine Formulierung, die wahlweise UND einen harten Termin nennt, ist nicht
+  # wahlweise: "Acc. to User's decision (1 000 FH inspection obligatory)" und
+  # "Considered as mandatory for the gliders flown over 6.000 FH. Recommended
+  # for …" stehen beide so im Blatt.
+  mandatory_override: '/(mandatory|obligatory|immediately|before next flight|upon receipt)/i'
+
+# Bleibt ohne Wirkung, solange keine Behördenspalte zugeordnet ist (siehe
+# headings) -- steht hier, damit die Zuordnung stimmt, sobald sie es kann.
+authority_kind_pattern: '/EASA|FAA|AD/i'

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+
+    <!--
+        DIE OBERFLAECHEN-TESTS LAUFEN GETRENNT, und zwar aus einem Grund, der
+        nichts mit ihrem Wert zu tun hat: Jeder von ihnen faehrt die Anwendung
+        neu hoch, damit die Modul-Ressourcen ueberhaupt Routen bekommen. Das
+        kostet gemessen 67 Sekunden je Test; bei sechs Tests sind das sieben
+        Minuten auf einen Lauf, der sonst neun dauert.
+
+        Sechzehn Minuten sind die Grenze, ab der man anfaengt, Laeufe zu
+        ueberspringen. Und genau das ist der Zustand, in dem eine rote Pipeline
+        drei Wochen unbemerkt bleibt; in diesem Projekt schon passiert.
+
+        Ausgeschlossen heisst NICHT weggelassen: In der CI laeuft ein eigener
+        Job (render in .gitlab-ci.yml), PARALLEL zum normalen. Die Pipeline
+        wird dadurch nicht langsamer, der schnelle Lauf bleibt schnell.
+
+        Von Hand:  vendor/bin/phpunit mit der Option "group rendering"
+    -->
+    <groups>
+        <exclude>
+            <group>rendering</group>
+        </exclude>
+    </groups>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <!--
+            Mehr Speicher als PHPs Standard, und das ist eine Folge der
+            Testphilosophie dieses Projekts: Geprueft wird gegen die ECHTEN
+            Herstellerseiten, nicht gegen zurechtgeschnittene Auszuege. Rotax
+            (456 kB), Stemme (714 kB) und Zlin (332 kB) sind gross, weil ihre
+            Tabellen gross sind: 490, 379 und 577 Zeilen.
+
+            Mit 128 MB stirbt der Prozess irgendwo im hinteren Drittel der Suite,
+            und zwar an einer voellig unbeteiligten Stelle: gemeldet wurde ein
+            Warehouse-Test, der fuer sich genommen laeuft. Wer das sieht, sucht
+            an der falschen Stelle.
+        -->
+        <ini name="memory_limit" value="512M"/>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="BROADCAST_CONNECTION" value="null"/>
+        <env name="CACHE_STORE" value="array"/>
+        <!--
+            Tests laufen gegen MariaDB, nicht gegen SQLite in-memory.
+            Das ist eine Architektur-Leitplanke, keine Vorliebe: Getestet wird
+            gegen die Datenbank, die auch produktiv laeuft. Siehe CLAUDE.md.
+            Zugang und Host kommen aus der .env; nur die Datenbank wird
+            umgebogen, damit Tests die Entwicklungsdaten nicht anfassen.
+        -->
+        <env name="DB_CONNECTION" value="mariadb"/>
+        <env name="DB_DATABASE" value="aeronance_test"/>
+        <env name="DB_URL" value=""/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="NIGHTWATCH_ENABLED" value="false"/>
+    </php>
+</phpunit>

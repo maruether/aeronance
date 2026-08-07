@@ -1,0 +1,74 @@
+# LTB Lindner -- G 103 SL.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# THE FOURTH SHAPE: a list of links. Not a table, not an API, no login.
+#
+# A WordPress PDF-manager renders one <li> per document. Each item carries a
+# title attribute, the link and a date -- but the number and the subject share
+# one string ("TM-G05 Seilrollen Durchmesser 42mm"), so every field is found by
+# its own pattern instead of by a column position.
+#
+# NO DATE IS MAPPED, AND THAT IS DELIBERATE. The items do have a data-date, but
+# 83 of the 92 entries on this page share 2021-04-05 -- the day the documents
+# were bulk-uploaded, not the day the notes were issued. Mapping it would write
+# 83 wrong dates into aircraft records. An empty date is visible; a wrong one is
+# not.
+#
+# One page per type; this file covers G 103 SL. Its siblings differ only in the
+# URL, the name and -- for Phoebus -- the number pattern.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: lindner-g103sl
+label: 'LTB Lindner — Grob G 103 SL'
+issuer: 'LTB Lindner'
+type: list
+
+default_kind: tm
+subject_kind: aircraft_model
+
+page:
+  url: 'https://ltb-lindner.com/g-103-sl-lta-tm/'
+
+  # One <li> per document.
+  row_pattern: '#<li class="bsk-pdfm-list-item.*?</li>#is'
+
+# Patterns, not positions. The first capture group wins where there is one.
+columns:
+  # ANCHORED TO THE TITLE ATTRIBUTE, not to the item as a whole. Run loose over
+  # the <li>, the pattern matches the PDF's FILENAME first -- which yielded
+  # "LTA-TM-Uebersicht-30.06.2026.pdf" as a number and lower-cased the rest
+  # ("tm-g08" where the title says "TM-G08"). The number a person quotes is the
+  # one in the title.
+  #
+  # The overview PDF ("G 103 LTA & TM Übersicht 30.06.2026") has no such number
+  # and is therefore skipped -- correctly: it is Lindner's own summary list, not
+  # a directive somebody assesses.
+  #
+  # TWO NUMBERING SCHEMES ON ONE PAGE, which a first attempt missed entirely:
+  # Lindner's own notes ("TM-G11", "A-I-G01") sit alongside Grob's original ones
+  # numbered by type ("315-76", "315-64-2", "315-GROB-003" -- 315 is the G 103's
+  # Kennblatt number). A pattern for the first silently dropped nineteen real
+  # directives, which is the failure mode this module exists to prevent.
+  #
+  # So: the FIRST token of the title, provided it contains both a digit and a
+  # hyphen. That admits every identifier either scheme uses and rejects the
+  # overview PDF, whose title starts with a bare "G".
+  number: '/title="\s*(?=[^\s"]*\d)(?=[^\s"]*-)([^\s"]+)/'
+
+  # The full title attribute: number and subject together, which is how Lindner
+  # writes it and how a person reads it.
+  title: '/title="([^"]+)"/'
+
+  document: '/href="([^"]+\.pdf)"/i'
+
+# Everything binding unless a wording says otherwise -- the same asymmetry as
+# every other source: wrong towards binding leaves a line on the list, wrong
+# towards optional lets it be waived with a sentence.
+bindingness:
+  optional_phrases:
+    - wahlweise
+    - optional
+    - empfohlen
+    - 'auf wunsch'
+
+  mandatory_override: '/(vor dem nächsten (start|flug)|spätestens|bis zum|jahresnachprüfung)/u'

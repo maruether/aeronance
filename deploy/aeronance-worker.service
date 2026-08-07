@@ -1,0 +1,38 @@
+# Queue-Worker.
+#
+# Aeronance läuft mit dem Start-Default QUEUE_CONNECTION=database (CLAUDE.md:
+# Redis erst mit echtem Grund). Der Worker ist trotzdem nötig -- ohne ihn bleibt
+# alles Verzögerte liegen: Benachrichtigungen, Dokumentverarbeitung, der
+# Herstellerabruf, wenn er in die Queue wandert.
+#
+#   install -m 644 deploy/aeronance-worker.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now aeronance-worker
+
+[Unit]
+Description=Aeronance queue worker
+After=network.target mariadb.service
+Requires=mariadb.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/aeronance
+
+# --max-time sorgt für einen regelmässigen Neustart. Ein Worker, der tagelang
+# läuft, hält alten Code und alte Konfiguration im Speicher -- nach einem Update
+# arbeitet er sonst weiter mit dem Stand von vorgestern.
+ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+
+Restart=always
+RestartSec=5
+
+# Der Worker braucht kein Schreibrecht ausserhalb der Anwendung.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/www/aeronance/storage /var/www/aeronance/bootstrap/cache
+
+[Install]
+WantedBy=multi-user.target

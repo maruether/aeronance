@@ -1,0 +1,44 @@
+# American Champion Aircraft -- Service Letters fuer Citabria, Scout, Decathlon.
+#
+# ---------------------------------------------------------------------------
+# VERBREITETE SCHLEPPMUSTER. Die Kette Aeronca -> Champion Aircraft (1954) ->
+# Bellanca (1970) -> American Champion (1988) laesst sich aus Sekundaerquellen
+# belegen, nicht aus einem TCDS -- die Seite selbst nennt weder Bellanca noch
+# Aeronca. Dass der Hersteller die Altlinie fortfuehrt, zeigt die Liste aber
+# selbst: C-135 und C-139 aus der Champion-Zeit stehen neben der 400er-Reihe.
+#
+# KEINE TABELLE. Die Seite ist ein Wix-Repeater; im Roh-HTML gibt es kein
+# <table>, sondern eine Folge von Elementen: Nummer, Gegenstand, Link. Deshalb
+# `list` mit einem Zeilenmuster ueber genau diese Folge.
+#
+# KEIN AUSGABEDATUM -- die Seite fuehrt keines. Wie bei Lindner, Stemme und
+# Lange bleibt das Feld leer.
+# ---------------------------------------------------------------------------
+
+name: american-champion
+label: 'American Champion (Service Letters)'
+issuer: 'American Champion Aircraft'
+type: list
+
+default_kind: tm
+subject_kind: aircraft_model
+number_prefix: false
+
+page:
+  url: 'https://www.americanchampionaircraft.com/service-letters'
+
+  # Ein Eintrag ist die Folge "Nummer, Gegenstand, PDF-Link". Die Wix-Klassen
+  # (comp-...) wechseln bei jedem Umbau der Seite und taugen nicht als Anker --
+  # die REIHENFOLGE dagegen ist der Inhalt selbst.
+  # Zwei Nummernformen: "C-135" aus der Champion-Zeit und die blosse 400er-Reihe.
+  # Die Fenster sind gemessen, nicht geraten -- zwischen Nummer und Link liegen
+  # rund 840 Zeichen Wix-Markup.
+  row_pattern: '#>\s*((?:[A-Z]{1,3}-)?\d{2,4}[A-Z]?)\s*<.{0,700}?>\s*([^<>]{6,160}?)\s*<.{0,900}?href="(https://[^"]+\.pdf[^"]*)"#is'
+
+columns:
+  number: '#>\s*((?:[A-Z]{1,3}-)?\d{2,4}[A-Z]?)\s*<#'
+  title: '#>\s*(?:[A-Z]{1,3}-)?\d{2,4}[A-Z]?\s*<.{0,700}?>\s*([^<>]{6,160}?)\s*<#is'
+  document: '#href="(https://[^"]+\.pdf[^"]*)"#i'
+
+# Keine Verbindlichkeitsangabe auf der Seite: Es bleibt alles verbindlich, die
+# Einstufung macht der Nutzer.

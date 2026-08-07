@@ -1,0 +1,100 @@
+# BRISTELL (BRM Aero) -- Service Bulletins
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE BESTE TABELLE DIESES MODULS, und die einzige, die ihre Verbindlichkeit
+# selbst benennt statt sie in einen Termin zu verstecken:
+#
+#   Bulletin No. | Classification | Issued / Revised | Titel & Beschreibung
+#                | Affected aircraft | Download
+#
+# Die B23 hat ein EASA-Kennblatt (EASA.A.642) und ist damit kein Ultraleicht,
+# sondern ein zugelassenes Muster -- der Grund, warum dieser Hersteller hier
+# steht und nicht in der UL-Warteschlange.
+#
+# GEZÄHLT: 38 Anweisungen. Der Vollständigkeitsbericht muss leer bleiben.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE KLASSIFIKATION, UND WARUM SIE NICHT EINS ZU EINS ÜBERNOMMEN WIRD
+#
+# Bristell schreibt sechs Stufen, jede mit einem erklärenden Satz darunter --
+# beides steht in derselben Zelle und wird zusammen gelesen:
+#
+#   Mandatory          "This service bulletin is mandatory"            11
+#   Recommended        "Service bulletin recommended…"                  5
+#   Optional           "for convenience…"                               7
+#   Informational      "to introduce…"                                  9
+#   Could become AD    "could be made mandatory by an EASA AD"          3
+#   Cancelled          "recommended to be…"                             1
+#
+# Abgebildet wird auf die drei Stufen, die dieses Modul kennt:
+#
+#   Recommended, Cancelled  -> empfohlen   (beide sagen "recommended")
+#   Optional, Informational -> wahlweise
+#   Mandatory               -> verbindlich (Vorgabe)
+#   Could become AD         -> VERBINDLICH, und das ist Absicht.
+#
+# „Could become AD" heisst: die Behörde kann daraus jederzeit eine
+# Lufttüchtigkeitsanweisung machen. Als wahlweise eingestuft verschwände die
+# Zeile aus der Aufmerksamkeit -- genau die Zeile, die morgen verbindlich ist.
+# Sie fällt deshalb durch alle Muster hindurch auf die Vorgabe. Die übliche
+# Asymmetrie: zu verbindlich gelesen bleibt eine Zeile auf der Liste stehen,
+# zu wahlweise gelesen verschwindet sie daraus.
+#
+# CANCELLED WIRD MITGENOMMEN, nicht ausgefiltert. Vorgabe: „ich hätte lieber
+# eine nicht mehr gültige tm, die ich als alt abhaken kann wie eine zu wenig."
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: bristell
+label: 'BRISTELL / BRM Aero (Service Bulletins)'
+issuer: 'BRM Aero s.r.o.'
+type: table
+
+default_kind: sb
+subject_kind: aircraft_model
+
+# "B23-SBM-0-0-0-ALL-0005-2026" trägt seine Art schon im Namen.
+number_prefix: false
+
+page:
+  url: 'https://bristell.com/service-bulletins/'
+
+  table_pattern: '#<table[^>]*>.*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+
+  # ZWEI TABELLEN, und die zweite ist keine Fussnote: eine fuer die B23, eine
+  # fuer alle uebrigen Muster. In ihr stehen 11 der 38 Anweisungen, darunter
+  # vier Safety Alerts. Ohne diesen Schalter liest der Treiber nur die erste,
+  # meldet nichts als fehlend -- und die Liste sieht vollstaendig aus.
+  all_tables: true
+
+  # Sechs Spalten. Beide Kopfzeilen haben sie auch, werden aber verworfen, weil
+  # ihre Nummernzelle keine Nummer ist ("Bulletin No.").
+  min_cells: 6
+
+  # Der erste Anhang je Zeile ist die englische Fassung -- Bristell setzt sie
+  # in der Download-Spalte nach vorn.
+  document_pattern: '#href="([^"]*\.pdf[^"]*)"#i'
+
+columns:
+  number: 0
+  compliance: 1
+  date: 2
+  title: 3
+  affected: 4
+
+bindingness:
+  # Zuerst geprüft, weil die Stufen sich überlappen: die Zelle des Herstellers
+  # enthält die Stufe UND ihren Erklärsatz, und der Erklärsatz von "Cancelled"
+  # lautet ebenfalls "recommended to be…".
+  recommended_phrases:
+    - 'recommended'
+
+  optional_phrases:
+    - 'optional'
+    - 'informational'
+
+  # Fängt den Fall, in dem der Erklärsatz das Gegenteil der Stufe sagt.
+  # "Could become AD" enthält "could be made mandatory" und bleibt damit auch
+  # dann verbindlich, wenn Bristell die Formulierung einmal umstellt.
+  mandatory_override: '/\bmandatory\b/i'

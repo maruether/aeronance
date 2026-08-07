@@ -1,0 +1,74 @@
+# --- Abhängigkeiten (kommen aus composer.lock / package-lock.json) ---
+/vendor
+/node_modules
+/public/build
+/public/wasm
+
+# Die installierte Fassung -- erzeugt vom pack-Job bzw. von deploy/update.sh.
+# Sie beschreibt EINE Installation und gehoert deshalb nie ins Repo.
+/VERSION
+/public/hot
+/public/storage
+
+# --- Laufzeit ---
+/storage/*.key
+/storage/pail
+/storage/app/private
+/storage/app/public
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+/storage/logs/*
+!.gitignore
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+
+# --- Konfiguration und Secrets: NIEMALS ins Repo ---
+.env
+.env.*
+!.env.example
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Die Docker-Vorlage gehoert INS Repo -- sie war es nie.
+#
+# Die Regel `.env.*` darueber verschluckt sie, und die Ausnahme galt nur der
+# .env.example im Wurzelverzeichnis. Ergebnis: Die Datei existierte
+# ausschliesslich auf dem Entwicklungsrechner. Wer klonte oder den
+# Release-Tarball auspackte, hatte keine Vorlage -- obwohl README und
+# docker-compose.yml sie ausdruecklich nennen ("cp .env.docker.example .env").
+#
+# Sie enthaelt keine Geheimnisse: APP_KEY und Passwoerter stehen leer, alles
+# andere sind Platzhalter. Genau dafuer ist eine Vorlage da.
+# ─────────────────────────────────────────────────────────────────────────────
+!deploy/docker/.env.docker.example
+auth.json
+*.pem
+*.key
+!/public/**/*.key
+
+# --- Installationsmarker (siehe Setup-Assistent) ---
+/storage/installed
+
+# --- Tests / Tooling ---
+.phpunit.result.cache
+.phpunit.cache
+/.phpstan.cache
+/coverage
+/.php-cs-fixer.cache
+
+# --- Editoren und IDEs ---
+/.idea
+/.vscode
+/.fleet
+/.nova
+/.zed
+*.swp
+*~
+
+# --- Betriebssystem ---
+.DS_Store
+Thumbs.db
+
+# --- Lokale Werkzeuge ---
+/.claude/settings.local.json

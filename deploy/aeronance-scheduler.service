@@ -1,0 +1,32 @@
+# Scheduler -- der Ersatz für einen Cron-Eintrag.
+#
+# Läuft dauerhaft und startet die geplanten Aufgaben minütlich. Was daran hängt:
+# der wöchentliche LTA/TM-Abruf, das Ablaufen von Beständen, später die
+# Aufbewahrungsjobs.
+#
+#   install -m 644 deploy/aeronance-scheduler.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now aeronance-scheduler
+
+[Unit]
+Description=Aeronance scheduler
+After=network.target mariadb.service
+Requires=mariadb.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/aeronance
+ExecStart=/usr/bin/php artisan schedule:work
+
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/www/aeronance/storage /var/www/aeronance/bootstrap/cache
+
+[Install]
+WantedBy=multi-user.target

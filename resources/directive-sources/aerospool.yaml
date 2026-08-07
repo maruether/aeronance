@@ -1,0 +1,94 @@
+# Aerospool -- WT9 Dynamic, Publikationen
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DREI TABELLEN, DREI GATTUNGEN, und die vierte auf der Seite ist keine:
+#
+#   Service Bulletins        ZB…/SB…    40 Zeilen   (mandatory_bulletins/)
+#   Information Bulletins    IB…         2 Zeilen
+#   Recommendations          DV…        11 Zeilen
+#   ------------------------------------------------
+#   Cookie-Hinweise                       6 Zeilen   <- keine Anweisungen
+#
+# Die Cookie-Tabelle wird nicht ausgeschlossen, sondern fällt durch: ihre
+# Zeilen haben drei Zellen, min_cells verlangt sechs. Das ist die bessere
+# Abgrenzung als ein Muster auf die Überschrift, weil sie an der Form der
+# Daten hängt und nicht an einem Wort, das der Betreiber morgen ändert.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# ALLES BLEIBT VERBINDLICH, AUCH DIE EMPFEHLUNGEN -- und das ist eine bewusste
+# Vergröberung, keine Nachlässigkeit.
+#
+# Aerospool schreibt die Gattung NICHT in eine Spalte, sondern nur in die
+# Überschrift über der jeweiligen Tabelle, und Überschriften fallen beim Lesen
+# der Zeilen weg. Aus der Zeile selbst ist die Gattung nur an der Nummer
+# abzulesen (ZB/SB gegen IB gegen DV).
+#
+# Die übliche Asymmetrie entscheidet: zu verbindlich gelesen bleibt eine Zeile
+# auf der Liste stehen und jemand hakt sie ab; zu wahlweise gelesen verschwindet
+# sie daraus. Die Nummer steht dabei vor den Augen dessen, der sie beurteilt --
+# "IBWT901/2013" sagt ihm selbst, dass es eine Information ist.
+#
+# DIE ÜBERSICHTSDOKUMENTE ("List of Bulletins", "List of information
+# Bulletins", "List of Reccomendations") sind Aerospools eigene Inhaltsliste
+# und keine Anweisung. Sie tragen statt einer Dokumentnummer einen Dateinamen
+# und stehen deshalb namentlich unter page.ignore -- ausgeschlossen, weil man
+# weiss was sie sind, nicht weil eine Form sie zufällig nicht trifft.
+#
+# GEZÄHLT: 53 Zeilen in den drei Tabellen, davon 3 Übersichtsdokumente,
+# also 50 Anweisungen.
+#
+# DOKUMENTE ALS PDF ODER ZIP. Aerospool legt einen Teil der Bulletins als
+# Archiv ab; ein Muster nur auf .pdf liess jene Zeilen auf die Seite selbst
+# zeigen. Wo gar nichts verlinkt ist, bleibt die Seite als Fundort stehen.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: aerospool
+label: 'Aerospool WT9 Dynamic (Publikationen)'
+issuer: 'Aerospool spol. s r.o.'
+type: table
+
+default_kind: sb
+subject_kind: aircraft_model
+
+# "ZB WT9 01A/2003" trägt seine Art schon.
+number_prefix: false
+
+page:
+  url: 'https://www.aerospool.sk/index.php/ull-dynamic-wt9-bulletins/'
+
+  table_pattern: '#<table[^>]*>.*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+
+  # Alle drei Publikationstabellen. Ohne dies stünden nur die Service
+  # Bulletins da und die Empfehlungen fehlten wortlos.
+  all_tables: true
+
+  # Sechs Spalten -- was weniger hat, ist keine Publikationszeile. Das hält
+  # auch die Cookie-Tabelle draussen (drei Spalten).
+  min_cells: 6
+
+  # PDF ODER ZIP. Aerospool legt einen Teil der Bulletins als Archiv ab
+  # (ZBWT9_02A.zip), und ein Muster nur auf .pdf liess diese Zeilen auf die
+  # Seite selbst zeigen statt auf ihr Dokument -- eine Adresse, die aussieht
+  # wie ein Nachweis und keiner ist. Wo gar nichts verlinkt ist, bleibt die
+  # Seite als Fundort stehen; das ist dann die Wahrheit.
+  document_pattern: '#href="([^"]*\.(?:pdf|zip)[^"]*)"#i'
+
+  # Die drei Inhaltslisten des Herstellers ("List of Bulletins", "List of
+  # information Bulletins", "List of Reccomendations"). Sie stehen als Zeile in
+  # ihrer eigenen Tabelle, sind aber keine Anweisung, sondern das
+  # Inhaltsverzeichnis darueber -- genau wie Lindners Uebersichts-PDF. Namentlich
+  # ausgeschlossen, nicht ueber eine Form geraten.
+  ignore: '/^(?:\d{8}_)?List_of_/i'
+
+# Document No. | Title | Date of Issue | Rev | Revision Date | Cancel Date
+columns:
+  number: 0
+  title: 1
+  date: 2
+
+# NICHT gelesen: "Cancel Date" (Spalte 5). Eine zurückgezogene Anweisung bleibt
+# im Bestand -- Vorgabe: „ich hätte lieber eine nicht mehr gültige tm, die ich
+# als alt abhaken kann wie eine zu wenig." Dass sie zurückgezogen ist, steht
+# im Dokument selbst.

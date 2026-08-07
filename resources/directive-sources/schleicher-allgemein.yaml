@@ -1,0 +1,55 @@
+# Alexander Schleicher -- Allgemeine Technische Mitteilungen.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# NOT A TYPE, AND THAT IS WHY IT NEEDED ITS OWN FILE.
+#
+# schleicher.yaml walks an index of types and filters it with
+#   model_filter: /^(AS[KWHG]?|AS)\s?[0-9]/i
+# which is right for "ASK 21" and "ASW 19" -- and quietly excluded the one entry
+# on that index that is not a type: /tm-lta-wa/tm-flugzeuge/allgemeine-tm/.
+# Eighteen notes, none of them imported, and nothing anywhere said so. The filter
+# was doing its job; nobody had asked what it was leaving out.
+#
+# Same table, same patterns as the type pages -- so this file is schleicher.yaml
+# pointed at one page, with general: true.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: schleicher-allgemein
+label: 'Alexander Schleicher — Allgemeine TM (Download)'
+issuer: 'Alexander Schleicher'
+
+type: table
+default_kind: tm
+subject_kind: aircraft_model
+
+# Approved data the operator MAY apply, not something an aircraft is overdue on.
+# The content says the same: replacement fabrics, an approved way to fit
+# equipment, a substitute for a discontinued sandwich mat.
+page:
+  url: 'https://www.alexander-schleicher.de/tm-lta-wa/tm-flugzeuge/allgemeine-tm/'
+  table_pattern: '#<table[^>]*class="[^"]*tableFormated[^"]*".*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 7
+
+columns:
+  number: 0
+  authority_number: 2
+  title: 4
+  affected: 5
+  compliance: 6
+
+bindingness:
+  optional_phrases:
+    - wahlweise
+    - optional
+    - 'bei bedarf'
+    - 'auf wunsch'
+    - 'nach wunsch'
+    - 'bei neubauten'
+    - 'bei neufertigung'
+    - 'bei neueinbau'
+    - 'als nachrüstung'
+  mandatory_override: '/(vor dem nächsten (start|flug)|spätestens|bis zum|jahresnachprüfung)/u'
+
+authority_kind_pattern: '/EASA|AD/i'

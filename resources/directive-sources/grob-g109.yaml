@@ -1,0 +1,100 @@
+# Grob G 109 -- Service Bulletins über das Übersichtsblatt.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE LÜCKE, DIE LINDNER NICHT ABDECKT. lindner-g102/-g103/-g103sl/-g104 lesen
+# die Grob-SEGELflugzeuge; der Motorsegler G 109 wird vom Hersteller selbst
+# betreut -- support.grob-aircraft.com, offen, ohne Login. Grob gehört seit
+# Juni 2025 Helsing SE; der zivile Support läuft unverändert weiter. Das Blatt
+# trägt "List State: 10-Apr-2026".
+#
+# DIESES BLATT HAT DEN LESER DREIMAL ERWEITERT (docs/LTA-TM.md §18):
+#   1. Kopfzeilen über drei Zeilen gebrochen
+#   2. Überschriften mittig über ihren Spalten  -> headings_centred
+#   3. Spalten wurden aus den eigenen Überschriften mitgemessen
+# Alle drei sind allgemein, keiner ist Grob-spezifisch.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: grob-g109
+label: 'Grob G 109 (Übersicht)'
+issuer: 'Grob Aircraft'
+type: overview
+
+default_kind: sb
+subject_kind: aircraft_model
+
+# "817-1", "MSB817-59" -- die Nummer trägt ihre Art selbst, wo sie eine hat.
+number_prefix: false
+
+overview:
+  # Zwei Generationen auf demselben Blatt: 817-1 und 4601-10 ohne Marker, die
+  # neueren mit Verbindlichkeit im Präfix. Ohne den optionalen Präfix meldete
+  # der Leser 20 unbekannte Einträge und übernahm -- richtigerweise -- nichts.
+  number_pattern: '/^(?:[MOAR]SB)?\d{3,4}-\d+/'
+
+  # Grob zentriert seine Überschriften: "Title" steht auf 57 über einer Spalte,
+  # deren Einträge alle auf 24 beginnen.
+  headings_centred: true
+
+  # Ein Eintrag belegt drei Zeilen -- deutscher Text über der Nummer, englische
+  # Fassung darunter:
+  #
+  #     Änderung des Fluggewichtes von 810 kg auf
+  #     817-1   Zuladung                  X   12-May-1981
+  #     Increase of max. weight from 810 kg
+  #
+  # Beide Merkmale zusammen ergeben "die ersten beiden Zeilen nehmen, die dritte
+  # verwerfen". Einzeln kürzen sie sich gegenseitig.
+  numbers_centred_in_row: true
+  bilingual: true
+
+  headings:
+    number:
+      - 'sb no'
+    title:
+      - 'title'
+    # "Alert" ist die erste der vier Kategoriespalten und hier NICHT als
+    # Dringlichkeit gemeint, sondern als GRENZE: Ohne sie liefe der Titel nach
+    # rechts über die Ankreuzfelder hinweg weiter.
+    compliance:
+      - 'alert'
+    date:
+      - 'issue date'
+    subject:
+      - 'remarks'
+
+  documents:
+    'G 109': 'https://support.grob-aircraft.com/en/g-109-general.html?file=files/xtranet_g109a-g109b/SB/List%20_of_SB_Pubs_817.pdf'
+    'G109B': 'https://support.grob-aircraft.com/en/g-109-general.html?file=files/xtranet_g109a-g109b/SB/List%20_of_SB_Pubs_817.pdf'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE VERBINDLICHKEIT KOMMT AUS DER NUMMER, NICHT AUS DER ANKREUZMATRIX.
+#
+# Grob führt vier Spalten -- Alert | Mandatory | Recommended | Optional -- und
+# setzt ein X in eine davon. Ein X ist ein Zeichen ohne Wort, und die Spalten
+# stehen dicht beieinander: eine Zuordnung eine Spalte daneben machte aus
+# "empfohlen" ein "optional", und optional heißt "darf abgelehnt werden".
+#
+# Dieselbe Auskunft steht bei den neueren Bulletins ausgeschrieben in der
+# Bezeichnung. Die zu lesen ist eine Messung; die Kreuze zu lesen wäre geraten.
+# Die älteren ohne Präfix bleiben verbindlich -- der Default.
+# ─────────────────────────────────────────────────────────────────────────────
+bindingness:
+  source: 'number'
+
+  recommended_phrases:
+    - rsb
+
+  optional_phrases:
+    - osb
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WAS BLEIBT, ausdrücklich benannt statt versteckt -- wie SZDs Restfehler in §15:
+#
+# 6 von 68 Titeln tragen die englische Fassung des VORHERGEHENDEN Eintrags als
+# Vorspann ("Increase of max. weight ... Abweichungen gegenüber dem
+# Gerätekennblatt ..."). Der eigene deutsche Titel steht vollständig dahinter,
+# die Zeile ist also auffindbar; sauber ist sie nicht.
+#
+# Nummer, Ausgabedatum, Verbindlichkeit und Betroffenheit sind davon NICHT
+# betroffen. Ein Test pinnt die Zahl fest, damit sie nicht unbemerkt wächst.
+# ─────────────────────────────────────────────────────────────────────────────

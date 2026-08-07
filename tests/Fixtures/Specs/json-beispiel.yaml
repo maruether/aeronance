@@ -1,0 +1,56 @@
+# Beispielspezifikation für den JSON-Modus -- KEIN Hersteller.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Diese Datei liegt bewusst unter tests/, nicht unter resources/: Sie beschreibt
+# KEINE reale Quelle, sondern nur die Form einer JSON-Spezifikation, damit der
+# Modus geprüft werden kann.
+#
+# Sie war einmal eine DG-Aviation-Spec mit geratenen Feldpfaden. Anmerkung dazu, zu
+# Recht: "wir raten nicht. Niemals." Eine Herstellerdatei auszuliefern, deren
+# Felder eine Vermutung sind, widerspricht genau der Regel, nach der dieses Modul
+# sonst arbeitet -- keine Frist aus Prosa, keine abgeleitete Wiederkehr, lieber
+# ein leeres Feld als ein falsches. Ein Kommentar "unverified" heilt das nicht.
+#
+# Was über DG feststeht, steht in docs/LTA-TM.md §12.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: json-beispiel
+label: 'Beispiel (JSON-Modus)'
+issuer: 'Beispiel'
+type: json
+
+default_kind: tm
+subject_kind: aircraft_model
+
+endpoint:
+  url: 'https://beispiel.invalid/api/dokumente'
+
+  query:
+    juwpfisadmin: 'false'
+    action: 'wpfd'
+    task: 'files.display'
+
+  # Which request parameter carries the manufacturer's own type id. DG uses
+  # numeric category ids (DG-300 is 85), read off the page's data-idcat.
+  type_parameter: 'categoryid'
+
+  # Where the rows sit in the response.
+  items: 'files'
+
+# Dotted paths into one item, not cell indices -- the only thing that differs
+# between the two modes.
+columns:
+  number: 'title'
+  title: 'description'
+  date: 'created'
+  document: 'link'
+
+bindingness:
+  optional_phrases:
+    - wahlweise
+    - optional
+    - empfohlen
+    - 'bei bedarf'
+    - 'auf wunsch'
+
+  mandatory_override: '/(vor dem nächsten (start|flug)|spätestens|bis zum|jahresnachprüfung)/u'

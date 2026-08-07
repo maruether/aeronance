@@ -1,0 +1,86 @@
+# Valentin Taifun 17E / 17E II -- LTA-TM-Übersicht des Musterbetreuers.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Valentin gibt es nicht mehr; die Musterbetreuung liegt bei der Korff Luftfahrt
+# GmbH, die die Übersicht offen veröffentlicht. Kennblattnummer 818 -- sie steckt
+# in jeder TM-Nummer (01/818, 02/818 …).
+#
+# STAND 04/2017. Die Seite sagt selbst, dass nicht alle TMs dort herunterladbar
+# sind; die Übersicht ist trotzdem die vollständige Liste dessen, was existiert,
+# und genau darum geht es hier: die Zeile, die abgehakt wird.
+#
+# DIE ADRESSE IST AUSGESCHRIEBEN, nicht abgeleitet: Die PDF liegt auf der CDN des
+# Homepage-Baukastens, nicht unter der Seitenadresse. Die naheliegende URL
+# antwortet mit HTTP 404 -- und ein 404 liest sich im Import wie "nichts
+# veröffentlicht".
+#
+# DIESES BLATT IST SEITENVERKEHRT ZU SCHLEICHER: Baureihe und betroffene
+# Werknummern stehen VOR der TM-Nummer. Der Leser suchte die Nummer nur links
+# der Betroffenheitsspalte und fand deshalb keine einzige -- siehe
+# OverviewSheet::numberColumn().
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: valentin-taifun
+label: 'Valentin Taifun 17E (Korff)'
+issuer: 'Korff Luftfahrt'
+type: overview
+
+default_kind: tm
+subject_kind: aircraft_model
+
+overview:
+  # "01/818" bis "28/818" -- laufende Nummer und Kennblatt.
+  # Die Nummernzelle steht über bis zu drei Zeilen: HERAUSGEBER, Nummer, Datum.
+  #
+  #     TAIFUN   alle W/Nr.   KOCO         Brandhahn
+  #     17 E II               01/818
+  #                           14.03.1998
+  #
+  # "KOCO", "Schmiderer" und "SAUER" sind also Herausgeber und keine Nummern.
+  # Als Nummer gelesen zerfiel jeder solche Eintrag in ZWEI Zeilen: eine mit dem
+  # Herausgebernamen und dem Gegenstand, eine mit der Nummer und dem Datum.
+  # Zwei Zeilen setzen Herausgeber und Nummer doch auf DIESELBE Zeile
+  # ("KOCO 2003-051"); die sind echte Zulieferdokumente und kommen mit herein.
+  number_pattern: '#^(\d{2}/818|KOCO\s+[\d/-]+)#'
+
+  # Was Korff sonst in die Nummernspalte schreibt und was keine Nummer ist: der
+  # Herausgebername und der Ausgabestand. Beide gehören zur Zeile darunter --
+  # sie zu verwerfen entfernt keine Anweisung, sondern setzt sie zusammen.
+  ignore: '/^(Ausgabe\s+\d+|KOCO|Schmiderer|SAUER\s*TM-?|Nr\.\s*\d+|TM-Nr\.\s*\d+)$/i'
+
+  headings:
+    subject:
+      - 'betroffene'
+    number:
+      - 'tm-'
+    # DIE LTA-SPALTE IST BEWUSST NICHT ZUGEORDNET. Ihre Überschrift steht nur
+    # zwölf Zeichen neben der TM-Überschrift, und der Leser bekam dort die
+    # TM-Nummer statt der LTA-Nummer ("LTA/AD: 01/818"). Eine gesetzte
+    # Behördennummer macht jede Zeile verbindlich -- damit wären auch die als
+    # "optional" ausgewiesenen Zeilen verbindlich gewesen, und zwar still.
+    #
+    # Die LTA-Nummern (85-29, 85-129, 94-114) gehen dadurch verloren. Das ist
+    # der kleinere Schaden: eine fehlende Referenz sieht man, eine falsche
+    # Verbindlichkeit nicht.
+    title:
+      - 'gegenstand'
+    compliance:
+      - 'fristen'
+
+  documents:
+    'Taifun 17E': 'https://1ea5ab27f6.clvaw-cdnwnd.com/1331cd600900af5a91d35ed7097e9ac2/200000098-967f49778a/LTA-TM-Liste_aktuell-04-2017.pdf'
+    'Taifun 17E II': 'https://1ea5ab27f6.clvaw-cdnwnd.com/1331cd600900af5a91d35ed7097e9ac2/200000098-967f49778a/LTA-TM-Liste_aktuell-04-2017.pdf'
+
+# Das Datum steht wie bei Schleicher IN der Nummernzelle, unter der Nummer --
+# dafür braucht es keine eigene Spalte.
+#
+# Die Fristenspalte trägt die Verbindlichkeit im Klartext. Eine Frist ist dabei
+# stärker als das Wort: "wahlweise, aber vor dem nächsten Flug" ist keine Wahl.
+bindingness:
+  optional_phrases:
+    - optional
+    - wahlweise
+    - 'bei bedarf'
+    - empfohlen
+
+  mandatory_override: '/(vor dem nächsten (start|flug)|spätestens|bis zum|jahresnachprüfung|sofort)/u'

@@ -1,0 +1,55 @@
+# Limbach Flugmotoren -- Technische Mitteilungen.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Die Firma existiert (Königswinter, EASA.AP509). Die Domain ist limflug.de --
+# limbach-flugmotoren.com löst gar nicht auf, und limbach-flugmotoren.de ist nur
+# eine Platzhalterseite von rund 1 kB. Auf die falsche zu zeigen hieße: Import
+# läuft ins Leere und meldet "Limbach hat nichts veröffentlicht".
+#
+# ACHT TABELLEN AUF EINER SEITE, unterschieden nicht durch die Tabelle, sondern
+# durch die ZEILENKLASSE:
+#
+#   <tr class="file pdf technicalBulletins">        51 Technische Mitteilungen
+#   <tr class="file pdf maintenanceInstructions">   15 Wartungsanweisungen
+#
+# Deshalb greift row_pattern hier direkt auf die Klasse zu und table_pattern auf
+# die ganze Seite: Die Trennung liegt in der Zeile, nicht im Rahmen.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: limbach
+label: 'Limbach Flugmotoren (Downloads)'
+issuer: 'Limbach Flugmotoren'
+type: table
+
+default_kind: tm
+subject_kind: engine
+
+page:
+  url: 'https://limflug.de/de/support/downloads.php'
+
+  # Die ganze Seite als "Tabelle" -- die Auswahl trifft das Zeilenmuster.
+  table_pattern: '#<body.*?</body>#is'
+  row_pattern: '#<tr[^>]*class="[^"]*technicalBulletins[^"]*"[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 8
+
+  # Die deutsche Fassung; die englische steht daneben in Zelle 3.
+  document_pattern: '#href="(downloads\.php\?type=technicalBulletins[^"]+)"#i'
+
+# TM-Nr. | Gegenstand | Download(de) | Download(en) | L1700 | L2000 | L2400 | Stand
+#
+# Die drei Baureihenspalten tragen nur "alle" / "nur EA" / "außer EA"; Spalte 4
+# ist stellvertretend als Betroffenheit zugeordnet, weil dort der einzige
+# inhaltliche Hinweis steht.
+columns:
+  number: 0
+  title: 1
+  affected: 4
+  date: 7
+
+# Das Datum steht im Mischformat "23. Mar 2006" -- deutscher Tag, englischer
+# Monatsname. Ein Monatsname kann nicht mit einem Tag verwechselt werden, deshalb
+# ist die Form eindeutig lesbar (siehe ConfiguredSource::dateWithMonthName).
+#
+# Keine Dringlichkeitsspalte und kein Marker in der Nummer: Es bleibt alles
+# verbindlich, die Einstufung macht der Nutzer.

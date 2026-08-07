@@ -1,0 +1,58 @@
+# Stemme -- Service Bulletins und Airworthiness Directives.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE GRÖSSTE EINZELQUELLE DER MOTORSEGLER: 379 Dokumentzeilen auf EINER Seite,
+# ohne Login. Varianten (S12, S10, S10-V, S10-VT, S6, S6-RT und vier Propeller)
+# und Dokumentart werden clientseitig gefiltert -- ein Abruf holt alles.
+#
+# DIE ERSTE SPALTE IST KEIN DATUM, auch wenn sie so aussieht: "30,12,16" ist die
+# Liste der betroffenen VARIANTEN, nicht der 30.12.16. Über die Seite gibt es
+# 136 solcher Kombinationen. Sie einmal als Datum gelesen zu haben, ist genau
+# der Fehler, gegen den dieses Modul gebaut ist -- plausibel und falsch.
+#
+# KEIN AUSGABEDATUM. Alle 379 <div class="date"> sind leer. Dieselbe Lage wie
+# bei Lindner: Feld leer lassen, nicht ersatzweise etwas anderes hineinschreiben.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: stemme
+label: 'Stemme (Service)'
+issuer: 'Stemme'
+type: table
+
+default_kind: sb
+subject_kind: aircraft_model
+
+# Die Nummern tragen ihre Art selbst (SB_914_042, AD_...), ein vorangestelltes
+# "SB" ergäbe "SB SB_914_042".
+number_prefix: false
+
+page:
+  url: 'https://www.stemme.com/service.html'
+
+  table_pattern: '#<table[^>]*id="data-table-service".*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 6
+
+  # Die Tabelle ist responsiv und wiederholt die Spaltenüberschrift INNERHALB
+  # jeder Zelle ("Date/File", "Subject", "Affected"), damit die schmale Ansicht
+  # etwas anzuzeigen hat. Ohne das kommt die Nummer als "Date/File SB_914_042"
+  # heraus -- eine Bezeichnung, die Stemme nie geschrieben hat.
+  cell_strip: '#<div class="identifier">.*?</div>#is'
+
+  document_pattern: '#href="(https?://[^"]+\.pdf)"#i'
+
+# (Varianten) | Date/File | Subject | Affected | S/N | Download
+#
+# Spalte 0 ist bewusst NICHT zugeordnet: Sie enthält die Variantenkombination
+# als Zahlenliste ("29,30,12,16,17,31"), deren Auflösung nur die Seite selbst
+# kennt. Als `affected` übernommen stünden in der Zusammenfassung Zahlen, die
+# niemand lesen kann.
+columns:
+  number: 1
+  title: 2
+  affected: 3
+
+# Keine Verbindlichkeitsangabe in der Tabelle -- weder Spalte noch Marker in der
+# Nummer. Damit bleibt alles verbindlich (der Default und die sichere
+# Asymmetrie), die Einstufung macht der Nutzer.

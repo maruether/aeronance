@@ -1,0 +1,43 @@
+# Hartzell Propeller -- Service Bulletins.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Hartzell-Verstellpropeller hängen an einem großen Teil der Motorflugzeuge, die
+# in Vereinen stehen. Offen, ohne Login, eine gewöhnliche Tabelle.
+#
+# Die Nummer sagt selbst, was sie ist: HC-SB-61-408 (Service Bulletin) neben
+# HC-ASB-61-413 (Alert Service Bulletin). Das A steht dort für die Dringlichkeit
+# des Herstellers -- eine bindingness-Regel daraus zu machen wäre trotzdem
+# geraten: Hartzell erklärt die Stufen im Dokument, nicht in der Liste. Es bleibt
+# alles verbindlich, die Einstufung macht der Nutzer.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: hartzell
+label: 'Hartzell Propeller (Service Bulletins)'
+issuer: 'Hartzell Propeller'
+type: table
+
+default_kind: sb
+subject_kind: propeller
+number_prefix: false
+
+page:
+  url: 'https://hartzellprop.com/services/product-support-library/service-documents/service-bulletins/'
+
+  table_pattern: '#<table[^>]*>.*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 4
+
+  document_pattern: '#href="(https?://[^"]+\.pdf)"#i'
+
+  # Die erste Zeile ist der INDEX der Bulletins, kein Bulletin. Als Anweisung
+  # geführt wäre das ein offener Punkt, den niemand durchführen kann.
+  ignore: '/^service bulletin index$/i'
+
+# Title | Date | Revision | Description
+columns:
+  number: 0
+  date: 1
+  title: 3
+
+# "Jul. 08, 2026" -- Monatsname, also eindeutig lesbar.

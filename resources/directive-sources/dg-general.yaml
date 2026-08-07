@@ -1,0 +1,63 @@
+# DG Aviation -- allgemeine Technische Mitteilungen für alle DG- und LS-Muster.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# KEIN MUSTER, UND DESHALB EINE EIGENE DATEI.
+#
+# DG führt neben den Musterblättern ein Blatt "General - allgemeine TM's für
+# alle DG und LS Muster". Jedes Musterblatt endet mit dem Hinweis, dass diese
+# TMs zusätzlich gelten, und listet sie als blosse Nummern auf -- die Zeilen
+# selbst stehen nur hier.
+#
+# Inhaltlich sind es zugelassene Verfahren, keine Rückstände: anerkannte
+# Reparaturverfahren, der genehmigte Einbau eines Transponders, ein
+# alternatives Glasfasergewebe. Deshalb general: true -- Daten, die ein Halter
+# ANWENDEN darf, nicht etwas, womit ein Flugzeug überfällig ist.
+#
+# Dieselben Spalten und dasselbe Nummernmuster wie dg.yaml, nur auf ein Blatt
+# gerichtet: 14 Zeilen, 0 verworfen.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: dg-general
+label: 'DG Aviation — Allgemeine TM (Übersicht)'
+issuer: 'DG Aviation'
+
+type: overview
+default_kind: tm
+subject_kind: aircraft_model
+
+overview:
+  number_pattern: |-
+    ~^(?:
+          (?:Service\s+Info|SI|Info)(?=\s|$)\s*(\d{2,4}[-/]\d{1,4})?
+        |
+          (?:T[MN](?=[\s\d]))?\s*(
+              (?:\d{3,4}[-/]\d{1,3}|(?!19|20)\d{4})[a-z]?(?:\s+Rev\.\s*\d+)?
+            | [A-Z]{2}-[A-Z]{1,2}-\d{1,3}
+          )
+      )(?![\w./-])~x
+
+  headings:
+    # Keine Behördenspalte: dieses Blatt führt keine LTA/AD-Nummern, weil
+    # allgemeine TMs nicht von einer Behörde angeordnet werden.
+    number: ['tm-nr']
+    subject: ['betrifft']
+    title: ['gegenstand']
+    compliance: ['dringlichkeit']
+
+  bilingual: true
+  ignore: '/^(Solo|SB\s|Rev(\.|ision)?\s*\d*$|\d{2}\.[a-z]$)/ui'
+
+  # Ein Blatt für alles -- es gibt kein Muster, nach dem zu fragen wäre.
+  url: 'https://www.dg-aviation.de/wpfd_file/uebersicht-overview_tm-dg-general-2/'
+  document_pattern: '#href="(https://www\.dg-aviation\.de/download/[^"]+\.pdf)"#i'
+
+bindingness:
+  optional_phrases:
+    - wahlweise
+    - optional
+    - 'keine, optional'
+    - 'bei bedarf'
+    - 'siehe tm'
+    - 'bei transpondereinbau'
+    - 'bei herstellung'
+  mandatory_override: '/(vor dem nächsten (start|flug)|spätestens|bis zum \d|jahresnachprüfung)/u'

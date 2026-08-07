@@ -1,0 +1,32 @@
+/*
+ * The admin panel's stylesheet.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * WITHOUT THIS FILE, EVERY TAILWIND CLASS IN THIS PROJECT'S PANEL VIEWS DOES
+ * NOTHING.
+ *
+ * Filament ships a prebuilt stylesheet containing its own fi-* classes and
+ * nothing else -- it cannot contain utilities for views it has never seen. The
+ * panel had no theme registered, so thirteen of our own Blade views across five
+ * modules were written with text-*, bg-*, grid-cols-* and friends, roughly three
+ * hundred and sixty of them, and not one had any effect. The pages rendered as
+ * unstyled stacks and looked merely plain rather than broken, which is why it
+ * went unnoticed for so long.
+ *
+ * @source lines are what fix it: Tailwind scans those files and emits exactly
+ * the utilities they use. Miss a path and its classes silently vanish again --
+ * the same failure, quieter.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+/* Our own panel views -- pages, and anything a module renders inside them. */
+@source '../../../../resources/views/**/*.blade.php';
+
+/* Filament classes referenced from PHP: resource tables, form schemas, actions
+   and page classes all pass class strings that never appear in a Blade file. */
+@source '../../../../app/**/Filament/**/*.php';
+
+/* Filament's own components, so its markup keeps the utilities it relies on. */
+@source '../../../../vendor/filament/**/*.blade.php';

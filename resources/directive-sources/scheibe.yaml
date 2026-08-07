@@ -1,0 +1,261 @@
+# Scheibe Aircraft GmbH, Heubach -- Lufttüchtigkeitsanweisungen und Technische
+# Mitteilungen.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE ADRESSE DES PDF VERFÄLLT. DIE MUSTERSEITE NICHT.
+#
+# Scheibe legt seine Blätter nicht auf den eigenen Server, sondern auf
+# cdn.website-editor.net, und jede dieser Adressen trägt "?Expires=…&Signature=…".
+# Eine gespeicherte PDF-Adresse ist nach Stunden tot -- und ein toter Link sieht
+# im Abruf aus wie "für dieses Muster gibt es nichts".
+#
+# Deshalb steht unter overview.documents die MUSTERSEITE, nicht das PDF: eine
+# dauerhafte Adresse wie /sf-25c. overview.document_pattern liest daraus bei
+# jedem Lauf die frisch signierte PDF-Adresse. Das ist derselbe zweistufige Weg,
+# den DG braucht (dort wechselt die Datei-ID), nur aus einem anderen Grund.
+#
+# Der Weg über index.link_pattern -- Musterliste holen, Muster suchen, Seite
+# aufrufen -- geht bei Scheibe NICHT: die Navigation auf
+# /newpaged90c5464 verlinkt ausschliesslich relativ ("/sf-25c"), und der Abruf
+# reicht die gefundene Adresse unverändert an den Fetcher weiter. Erst wenn der
+# Treiber relative Adressen gegen index.url auflöst, kann die Liste hier
+# entfallen. Bis dahin ist sie ohnehin nicht zu erraten: die Musterseite der
+# SF 28 A heisst "/sf30", die der SF 30 "/sf30b817afe4", und drei weitere heissen
+# "/newpage…" mit einer Hexadezimalzahl.
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# GELESEN UND GEGENGEZÄHLT (Stand 31.07.2026, alle 29 Blätter abgerufen).
+#
+# VOLLSTÄNDIG -- Zeilenzahl unabhängig am Dokument nachgezählt, 0 verworfen:
+#   Zugvogel I 12 · Zugvogel II 11 · Zugvogel III 12 · Zugvogel IV 11
+#   Spatz 13 · Specht 13 · Sperber 11 · Bergfalke IV 20 · Mü 13 D 10
+#   SF 23 5 · SF 24 14 · SF 26 A 14 · SF 27 15 · SF 30 6 · SF 34 17
+#
+# Die übrigen vierzehn Blätter liest dieser Leser NICHT vollständig, und der
+# Grund liegt nicht in dieser Datei, sondern in einer Annahme der gemeinsamen
+# Klassen: Überschrift und Zellinhalt stünden linksbündig in ihrer Spalte.
+# Scheibe zentriert beides.
+#
+#   a) ZENTRIERTE ÜBERSCHRIFT über einer breiten Spalte. Auf der SF 25 C steht
+#      "Gegenstand" auf Position 74, die Einträge darunter beginnen bei 40.
+#      LayoutTable::nearest() sucht die gemessene Spalte, die der Überschrift am
+#      nächsten liegt, und findet 82 -- der ganze Gegenstand landet damit in der
+#      Nummernspalte. Diese Blätter melden Dutzende unerkannter Einträge, und
+#      der Abruf bricht ab. Das ist das richtige Verhalten: die SF 25 C hat 88
+#      Zeilen, gelesen würden 19.
+#      Betroffen: SF 25 A/B/C/D/E/K, SF 27 M, Bergfalke II/55.
+#
+#   b) ZENTRIERTER ZELLINHALT, und das ist der gefährlichere Fall, weil er
+#      nichts meldet. Auf dem Bergfalke III steht die TM-Nummer je nach Zeile
+#      auf Position 15 bis 25 -- der Strich "--" der Zeile LTA 82-216 auf 25,
+#      näher an der Gegenstandsspalte (33) als an der Nummernspalte (15).
+#      LayoutTable::assign() gibt ihn dem Gegenstand, die Zeile beginnt nie, und
+#      ihre LTA-Nummer klebt an der Zeile davor ("--82-216").
+#      Nachgewiesen: Bergfalke III 30 statt 31 · Bergfalke II 25 statt 26 ·
+#      SF 36 A 15 statt 16 · Mü 13 E mindestens 2 Zeilen · SF 28 A 1 Zeile.
+#      Nicht abschliessend geprüft: SF 36 R.
+#
+# Die Musteradressen unten sind davon unberührt und bleiben richtig; sobald die
+# Spaltenerkennung zentrierte Sätze beherrscht, liest diese Datei alle 29
+# Blätter.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: scheibe
+label: 'Scheibe Aircraft (Übersicht)'
+issuer: 'Scheibe Aircraft'
+
+type: overview
+
+default_kind: tm
+subject_kind: aircraft_model
+
+overview:
+  # Was auf einem Scheibe-Blatt in der Spalte "TM-Nr." stehen kann.
+  #
+  # x-Modus, weil es sieben Schreibweisen aus sechzig Jahren sind. Die erste
+  # Gruppe, die fängt, IST die Nummer; was davor steht (der Name eines fremden
+  # Herstellers, das Kürzel "TM", "Gen.") gehört nicht dazu.
+  number_pattern: |-
+    ~^(?:
+          # Scheibes eigene Reihe, benannt nach dem Kennblatt: 653 für die
+          # SF 25, 104 für den Bergfalke, 214 für den Zugvogel, 819 für die
+          # SF 36, 63 für die Mü 13 D. Geschrieben wird sie mit Bindestrich
+          # oder Halbgeviertstrich, mit oder ohne Leerzeichen davor und danach:
+          # "653-29", "653- 28", "653 – 47 / 2", "653–84/1", "104 – 1 / 66",
+          # "770- 17/ 2", "653-9/76-1".
+          #
+          # Vorn zwei bis drei Ziffern, nie vier: die LTA-Nummern in der Spalte
+          # daneben heissen "1989-018/3", "2003-160", "2005-02323", und eine
+          # davon als TM-Nummer zu lesen wäre eine erfundene Anweisung.
+          (\d{2,3}\s*[-–]\s*\d{1,3}(?:\s*/\s*\d{1,3})?(?:\s*[-–]\s*\d{1,3})?)(?![\w.-])
+        |
+          # Die ältesten Blätter zählen nur durch und hängen das Jahr an:
+          # "1/69", "2/71", "3/77", "1 / 70", "62/1". Mit Schrägstrich statt
+          # Bindestrich -- eine LTA schreibt sich nie so, deshalb kollidiert
+          # diese Form nicht mit der Spalte daneben.
+          (\d{1,2}\s*/\s*\d{1,3})(?![\w./-])
+        |
+          # Die musterübergreifenden TMs. "Gen." ist die Reihe, nicht das
+          # Kürzel, und bleibt deshalb aussen vor -- die Nummer ist "01-2020".
+          Gen\.\s*(\d{2}\s*[-–]\s*\d{4})(?![\w./-])
+        |
+          # "TM 1", "TM 2 Ausg. 2", "TM 235", "TM 25C-1-73". Kürzel ist Gattung,
+          # nicht Identität -- gefangen wird nur die Nummer.
+          TM\s*(\d{2}[A-Z]\s*[-–]\s*\d{1,3}\s*[-–]\s*\d{1,3}|\d{1,3})(?![\w./-])
+        |
+          # Änderungen der Zelle: "Änd. 4", "Änd.1,2,3,7", "Änd . 23",
+          # "Änder.Nr. 20", "Änderung 2", "Änderungsanweis. 1", "Tost Änd. 2/65".
+          # Die englische Wiederholung "(Mod. 4)" steht auf derselben oder der
+          # nächsten Zeile und wird mitverbraucht, damit sie nicht als eigener,
+          # unerkannter Eintrag gemeldet wird.
+          (?:Tost\s+)?
+          (Änd(?:er(?:ung)?(?:sanweis)?)?\s*\.?\s*(?:Nr\.\s*)?\d+(?:\s*[,/]\s*\d+)*)(?![\w.-])
+          \s*(?:\(Mod\.[^)]*\))?
+        |
+          # Fremde Hersteller mit eigener Nummer.
+          Pützer\s+(S\s*[-–]\s*\d{2}\s*[-–]\s*\d{2})(?![\w./-])
+        |
+          Bendix\s+(SB\s*\d{3})(?![\w./-])
+        |
+          # Fremde Hersteller OHNE Nummer -- "Tost Betr.Anw.", "L`Hotellier:
+          # keine", "Cessna" (die Nummer SEB 91-5 steht eine Zeile tiefer),
+          # "Allied Signal", "Betr.u.Wartungs-Anweisung für Hirth F 10".
+          #
+          # Bewusst ohne Fanggruppe: Scheibe hat diesen Zeilen keine TM-Nummer
+          # gegeben, also wird auch keine erfunden. Die Zeile beginnt trotzdem
+          # und wird über ihre LTA-Nummer geführt -- 74-5, 93-001/3, 94-001/2,
+          # 93-149, 99-044, 69-142 stehen alle da.
+          (?:Tost\s+Betr|L\s*[`'’]\s*-?\s*Hotellier|Cessna|Allied\s+Signal
+            |Betr\s*\.?\s*u\.?\s*\s*Wartungs)
+        |
+          # Der Strich, mit dem Scheibe "keine TM" schreibt: --, ---, ----.
+          #
+          # Ebenfalls ohne Fanggruppe, aber nicht überflüssig neben dem
+          # Platzhalter, den der Leser selbst kennt: pageHeads() schneidet die
+          # ersten Zeilen unter der Kopfzeile heraus, solange dort keine NUMMER
+          # steht. Ohne diese Alternative verschwand die erste Zeile jeder
+          # Seite, die mit einem Strich beginnt -- auf der Mü 13 D die LTA
+          # 67-96, ohne jede Meldung.
+          [-–—]{2,4}$
+      )~xu
+
+  # Wie Scheibe seine Spalten überschreibt:
+  #   LTA-Nr. | TM-Nr. | Gegenstand | Durchführung | Datum | Prüfer
+  #   Ausgabe | Ausgabe | (Subject)  | (Compliance) | (Date) | (Inspector)
+  headings:
+    authority: ['lta-nr']
+    number: ['tm-nr']
+    title: ['gegenstand']
+    compliance: ['durchführung']
+
+  # "Datum" ist hier ABSICHTLICH nicht beschrieben.
+  #
+  # Die Spalte heisst "Datum (Date)" und steht neben "Prüfer (Inspector)": das
+  # ist das Feld, in das der Prüfer bei der Jahresnachprüfung einträgt, wann er
+  # die Anweisung abgearbeitet hat. Im Blatt ist sie leer. Das Ausgabedatum der
+  # TM steht bei Scheibe unter der Nummer ("Ausgabe / Edition"), und genau von
+  # dort holt der Leser es, wenn keine Datumsspalte beschrieben ist.
+
+  # Einsprachig gelesen, obwohl das Blatt zweisprachig ist: Scheibe setzt die
+  # englische Fassung nicht als eigene Zeile darunter, sondern in dieselbe
+  # Zelle, meist in Klammern. Der Gegenstand läuft ausserdem über zwei bis vier
+  # Zeilen, und nur der ganze Block ergibt einen lesbaren Satz.
+  bilingual: false
+
+  # Scheibe setzt seine Tabelle solide, ohne Leerzeile zwischen den Zeilen.
+  blank_separates_rows: false
+
+  # Was Scheibe sonst noch unter die Nummer setzt -- und was der
+  # Vollständigkeitsbericht dadurch nicht mehr melden kann. Deshalb Zeile für
+  # Zeile aus den Blättern gezogen, nicht ausgedacht:
+  #   EASA-Approval / EASA.A.C.09241 / EASA 10035206 / N° 2004-7850
+  #   A.C.02899, E.C.01218          die Kurzform derselben Zulassung
+  #   2005-02323                    dieselbe Nummer ohne "EASA" davor
+  #   (Mod. 60)                     die englische Fassung der Änderungsnummer
+  #   Rev. 1, Ausg. 2, Ausgabe 2    der Ausgabestand, nicht die Nummer
+  #   sung Ausg., E aus 03/94       die Fortsetzung von "L`Hotellier
+  #   Wartungsanwei                  Wartungsanweisung Ausg. E aus 03/94"
+  #   keine                         "L`Hotellier: keine" -- es gibt keine TM
+  #   SB KT76A-7, SEB 91-5          die Nummer des fremden Herstellers, eine
+  #   Fa. HOCO, Hirth F 10          Zeile unter seinem Namen
+  #   03.70                         ein Ausgabedatum ohne Tag (März 1970)
+  #   9891)                         die zweite Hälfte einer umbrochenen Nummer
+  ignore: |-
+    ~^(?:
+        EASA | N° | \(EASA | [AE]\.C\.\d | \d{4}-\d{5}
+      | \(Mod\. | Rev\s*\. | Ausg(?:abe|\.)? | sung\b | E\s+aus\b
+      | Wartungsanwei | keine$ | Module$ | Anweisung\b | Hirth\b | Fa\. | HOCO\b
+      | SB\s*KT | SEB\s | \d{2}\.\d{2}$ | \d+\)$
+    )~xiu
+
+  # Die Musterseiten, ausgeschrieben -- siehe oben, warum sie nicht zu erraten
+  # und nicht aus der Navigation zu holen sind. Der Name links ist der, unter
+  # dem ein Verein sein Flugzeug führt; verglichen wird ohne Leer- und
+  # Sonderzeichen.
+  documents:
+    'Bergfalke II': 'https://www.scheibe-aircraft.de/bf-ii'
+    'Bergfalke II/55': 'https://www.scheibe-aircraft.de/kopie-bf-ii-55'
+    'Bergfalke III': 'https://www.scheibe-aircraft.de/bf-iii'
+    'Bergfalke IV': 'https://www.scheibe-aircraft.de/bf-iv'
+    'Mü 13 D': 'https://www.scheibe-aircraft.de/newpage4b8f29e1'
+    'Mü 13 E': 'https://www.scheibe-aircraft.de/newpage2a916822'
+    'SF 23': 'https://www.scheibe-aircraft.de/sf23'
+    'SF 24': 'https://www.scheibe-aircraft.de/sf-24'
+    'SF 25 A': 'https://www.scheibe-aircraft.de/sf-25a'
+    'SF 25 B': 'https://www.scheibe-aircraft.de/sf-25b'
+    'SF 25 C': 'https://www.scheibe-aircraft.de/sf-25c'
+    'SF 25 D': 'https://www.scheibe-aircraft.de/sf-25d'
+    'SF 25 E': 'https://www.scheibe-aircraft.de/sf-25e'
+    'SF 25 K': 'https://www.scheibe-aircraft.de/sf-25k'
+    'SF 26 A': 'https://www.scheibe-aircraft.de/newpageb7774585'
+    'SF 27': 'https://www.scheibe-aircraft.de/sf27'
+    'SF 27 M': 'https://www.scheibe-aircraft.de/sf27-m'
+    # Nicht vertauscht: die Musterseite der SF 28 A heisst bei Scheibe "/sf30",
+    # die der SF 30 "/sf30b817afe4". Geprüft am Blatt hinter der Adresse --
+    # UEBLTA28A.pdf beziehungsweise UEBLTA_SF30.pdf.
+    'SF 28 A': 'https://www.scheibe-aircraft.de/sf30'
+    'SF 30': 'https://www.scheibe-aircraft.de/sf30b817afe4'
+    'SF 34': 'https://www.scheibe-aircraft.de/sf34'
+    'SF 36 A': 'https://www.scheibe-aircraft.de/sf-36a'
+    'SF 36 R': 'https://www.scheibe-aircraft.de/sf-36r'
+    'Spatz': 'https://www.scheibe-aircraft.de/spatz'
+    'Specht': 'https://www.scheibe-aircraft.de/specht'
+    'Sperber': 'https://www.scheibe-aircraft.de/sperber'
+    'Zugvogel I': 'https://www.scheibe-aircraft.de/zugvogel-i'
+    'Zugvogel II': 'https://www.scheibe-aircraft.de/zugvogel-ii'
+    'Zugvogel III': 'https://www.scheibe-aircraft.de/zugvogel-iii'
+    'Zugvogel IV': 'https://www.scheibe-aircraft.de/zugvogel-iv'
+
+  # Das Blatt auf der Musterseite. Der Dateiname beginnt bei 27 von 29 Mustern
+  # mit "UEBLTA", bei der SF 36 A und der SF 36 R mit "ÜBLTA" -- in der Adresse
+  # prozentkodiert als %C3%9CB. Beides muss stehen, sonst hätten genau diese
+  # zwei Muster stillschweigend keine Übersicht.
+  document_pattern: '#href="([^"]*/uploaded/(?:UEB|%C3%9CB)LTA[^"]*\.pdf\?[^"]*)"#i'
+
+bindingness:
+  # Aus der Spalte "Durchführung" selbst gezogen. Alles, was hier NICHT steht,
+  # gilt als verbindlich -- falsch in Richtung verbindlich lässt eine Zeile auf
+  # der Liste stehen, falsch in Richtung wahlweise lässt sie sich abtun.
+  #
+  # "Nicht Betroffen" heisst genau genommen nicht "wahlweise", sondern "gilt für
+  # dieses Muster nicht" (Scheibe führt die Zeile trotzdem, weil die LTA für die
+  # Schwestermuster gilt). Ohne Eintrag hier wäre sie verbindlich, und das wäre
+  # schlechter: eine Pflicht, die es nicht gibt.
+  optional_phrases:
+    - wahlweise
+    - optional
+    - 'bei bedarf'
+    - 'on request'
+    - 'im ermessen des halters'
+    - 'discretionary'
+    - 'nicht betroffen'
+
+  # Wahlweise UND ein harter Termin ist nicht wahlweise: "a) wahlweise
+  # b) optional c) spätestens bei der nächsten Jahresnachprüfung" steht so auf
+  # der SF 25 C, und Teil c) darf nicht mit a) untergehen.
+  mandatory_override: '/(vor dem nächsten (start|flug)|spätestens|bis zum|jahresnachprüfung)/u'
+
+# Eine EASA-AD wird als AD geführt, eine LBA-LTA als LTA. Verbindlich sind
+# beide; die Art wird festgehalten, weil ein Prüfer nach dem Dokument fragt.
+authority_kind_pattern: '/EASA|AD/i'

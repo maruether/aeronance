@@ -1,0 +1,64 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits"
+  ],
+
+  "description": [
+    "CLAUDE.md verlangt Renovate/Dependabot. Bei einem selbst gehosteten GitLab gibt es keine App zum Anklicken -- Renovate laeuft als geplanter CI-Job, siehe den Job 'renovate' in .gitlab-ci.yml.",
+    "WARUM DAS MEHR IST ALS HYGIENE: CspScriptHashesTest schlaegt genau in dem Merge Request an, der composer.lock anfasst -- also in einem Renovate-MR, der Filament hebt. Ohne Bot faellt die Abweichung erst auf, wenn jemand von Hand updatet.",
+    "TAKT: einmal woechentlich, montags frueh. Ein Verein hat keinen Menschen, der taeglich Merge Requests durchsieht, und ein Bot, der schneller schreibt als jemand liest, wird abgeschaltet statt gelesen.",
+    "NICHTS WIRD AUTOMATISCH ZUSAMMENGEFUEHRT, auch keine Patch-Versionen: Die Pipeline prueft Dinge, die ein Mensch ansehen muss, und ein Automerge auf master waere eine Aenderung an einer oeffentlich erreichbaren Instanz ohne Blick darauf."
+  ],
+
+  "timezone": "Europe/Berlin",
+  "schedule": ["* 0-6 * * 1"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "automerge": false,
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+
+  "lockFileMaintenance": {
+    "description": "Einmal im Monat die Lock-Datei auffrischen, auch ohne neue Hauptversionen -- sonst sammelt sie ueber Jahre Stand, den niemand mehr nachvollzieht.",
+    "enabled": true,
+    "schedule": ["* 0-6 1 * *"]
+  },
+
+  "vulnerabilityAlerts": {
+    "description": "Sicherheitsluecken kommen sofort, nicht erst am Montag.",
+    "labels": ["sicherheit"],
+    "schedule": ["at any time"]
+  },
+
+  "packageRules": [
+    {
+      "description": "Filament veroeffentlicht seine Pakete im Gleichschritt; einzeln gehoben zerlegt es sich. An genau diesen Paketen haengt ausserdem der CSP-Hash-Test -- das Etikett erinnert daran, config/csp.php neu zu erzeugen.",
+      "groupName": "filament",
+      "matchPackageNames": ["filament/**"],
+      "addLabels": ["csp-hashes-pruefen"]
+    },
+    {
+      "description": "Laravel und Livewire zusammen -- ein halb gehobenes Framework laesst sich nicht sinnvoll pruefen.",
+      "groupName": "laravel",
+      "matchPackageNames": ["laravel/**", "livewire/**"]
+    },
+    {
+      "description": "Der QR-Dekoder und sein WASM-Teil muessen zueinander passen: Das WASM wird beim Bauen aus node_modules kopiert, siehe vite.config.js.",
+      "groupName": "barcode",
+      "matchPackageNames": ["barcode-detector", "zxing-wasm"]
+    },
+    {
+      "description": "PHP wird NICHT gehoben. Die Mindestversion ist eine Entscheidung ueber den Zielserver und keine Abhaengigkeit: Was hier steht, muss ein Debian-Standardsystem koennen. Ein Bot, der auf die naechste Version hebt, verschiebt still die Systemvoraussetzung fuer jeden Verein.",
+      "matchPackageNames": ["php"],
+      "enabled": false
+    },
+    {
+      "description": "MariaDB ebenso: 10.11 ist die LTS in Debian 12 und damit eine Zusage an die Betreiber, keine Zahl, die man hebt, weil es eine neuere gibt. Siehe die Leitplanke -- MariaDB ist Hard Limit.",
+      "matchPackageNames": ["mariadb"],
+      "enabled": false
+    }
+  ]
+}

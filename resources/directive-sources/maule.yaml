@@ -1,0 +1,53 @@
+# Maule Air -- Service Bulletin Index.
+#
+# ---------------------------------------------------------------------------
+# Eine Seite, frei, ohne Login. Spalten: SB# | SUBJECT | AFFECTED MODELS.
+#
+# KEIN AUSGABEDATUM. Der Index fuehrt keines -- weder eine Datumsspalte noch ein
+# Datum im Text. Das Feld bleibt leer, wie bei Lindner, Stemme, Lange und
+# American Champion.
+#
+# DIE DATEI IST ALT: ModDate Mai 2017. Ob Maule sie seither ueberarbeitet hat,
+# ist von aussen nicht feststellbar -- die Seite verlinkt diese Fassung.
+#
+# Die AD-Nummern stehen IM Gegenstand in Klammern ("(AD# 79-12-01)") und nicht
+# in einer eigenen Spalte. Sie bleiben deshalb im Titel stehen: sie dort
+# herauszuschneiden hiesse, den Satz des Herstellers umzuschreiben, und als
+# eigene Spalte auszugeben hiesse, eine Struktur zu behaupten, die das Blatt
+# nicht hat.
+# ---------------------------------------------------------------------------
+
+name: maule
+label: 'Maule Air (SB-Index)'
+issuer: 'Maule Air'
+type: overview
+
+default_kind: sb
+subject_kind: aircraft_model
+
+overview:
+  # "1.", "12.", "27." -- laufende Nummer mit Punkt.
+  # "1." bis "40.", und zwei Zeilen ohne Punkt: "29 Cancelled", "33 Cancelled".
+  # Die kommen MIT herein -- eine zurueckgezogene Anweisung ist eine Zeile, die
+  # jemand als erledigt abhaken koennen muss, keine, die verschwindet.
+  number_pattern: '#^\d{1,3}\b#'
+
+  # Fortsetzungszeilen des Gegenstands rutschen in die Nummernspalte, wo der
+  # Text ueber zwei Zeilen laeuft.
+  headings_centred: true
+
+  ignore: '#^[a-z]#'
+
+  headings:
+    number:
+      - 'sb#'
+    title:
+      - 'subject'
+    subject:
+      - 'affected models'
+
+  documents:
+    'M-4': 'https://fdb41ebf-dcb9-418b-8328-810edcfc833e.filesusr.com/ugd/a530ab_265bd617fc2f4c9cb69db080f9be0cfb.pdf'
+    'M-5': 'https://fdb41ebf-dcb9-418b-8328-810edcfc833e.filesusr.com/ugd/a530ab_265bd617fc2f4c9cb69db080f9be0cfb.pdf'
+    'M-6': 'https://fdb41ebf-dcb9-418b-8328-810edcfc833e.filesusr.com/ugd/a530ab_265bd617fc2f4c9cb69db080f9be0cfb.pdf'
+    'M-7': 'https://fdb41ebf-dcb9-418b-8328-810edcfc833e.filesusr.com/ugd/a530ab_265bd617fc2f4c9cb69db080f9be0cfb.pdf'

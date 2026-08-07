@@ -1,0 +1,27 @@
+# Automatische Aktualisierung -- Docker-Betrieb, auf dem WIRT.
+#
+#   install -m 644 deploy/docker/aeronance-update.service /etc/systemd/system/
+#   install -m 644 deploy/docker/aeronance-update.timer   /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now aeronance-update.timer
+#
+# WorkingDirectory anpassen, falls das Compose-Setup woanders liegt.
+#
+# ──────────────────────────────────────────────────────────────────────────────
+# ALS ROOT, WEIL DOCKER ES VERLANGT -- und genau deshalb steht diese Unit auf
+# dem Wirt und nicht in einem Container mit dem Docker-Socket. Wer den Socket
+# hat, ist auf dem Wirt root; ein Ausbruch aus einem solchen Container wäre kein
+# Ausbruch mehr, sondern ein Login.
+# ──────────────────────────────────────────────────────────────────────────────
+
+[Unit]
+Description=Aeronance automatische Aktualisierung (Docker)
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/aeronance/deploy/docker
+ExecStart=/opt/aeronance/deploy/docker/auto-update.sh
+
+TimeoutStartSec=1800

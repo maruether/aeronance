@@ -1,0 +1,78 @@
+# NEUFORM Propeller -- Technische Mitteilungen
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE DÜNNSTE QUELLE DIESES MODULS, und sie ist trotzdem gebaut.
+#
+# Neuform hat keine TM-Seite. Die Mitteilungen liegen unter „Downloads" in
+# einem Abschnitt „Technische Mitteilung", zwischen Betriebshandbüchern und
+# einem Fragebogen, und der Linktext IST der Dateiname. Es gibt:
+#
+#   keinen Titel        der Link heisst "Neuform-technische-mitteilung-tm-17-01.pdf"
+#   kein Datum          nirgends auf der Seite
+#   keine Dringlichkeit ebensowenig
+#
+# Damit bleibt: die Nummer und das Dokument. Das ist wenig -- aber der
+# Unterschied zwischen „vier Mitteilungen, hier sind sie" und „von Neuform
+# wissen wir nichts" ist genau der, um den es hier geht. Der Titel fällt auf
+# die Nummer zurück; erfunden wird keiner.
+#
+# VIER DOKUMENTE, namentlich:
+#   TM-17-01, TM-10-01, TM-08-01   Technische Mitteilungen
+#   AA-08-01                       Arbeitsanweisung, gehört zur TM-08-01
+#
+# NICHT DABEI: "Autorisierte_Betriebe-TM-08-01.pdf". Das ist die Liste der
+# Betriebe, die nach TM-08-01 arbeiten dürfen -- eine ANLAGE zur Mitteilung,
+# keine eigene. Als Anweisung geführt stünde sie als fünfter Punkt auf der
+# Liste, den niemand durchführen kann. Namentlich ausgeschlossen.
+#
+# DIE SCHREIBWEISE DER NUMMER FOLGT DEM HERSTELLER. Er schreibt sie in seinen
+# Dateinamen mal klein ("...-tm-17-01.pdf"), mal gross ("NEUFORM_TM-08-01.pdf").
+# Vereinheitlicht wird nichts: eine Nummer ist eine Kennung, und wer sie im
+# Dokument nachschlägt, findet sie so vor.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: neuform
+label: 'NEUFORM Propeller (Technische Mitteilungen)'
+issuer: 'Neuform-Technik GmbH'
+type: list
+
+default_kind: tm
+subject_kind: propeller
+
+page:
+  url: 'https://neuform-propeller.de/downloads/'
+
+  # Ein Anker je Dokument.
+  row_pattern: '#<a[^>]*href="[^"]*\.pdf"[^>]*>.*?</a>#is'
+
+  # Die Anlage zur TM-08-01, siehe oben.
+  ignore: '/Autorisierte/i'
+
+columns:
+  # Aus dem Dateinamen, weil die Seite nichts anderes hat -- der Linktext ist
+  # derselbe String. Sonst gilt in diesem Modul die Regel, die Nummer NICHT aus
+  # dem Dateinamen zu ziehen; hier gibt es keine zweite Quelle dafür, und das
+  # steht so in dieser Datei, damit niemand die Ausnahme für die Regel hält.
+  #
+  # Die Handbücher fallen durch: "9001-20190329-betriebshandbuch-..." trägt
+  # kein TM-/AA-Kürzel.
+  number: '#href="[^"]*?((?:TM|AA)[-_]\d{2}-\d{2})[^"]*\.pdf"#i'
+
+  # DER LINKTEXT, der hier derselbe String ist wie die Nummer -- der Titel
+  # kommt also gleich der Nummer heraus.
+  #
+  # Das ist die ehrliche Wiedergabe dieser Seite und keine Panne: Neuform
+  # vergibt keine Bezeichnung, nur einen Dateinamen. Die Spec verlangt ein
+  # Titelfeld, also steht dort, was da ist. Was die Gattung ist, sagt die
+  # Nummer selbst -- TM gegen AA.
+  #
+  # Wer hier später etwas Besseres einsetzen will, muss es aus dem PDF holen;
+  # aus der Seite ist es nicht zu bekommen.
+  title: '#<a[^>]*>\s*([^<]+?)\s*</a>#is'
+
+  document: '#href="([^"]+\.pdf)"#i'
+
+# Kein date-Feld: die Seite nennt keins. Ein Datum aus dem Dateinamen zu bauen
+# ginge bei den Handbüchern ("9001-20190329-..."), bei den Mitteilungen nicht --
+# und ein Feld, das mal stimmt und mal geraten ist, ist schlechter als ein
+# leeres.

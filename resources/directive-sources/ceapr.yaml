@@ -1,0 +1,127 @@
+# C.E.A.P.R. -- Bulletins Service und Lettres Service für die Robin-Muster.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DER HERSTELLER HINTER ROBIN. Robin Aircraft SAS wurde am 16.11.2023 vom
+# Handelsgericht Dijon liquidiert; die Musterzulassungen liegen bei der
+# Muttergesellschaft C.E.A.P.R. in Darois, die die Musterbetreuung fortführt.
+# robin-aircraft.com ist reine Werbung und trägt keinen Dokumentbereich --
+# gesucht werden muss auf ceapr.com.
+#
+# KEIN LOGIN, und das ist nachgemessen, nicht angenommen. Die Einstiegsseite
+# /app/publications sagt „Cette partie du site est réservée aux abonnés à nos
+# publications en ligne" und sieht damit aus wie eine Bezahlschranke. Die Liste
+# dahinter ist es nicht: 286 Einträge, 0 davon ohne Dokument, und neun über die
+# ganze Liste verteilte Stichproben liefern anonym echte PDFs (94 kB bis 1,5 MB).
+# Vorgesehen war für diese Quelle Zugangsdaten hinterlegt; gebraucht werden sie
+# nicht, und was nicht gebraucht wird, gehört nicht in eine Spec.
+#
+# NUR AUF POST. Derselbe Pfad antwortet auf JEDES GET mit HTTP 404 -- mit
+# Query-String und ohne. Deshalb `endpoint.method: POST`; siehe FormFetcher.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: ceapr
+label: 'C.E.A.P.R. (Robin)'
+issuer: 'C.E.A.P.R.'
+type: json
+
+default_kind: sb
+subject_kind: aircraft_model
+
+endpoint:
+  url: 'https://www.ceapr.com/app/publications/ls-bs-liste/1/choix-type-avion'
+  method: POST
+
+  # `nav` LEER heißt „alle Muster" und ist mit Absicht so gesetzt.
+  #
+  # Die Alternative wäre, je Flugzeugmuster einen `nav`-Wert zu schicken. Das
+  # wäre die schlechtere Wahl: Ein unbekannter Wert liefert HTTP 200 mit `{}` --
+  # kein Fehler, keine Meldung, nur eine leere Liste, die aussieht wie „C.E.A.P.R.
+  # hat für dieses Muster nichts veröffentlicht". Ein Tippfehler im Musternamen
+  # wäre damit unsichtbar. Ein Abruf, aufgeteilt über die `navigabilite`-Spalte,
+  # kann diesen Fehler nicht machen.
+  body:
+    nav: ''
+
+# Kein `items`: Die Antwort ist ein JSON-OBJEKT mit Zahlen-Schlüsseln
+# ("0", "1", "2", ...), kein Array. Ohne Pfad liest der Treiber die Wurzel, und
+# ein assoziatives Array durchläuft genauso.
+
+# Die Felder, die C.E.A.P.R. je Zeile liefert.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DAS DATUM IST BEWUSST NICHT ZUGEORDNET, und das ist der wichtigste Satz in
+# dieser Datei. `edition_date` ist gefüllt (284 von 286), aber NICHT
+# maschinenlesbar: In derselben Spalte, bei identischer Schreibweise, stehen
+# beide Konventionen nebeneinander. Gezählt über die 204 Zeilen der Form
+# „Issue N dtd T/M/J":
+#
+#   'Issue 0 dtd 24/02/2026'   ->   1 Zeile mit Tag > 12   (Tag zuerst)
+#   'Issue 1 dtd 10/27/2003'   -> 117 Zeilen mit 2. Zahl > 12 (Monat zuerst)
+#
+# Beide Formen tragen dasselbe „dtd". Es gibt also kein Merkmal, an dem sich die
+# Reihenfolge entscheiden ließe -- und bei der Mehrheit sind beide Zahlen <= 12,
+# da fiele die Verwechslung nicht einmal auf. Daneben stehen englische Langformen
+# („February 5th, 2024") und 71 Zeilen ganz ohne Datum.
+#
+# Ein Feld hier zuzuordnen hieße, für einen erheblichen Teil der Liste still
+# falsche Ausgabedaten zu schreiben. Dieselbe Entscheidung wie bei Lindner und
+# DG, nur aus einem schärferen Grund: dort FEHLT das Datum, hier ist es
+# vorhanden und mehrdeutig -- was gefährlicher ist, weil es vertrauenswürdig
+# aussieht.
+#
+# Das JSON trägt zusätzlich ein `date` als Unix-Zeitstempel. Der ist NICHT das
+# Ausgabedatum, sondern der Hochladezeitpunkt -- dieselbe Zahl steht als Präfix
+# im Dateinamen (1784636809-090702_...). CLAUDE.md und die Modulregel sind da
+# eindeutig: kein Hochladezeitpunkt als Ausgabedatum.
+# ─────────────────────────────────────────────────────────────────────────────
+columns:
+  number: 'titre'
+  title: 'descriptif'
+  model: 'navigabilite'
+  document: 'fic'
+
+# Aus `fic` wird die Dokumentadresse: https://www.ceapr.com/fic-bl/<fic>
+document_url: 'https://www.ceapr.com/fic-bl/{document}'
+
+# Die Verbindlichkeit steht in der DOKUMENTBEZEICHNUNG, nicht in einer eigenen
+# Spalte -- eine Dringlichkeitsspalte gibt es bei C.E.A.P.R. gar nicht. Gezählt
+# über alle 286 Zeilen, am Ende der Bezeichnung:
+#
+#   Mandatory    102      Recommended   48
+#   Optional       7      ohne Marker  129
+#
+# Die 129 ohne Marker bleiben verbindlich -- der Default, und die sichere
+# Richtung: Etwas Bindendes als optional zu führen erlaubt seine Umgehung,
+# umgekehrt steht es nur so lange auf der Liste, bis jemand die Zeile korrigiert.
+#
+# „Recommended" ist eine eigene Kategorie, keine Spielart von optional (Vorgabe: # „Empfohlen bedeutet Optional, aber der hersteller empfielt es."). 48 Zeilen
+# hängen daran, das ist kein Randfall.
+bindingness:
+  # Gelesen aus der Bezeichnung statt aus einer Dringlichkeitsspalte -- siehe
+  # SourceSpec::$bindingnessSource. Ohne das landete der ganze Titel als
+  # „Dringlichkeit: ..." in der Zusammenfassung, was er nicht ist.
+  source: 'titre'
+
+  recommended_phrases:
+    - recommended
+
+  optional_phrases:
+    - optional
+
+# Der Marker darf NICHT Teil der Nummer bleiben. Stuft C.E.A.P.R. eine Anweisung
+# um, änderte sich sonst die Zeichenkette, und der Import legte eine zweite
+# Anweisung an, statt die erste zu aktualisieren -- die Beurteilungen fielen
+# auseinander. Dieselbe Falle wie bei Diamond.
+#
+# `MADATORY` steht so im Original (SB 221201R1) -- ein Tippfehler des Herstellers.
+# Er wird bewusst NICHT mit abgeräumt: Ein Muster, das auch Vertipper trifft,
+# trifft irgendwann etwas, das keiner ist. Die eine Zeile korrigiert ein Mensch.
+# Das Trennzeichen ist OPTIONAL, weil C.E.A.P.R. beide Schreibweisen benutzt:
+# „SB 119 - Mandatory" (102) neben „SB 220701R1 MANDATORY" (14, ohne Strich).
+# Ein Muster, das den Bindestrich verlangt, ließ genau diese 14 stehen.
+number_strip: '/\s*[-–_]?\s*(mandatory|recommended|optional)\.?\s*$/i'
+
+# Präfixe über die 286 Zeilen: SB 196 · SL 89 · LS 1. Alle drei sind
+# Herstellerdokumente, deshalb ein einziges `default_kind: sb` -- eine
+# Unterscheidung nach Präfix kennt das Format nicht, und sie erfinden wäre
+# schlechter als sie wegzulassen.

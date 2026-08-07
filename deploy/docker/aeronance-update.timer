@@ -1,0 +1,26 @@
+# Wann nach einer neuen Fassung gesehen wird.
+#
+# ──────────────────────────────────────────────────────────────────────────────
+# NACHTS, UND MIT ZUFALLSVERZÖGERUNG.
+#
+# Nachts, weil ein Update den Wartungsmodus einschaltet -- mitten am Samstag
+# wäre das die Werkstatt, die vor einer 503 steht.
+#
+# RandomizedDelaySec, weil sonst jede Aeronance-Installation der Welt zur
+# selben Minute dieselbe GitHub-API anfragt. Bei einer Handvoll Vereinen ist
+# das egal; die Rücksicht kostet nichts und wird sonst nie nachgerüstet.
+#
+# Persistent=true: Stand der Server nachts aus -- bei einem Verein der
+# Normalfall --, wird der Lauf beim nächsten Start nachgeholt statt übersprungen.
+# ──────────────────────────────────────────────────────────────────────────────
+
+[Unit]
+Description=Aeronance sucht nach Aktualisierungen (Docker)
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,135 @@
+# Flight Design -- Service Documents
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE GRÖSSTE QUELLE DIESES MODULS: 304 Dokumente in 17 Tabellen.
+#
+# Die Seite ist ein verschachteltes Akkordeon aus Reitern, und WELCHES MUSTER
+# eine Tabelle betrifft, steht nirgends in ihrer Nähe -- nicht als Überschrift,
+# nicht als Beschriftung. Die Reiter heissen nur nach der Zulassungsbasis
+# ("ASTM", "LT-UL", "SECS"). Eine erste Runde hat diese Quelle deshalb
+# ausdrücklich NICHT gebaut: 304 Zeilen auf 17 Muster zu verteilen, deren
+# Zuordnung nur in der Verschachtelung steckt, ginge nur mit einem DOM-Parser,
+# und eine Anweisung am falschen Flugzeug ist schlimmer als keine.
+#
+# DIE AUFLÖSUNG STAND IM DOKUMENT SELBST. Flight Design baut seine Nummern aus
+# vier Teilen:
+#
+#     SB   -   ASTM   -   CTLS   -   03
+#     ^        ^          ^          ^
+#     Gattung  Zulassung  Muster     laufende Nummer
+#
+# Gemessen über alle 304: SB (Service Bulletin), SN (Service Notification),
+# SA (Safety Alert), SL (Service Letter), SBu (Safety Bulletin); ASTM, LTUL,
+# SECS; CTLS, CTSW, CT2k, CT_, CT2K. Das Muster steht also in JEDER Zeile,
+# unabhängig davon, in welcher Tabelle sie steht -- die Verschachtelung wird
+# gar nicht gebraucht.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# ALLE GATTUNGEN, AUCH DIE LETTERS
+#
+# Bei Aviat sind die Service Letters ausgeschlossen: sie stehen dort in einer
+# eigenen zweiten Tabelle, und der Treiber liest nur die erste. Hier stehen sie
+# vermischt, und die Gattung steht in der Nummer -- vor den Augen dessen, der
+# die Zeile beurteilt. Ausgefiltert würden sie stillschweigend fehlen; so steht
+# "SL-" davor und die Zeile lässt sich abhaken.
+#
+# Vorgabe: „ich hätte lieber eine nicht mehr gültige tm, die ich als alt abhaken
+# kann wie eine zu wenig."
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DAS DATUM: TAG ZUERST, UND DAS IST GEMESSEN
+#
+# Die Spalte schreibt "26-10-2023". Das ist zweimal ein gültiges Datum, und aus
+# der Zeichenkette allein ist die Reihenfolge nicht zu gewinnen -- genau der
+# Fall, in dem C.E.A.P.R. das Feld leer lässt.
+#
+# Hier ist er entscheidbar, weil das Blatt es selbst beantwortet: von 304 Daten
+# haben 230 eine erste Zahl über zwölf, und KEIN EINZIGES eine zweite über
+# zwölf. Tagesführend, belegt durch die Daten und nicht aus dem Sitzland des
+# Herstellers geschlossen. Deshalb steht date_order hier ausgeschrieben.
+#
+# GEZÄHLT: 304 Dokumente in 17 Tabellen. Der Vollständigkeitsbericht muss leer
+# bleiben.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: flightdesign
+label: 'Flight Design (Service Documents)'
+issuer: 'Flight Design general aviation GmbH'
+type: table
+
+default_kind: sb
+subject_kind: aircraft_model
+
+# "SB-ASTM-CTLS-03" trägt seine Art schon im Namen.
+number_prefix: false
+
+# Siehe oben -- gemessen, nicht angenommen.
+date_order: 'dmy'
+
+page:
+  url: 'https://flightdesign.com/service-documents'
+
+  table_pattern: '#<table[^>]*>.*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+
+  # Siebzehn Tabellen, eine je Muster und Zulassungsbasis. Ohne dies stünde
+  # eine von siebzehn da, und nichts sagte es.
+  all_tables: true
+
+  # Sechs Spalten. Die Abschnittszeilen ("Safety Alerts", "Service Bulletins")
+  # haben eine und fallen hier heraus; die Gattung steht ohnehin in der Nummer.
+  min_cells: 6
+
+  document_pattern: '#href="([^"]*\.pdf[^"]*)"#i'
+
+  # Die Kopfzeile jeder der 17 Tabellen. Sie hat sechs Spalten wie eine
+  # Datenzeile, min_cells hält sie also nicht auf, und ihre Nummernzelle heisst
+  # "Download" -- 51 Zeilen, die sonst als Anweisungen im Bestand landeten.
+  ignore: '/^Download$/'
+
+# Download | Date | Subject | Affected | Compliance | Manual
+#
+# Die erste Spalte ist mit "Download" überschrieben, enthält aber die
+# Dokumentnummer -- der Anhang hängt daran.
+columns:
+  number: 0
+  date: 1
+  title: 2
+  affected: 3
+  compliance: 4
+
+bindingness:
+  # ─────────────────────────────────────────────────────────────────────────
+  # GEZÄHLT, BEVOR ETWAS EINGETRAGEN WURDE: Die Compliance-Spalte enthält
+  # praktisch nur Fristen, keine Wahlfreiheiten --
+  #
+  #    98x  n/a
+  #    54x  before the next flight
+  #    21x  prior to next flight
+  #    14x  until the next scheduled maintenance event …
+  #    14x  no later than the next annual inspection …
+  #    11x  mandatory, but without time limit
+  #
+  # Das Ergebnis ist entsprechend: 303 der 304 Zeilen verbindlich, eine
+  # wahlweise. Das ist die getreue Wiedergabe dieses Blattes und kein zu grob
+  # eingestelltes Muster -- Flight Design schreibt schlicht kaum etwas
+  # Wahlweises.
+  #
+  # "n/a" trägt keine Aussage und fällt damit auf verbindlich zurück. Die
+  # übliche Asymmetrie, hier besonders angebracht: die Zeilen mit "n/a" sind
+  # überwiegend Safety Alerts.
+  #
+  # Die Wörter unten stehen trotzdem, als Fangnetz für den Tag, an dem der
+  # Hersteller doch eines schreibt. Keines von ihnen kommt heute vor.
+  # ─────────────────────────────────────────────────────────────────────────
+  optional_phrases:
+    - 'optional'
+    - 'at owner'
+    - 'recommendation only'
+    - 'information only'
+
+  recommended_phrases:
+    - 'recommended'
+
+  mandatory_override: '/(mandatory|before next flight|immediately|upon receipt)/i'

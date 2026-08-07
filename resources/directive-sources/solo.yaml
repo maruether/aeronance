@@ -1,0 +1,62 @@
+# SOLO -- Technische Mitteilungen für die Klapptriebwerke.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Musterbetreuer ist heute die SOLO Vertriebs- und Entwicklungs GmbH,
+# Sindelfingen. solo-kleinmotoren.de ist nur eine JS-Weiterleitung auf die
+# Konzernseite; die Dokumente liegen auf solo-aircraft.com.
+#
+# ERGÄNZT schleicher-solo.yaml, ersetzt es NICHT. Schleicher veröffentlicht auf
+# seiner eigenen Seite nur die für AS-Muster relevanten Solo-TMs weiter; hier
+# steht die vollständige Liste des Musterbetreuers. Beide Quellen nebeneinander
+# zu führen ist Absicht -- ein Verein mit einer ASH bekommt die relevanten über
+# Schleicher, einer mit fremdem Muster über diese Datei.
+#
+# DIE TABELLE ENTHÄLT MEHR ALS ANWEISUNGEN: Von 105 Zeilen sind nur rund 44
+# echte TMs; daneben stehen Handbücher, EPT-Listen, Bestellformulare und
+# Reparaturaufträge. Die tragen keine Nummer, und eine Zeile ohne Nummer ist für
+# den Treiber keine Anweisung -- sie fallen von selbst weg, ohne Sonderregel.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: solo
+label: 'SOLO (Downloads)'
+issuer: 'SOLO Vertriebs- und Entwicklungs GmbH'
+type: table
+
+default_kind: tm
+subject_kind: engine
+
+# "TM 4603-1" trägt seine Art schon.
+number_prefix: false
+
+page:
+  url: 'https://www.solo-aircraft.com/de/content/8-downloads'
+
+  table_pattern: '#<table[^>]*class="[^"]*table-striped[^"]*".*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 5
+
+  document_pattern: '#href="([^"]*\.pdf[^"]*)"#i'
+
+# Motortyp | Nummer | Datum | Gegenstand | Download
+columns:
+  affected: 0
+  number: 1
+  date: 2
+  title: 3
+
+# Keine Verbindlichkeitsangabe -- es bleibt alles verbindlich.
+
+# In DERSELBEN Tabelle stehen SOLOs eigene TMs und die EASA-Anweisungen zu
+# denselben Motoren, unterschieden allein an der Schreibweise der Nummer:
+#
+#   TM 4603-1, TM-4600-9, AI 4603-1        SOLO selbst        (49)
+#   AD 2007-0001R1-E, AD2020-0056,
+#   EASA AD 214-0269, AD9-260/2            die Behörde        (12)
+#
+# Ohne diese Unterscheidung lägen zwölf Lufttüchtigkeitsanweisungen als
+# Technische Mitteilungen im Bestand -- und der Unterschied zwischen den beiden
+# ist genau der zwischen "muss" und "kann". Die Verbindlichkeit ändert sich
+# dadurch nicht (beide sind verbindlich voreingestellt); korrigiert wird das
+# Etikett.
+authority_number_pattern: '/^(EASA\s+)?AD[\s\d-]/i'

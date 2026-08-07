@@ -1,0 +1,64 @@
+# Alexander Schleicher -- AS propellers.
+#
+# A SINGLE PAGE, not an index, and that distinction is the whole point of this
+# file existing separately.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# The obvious URL is the wrong one. /tm-lta-wa/tm-triebwerke/ and
+# /tm-lta-wa/propeller/ are hub pages: they carry a list of links and not a
+# single table row. Pointed at one of those, the driver fetches HTTP 200, finds
+# no table, and returns zero rows -- a healthy-looking run reporting that
+# Schleicher has published nothing. That is this module's worst failure mode,
+# and it is one character of URL away.
+#
+# So each spec names the leaf page directly. Two of the six manufacturers listed
+# on those hubs (Austro Engine, Limbach, Hoffmann) publish on their own websites
+# and are separate questions, not something to crawl into.
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# No overview_pattern: unlike the aircraft pages, none of these three offers a
+# _TM_UE_D.pdf summary. Absent rather than empty -- do not copy one in.
+
+name: schleicher-propeller
+label: 'Alexander Schleicher — Propeller (Download)'
+issuer: 'Alexander Schleicher'
+
+default_kind: tm
+subject_kind: propeller
+
+page:
+  url: 'https://www.alexander-schleicher.de/tm-lta-wa/tm-propeller/'
+  table_pattern: '#<table[^>]*class="[^"]*tableFormated[^"]*".*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 7
+
+# Same eight columns as the aircraft pages:
+#   TM/TN Dat. | TM/TN Download | LTA/AD Dat. | LTA/AD Download
+#   Gegenstand | betroffen | Dringlichkeit | Handbuch
+columns:
+  number: 0
+  authority_number: 2
+  title: 4
+  affected: 5
+  compliance: 6
+
+bindingness:
+  # Values that actually occur in these three tables -- 'wahlweise', 'bei Bedarf',
+  # 'bei Neuanfertigung serienmäßig'. Anything NOT listed is treated as binding,
+  # so an unanticipated wording makes a line appear rather than vanish.
+  optional_phrases:
+    - wahlweise
+    - optional
+    - 'bei bedarf'
+    - 'auf wunsch'
+    - 'nach wunsch'
+    - 'bei neubauten'
+    - 'bei neufertigung'
+    - 'bei neuanfertigung'
+    - 'bei neueinbau'
+    - 'als nachrüstung'
+
+  mandatory_override: '/(vor dem nächsten (start|flug)|spätestens|bis zum|jahresnachprüfung)/u'
+
+authority_kind_pattern: '/EASA|AD/i'

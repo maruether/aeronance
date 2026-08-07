@@ -1,0 +1,9 @@
+# Aeronance ist die Werkstattverwaltung EINES Vereins, kein oeffentliches
+# Angebot. Es gibt hier nichts zu finden, was jemand suchen wuerde -- wohl aber
+# eine Anmeldemaske, deren Adresse nicht in einem Suchindex stehen muss.
+#
+# Das ist keine Sicherheitsmassnahme (wer die Adresse kennt, kommt trotzdem
+# hin), sondern schlicht die richtige Auskunft: Diese Seiten sind fuer die
+# Mitglieder da, nicht fuer Suchmaschinen.
+User-agent: *
+Disallow: /

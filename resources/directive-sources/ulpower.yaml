@@ -1,0 +1,70 @@
+# UL Power Aero Engines -- Service Bulletins
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# EIN MOTORENHERSTELLER, KEIN FLUGZEUGHERSTELLER, und deshalb hier trotz der
+# UL-Nähe: Die UL350iS und UL520 hängen in Vereinen unter Ultraleichten, aber
+# eine Motoranweisung gilt dem Motor, nicht der Zelle. Sie kommt über die
+# Komponente ins Flugzeug -- genauso wie Rotax, Limbach und SOLO.
+#
+# Die Seite ist eine der saubersten dieses Moduls: jede Anweisung steht als
+# eigenes <a class="download__item"> mit
+#
+#   href=".../001.pdf"                        das Dokument
+#   <div class="download__name">              "001: Propeller flange bolt locking"
+#   <div class="download__sbdate">            "Friday 24 September, 2010"
+#   data-engines="UL260i UL260iS UL350i …"    die betroffenen Muster
+#
+# Nichts davon muss aus Fließtext geraten werden.
+#
+# GEZÄHLT: 21 Bulletins, 001 bis 021, lückenlos. Der Vollständigkeitsbericht
+# muss leer bleiben -- die Nummern sind fortlaufend, eine Lücke wäre sichtbar.
+#
+# DAS DATUM steht ausgeschrieben mit Wochentag ("Friday 24 September, 2010").
+# Der Wochentag wird nicht gebraucht und stört das Einlesen nicht; das Komma
+# vor der Jahreszahl schon, deshalb der Zuschnitt im Muster.
+#
+# KEINE VERBINDLICHKEITSANGABE auf der Seite. Es bleibt also alles verbindlich
+# -- die übliche Asymmetrie dieses Moduls: zu verbindlich gelesen bleibt eine
+# Zeile auf der Liste stehen, zu wahlweise gelesen verschwindet sie daraus.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: ulpower
+label: 'UL Power Aero Engines (Service Bulletins)'
+issuer: 'UL Power Aero Engines'
+type: list
+
+default_kind: sb
+subject_kind: engine
+
+page:
+  url: 'https://ulpower.com/en/engines/service-bulletins'
+
+  # Ein <a> je Anweisung. Nicht-gierig bis zum schliessenden Tag, damit nicht
+  # der ganze Rest der Seite in den ersten Treffer läuft.
+  row_pattern: '#<a[^>]*class="[^"]*download__item[^"]*".*?</a>#is'
+
+columns:
+  # "001: Propeller flange bolt locking" -- die Nummer steht vor dem Doppelpunkt.
+  #
+  # Bewusst NICHT aus dem Dateinamen: der heisst zwar auch "001.pdf", aber ein
+  # Dateiname ist die Ablage des Herstellers und keine Kennung, die jemand
+  # zitiert. Ändert er die Ablage, ändert sich die Nummer im Bestand mit --
+  # und dieselbe Anweisung läge zweimal da.
+  number: '#<div class="download__name">\s*([^:<]+?)\s*:#i'
+
+  # Der Gegenstand, ohne die vorangestellte Nummer: die trägt die Zeile schon.
+  title: '#<div class="download__name">\s*[^:<]+:\s*([^<]+?)\s*</div>#i'
+
+  # "Friday 24 September, 2010" -- ohne den Wochentag, der nichts trägt.
+  # Das Komma bleibt drin: es stört das Einlesen nicht, und ein zweites
+  # Fanggruppenpaar würde nur die erste Hälfte liefern.
+  date: '#<div class="download__sbdate">\s*\w+\s+([^<]+?)\s*</div>#i'
+
+  # NICHT gelesen: data-engines nennt die betroffenen Motoren ("UL260i UL260iS
+  # UL350i …"). Der Listenmodus kennt kein Feld dafür -- er liest Nummer,
+  # Titel, Dringlichkeit, Behördennummer, Dokument und Datum. Die Angabe
+  # einfach in den Titel zu hängen wäre schlechter als sie wegzulassen: sie
+  # sähe dann aus wie ein Teil des Gegenstands, den der Hersteller so nie
+  # geschrieben hat.
+
+  document: '#href="([^"]+\.pdf)"#i'

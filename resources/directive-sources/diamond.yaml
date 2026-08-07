@@ -1,0 +1,103 @@
+# Diamond Aircraft — Service Bulletins über das Herstellerportal.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DER EINE HERSTELLER OHNE ÜBERSICHTSDOKUMENT.
+#
+# Vorgabe: „Die bieten leider keine gescheite übersicht an." Stimmt — als
+# Dokument. Ihr Portal liefert denselben Inhalt als strukturierte Daten, und
+# darin besser als jedes PDF: über 2508 Dokumente hinweg trägt JEDE Zeile ein
+# Ausgabedatum. DG und Lindner geben gar keines her.
+#
+# Kein Login. Der `member` unten sieht aus wie eine persönliche Kennung und ist
+# die GAST-Kennung der Seite — eine Konstante. Geklärt hat das nicht die
+# Technik, sondern der Hinweis, dass er dort gar kein Konto besitzt.
+#
+# ACHTUNG, die Falle: Ohne diesen Parameter antwortet die API mit „erfolgreich"
+# und einer LEEREN LISTE, nie mit einem Fehler. Deshalb prüft AuraClient jede
+# leere Antwort — eine leere Bibliotheksliste heißt „falsch gefragt", nicht
+# „nichts veröffentlicht".
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: diamond
+label: 'Diamond Aircraft (Portal)'
+issuer: 'Diamond Aircraft'
+
+type: aura
+default_kind: sb
+subject_kind: aircraft_model
+
+aura:
+  url: 'https://partners.diamondaircraft.com/s/sfsites/aura'
+  page: '/s/technical-publications'
+
+  classname: daiFilesController
+  methods:
+    libraries: getPublicLibraries
+    folders: getContentByFolder
+    files: getFilesByFolder
+
+  # Die Gast-Kennung der Seite, kein persönliches Konto.
+  member: '0052p000009lEjPAAU'
+
+  # Je Muster eine Bibliothek "TechPubs <Muster>". Daneben liegen
+  # "Engine Documentation" und "DAI Damage Reports" — die sind keine Muster.
+  library_pattern: '/^TechPubs\s+(.+)$/i'
+
+  # NUR Service Bulletins. Daneben liegen "Service Informations", Flug- und
+  # Wartungshandbücher, Ersatzteilkataloge. Vorgabe zur gleichen Frage bei
+  # Lindner: „eine ti ist keine tm, bleibt draußen" — eine Service Information
+  # ist dieselbe Dokumentenklasse.
+  folder_pattern: '/^Service Bulletins$/i'
+
+  document_url: 'https://partners.diamondaircraft.com/sfc/servlet.shepherd/document/download/{id}'
+
+  # Die Verbindlichkeit steckt in der Nummer selbst — in zwei Schreibweisen
+  # nebeneinander. VERANKERT gesucht: eine lose Suche nach „osb" irgendwo in der
+  # Nummer würde Dokumente entschärfen, die zufällig diese Buchstaben tragen,
+  # und Entschärfen ist die Richtung, die wehtun kann.
+  #
+  #   MSB40-02/1            Mandatory Service Bulletin   (295)
+  #   OSB40-01/2            Optional  Service Bulletin   (333)
+  #   RSB…                  Recommended -> eigene Kategorie (85)
+  #   SB20-9/3 Mandatory    das Wort angehängt            (25)
+  #   DA20-10-01            gar kein Marker              (206) -> bleibt verbindlich
+  number_marker: '/^([MOR]SB)|\s+(Mandatory|Recommended|Optional)\.?$/i'
+
+  # „SB20-9/3 Mandatory" ist ein Dokument, keine Nummer. Das Wort muss außerdem
+  # raus, weil es die Nummer INSTABIL macht: Stuft der Hersteller um, änderte
+  # sich die Zeichenkette und der Import legte eine zweite Anweisung an, statt
+  # die erste zu aktualisieren — die Beurteilungen fielen auseinander.
+  number_strip: '/\s+(Mandatory|Recommended|Optional)\.?$/i'
+
+
+# Die Felder, die das Portal je Datei liefert.
+columns:
+  number: Doc_No__c
+  title: Description
+  date: Date__c
+  document: ContentDocumentId
+
+# Die Verbindlichkeit ist ein VORSCHLAG, und nur dort, wo der Hersteller selbst
+# einen macht (siehe `number_marker`). Ohne Marker bleibt das Feld leer — und
+# leer heißt im Modell VERBINDLICH, mit Absicht: Eine bindende Anweisung als
+# optional zu führen, ließe sie abwählen; umgekehrt steht sie nur so lange in
+# der Liste, bis jemand die Zeile korrigiert.
+#
+# Das `(M)` in den alten Dimona-Nummern („SB No. 3/2 (M)") wird bewusst NICHT
+# gelesen: über alle Dokumente tragen es 1 %. Die Präfixe darüber decken 78 %
+# ab — das ist der Unterschied zwischen einer Regel und einer Stichprobe.
+#
+# Vorgabe: „Die klassifizierung muss der Nutzer erledigen." Der Vorschlag nimmt
+# ihm die Arbeit ab, nicht die Entscheidung.
+
+bindingness:
+  # Vorgabe: „Empfohlen bedeutet Optional, aber der hersteller empfielt es. Das
+  # ist eine eigene Kategorie." Rechtlich darf es also abgelehnt werden — aber
+  # es unter „optional" zu verbuchen, würfe den Rat des Herstellers weg.
+  recommended_phrases:
+    - rsb
+    - recommended
+
+  optional_phrases:
+    - osb
+    - optional

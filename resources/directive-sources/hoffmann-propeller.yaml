@@ -1,0 +1,73 @@
+# Hoffmann Propeller -- über Scheibes Weiterveröffentlichung.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# HOFFMANNS EIGENE LISTE IST NICHT ABRUFBAR, und das ist nachgemessen, nicht
+# angenommen: hoffmann-prop.com/en/documents/service-documents antwortet mit
+# HTTP 200 und enthält NULL Tabellen und NULL PDF-Links. Die Dokumente kommen
+# aus einem Sitecore-Search-Widget; 1,8 MB ausgelieferte JS-Bundles enthalten
+# weder dessen Host noch einen Schlüssel -- die Konfiguration wird erst zur
+# Laufzeit eingespielt. Ohne Ausführung ihres JavaScripts ist dort nichts zu
+# holen.
+#
+# Das ist die gefährlichste Sorte Quelle: Die Seite sieht vollständig aus und
+# ist leer. Ein Treiber darauf liefe sauber durch und meldete "Hoffmann hat
+# nichts veröffentlicht".
+#
+# DESHALB DIESER UMWEG. Scheibe führt die Hoffmann-Propeller-TMs, die ihre
+# eigenen Muster betreffen, auf einer eigenen Seite weiter -- mit Ausgabedatum,
+# Behördennummer und Durchführungsfrist, also vollständiger als eine blosse
+# Dokumentenliste.
+#
+# WAS DAS NICHT IST: Hoffmanns vollständige Liste. Hier steht, was Scheibe für
+# seine Muster für relevant hält. Ein Verein mit Hoffmann-Propellern an einem
+# anderen Muster bekommt damit weniger, als es gibt -- das gehört gesagt, weil
+# eine Teilliste, die man für vollständig hält, schlechter ist als eine, deren
+# Grenze man kennt. Der Weg zur vollständigen Liste führt über eine Anfrage bei
+# Hoffmann; kommt von dort ein PDF, ist es eine weitere Spec und keine Woche
+# Arbeit.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: hoffmann-propeller
+label: 'Hoffmann Propeller (über Scheibe)'
+issuer: 'Hoffmann Propeller'
+type: table
+
+default_kind: tm
+subject_kind: propeller
+
+page:
+  url: 'https://www.scheibe-aircraft.de/hoffmann'
+
+  table_pattern: '#<table[^>]*class="[^"]*table[^"]*".*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 4
+
+  document_pattern: '#href="([^"]+\.pdf[^"]*)"#i'
+
+# LTA-Nr./Ausgabe | TM-Nr./Ausgabe | Gegenstand | Durchführung
+#
+# Nummer und Ausgabedatum stehen in derselben Zelle -- dieselbe Form wie bei
+# Schleicher, dafür braucht es keine Datumsspalte.
+columns:
+  authority_number: 0
+  number: 1
+  title: 2
+  compliance: 3
+
+# Die Durchführungsspalte trägt die Frist im Klartext ("innerhalb der nächsten
+# 10 Betriebsstunden"). Eine Frist ist stärker als ein Wahlwort.
+bindingness:
+  optional_phrases:
+    - wahlweise
+    - optional
+    - empfohlen
+    - 'bei bedarf'
+
+  mandatory_override: '/(vor dem nächsten (start|flug)|spätestens|innerhalb|bis zum|jahresnachprüfung)/u'
+
+authority_kind_pattern: '/EASA|AD/i'
+
+# Nummer und Ausgabedatum stehen in einer Zelle ("SB 4C, 20.02.1984"); das
+# Trennkomma bleibt sonst an der Nummer hängen.
+number_strip: '/[,;]\s*$/'

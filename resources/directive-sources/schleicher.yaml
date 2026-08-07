@@ -1,0 +1,158 @@
+# Alexander Schleicher Flugzeugbau -- Technische Mitteilungen und LTA/AD.
+#
+# The first manufacturer spec, and the proof that the mechanism works: this file
+# replaces 608 lines of bespoke PHP and produces identical results against the
+# same saved pages.
+#
+# Everything here is DATA. There is no place in this format for a callback or an
+# expression, and that is deliberate -- CLAUDE.md: "Kein Code-Nachladen zur
+# Laufzeit". A manufacturer file must never be a way to run code on a club's
+# server.
+#
+# To add a manufacturer, copy this file and change the patterns. To fix one
+# without waiting for a release, put your version in
+# storage/app/directive-sources/ -- a local file of the same name wins, and
+# updates do not touch storage/.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE ZEILEN KOMMEN AUS DER ÜBERSICHT, nicht mehr aus der HTML-Tabelle.
+#
+# Vorgabe: "die übersicht ist das bindende dokument, das haben alle hersteller."
+# Schleicher legt sie auf jeder Musterseite ab -- "<Kennblatt>_TM_UE_D.pdf", das
+# Blatt mit der Spalte "Prüfvermerk", in der ein Prüfer abzeichnet. Der Link
+# darauf wurde hier schon eingesammelt (page.overview_pattern), nur nie geöffnet.
+#
+# Gegengezählt gegen die Tabelle, die bisher die Zeilen lieferte:
+#   ASK 21   Übersicht 53 Zeilen, Tabelle 53 -- 51 Titel wortgleich
+#   ASK 23   Übersicht 17 Zeilen, Tabelle 16
+# Die Unterschiede sind inhaltlich und sprechen für die Übersicht: sie führt
+# LTA 82-216 (ASK 21), die in der Tabelle fehlt, und nennt bei TM 4b den
+# Gegenstand statt der Auflage. Die Tabelle führt dafür "TM 4 b US", eine
+# FAA-Fassung, die im deutschen Blatt nicht steht. Bei TM 11 nennt das Blatt
+# 20.12.83, die Tabelle 20.12.84 -- verbindlich ist das Blatt.
+#
+# Die HTML-Tabelle bleibt vollständig beschrieben. Sie ist das
+# Dokumentverzeichnis: dort steht, welches PDF zu welcher Nummer gehört, und
+# darüber wird später jede Zeile der Übersicht auf ihr Dokument verlinkt.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: schleicher
+label: 'Alexander Schleicher (Übersicht)'
+issuer: 'Alexander Schleicher'
+
+type: overview
+
+# What a row IS when it carries the manufacturer's own number.
+default_kind: tm
+subject_kind: aircraft_model
+
+overview:
+  # Schleicher zählt schlicht durch: 1, 2, 4a, 4b, 13a, ... bis 47.
+  #
+  # Deshalb muss das Muster hinten begrenzt sein: der Fussvermerk "13/1-05/05"
+  # steht in derselben Spalte und ergäbe sonst eine Anweisung "13".
+  number_pattern: '~^(\d{1,3}[a-z]?)(?![\w./-])~'
+
+  headings:
+    # Zwei Schreibweisen, weil Schleicher die ältere Kopfzeile nicht überall
+    # nachgezogen hat: die ASK 21 überschreibt "LTA / AD-Nr.", die ASK 23
+    # "LBA-LTA-Nr.". Ohne beide landet das Ausgabedatum der LTA als Ausgabedatum
+    # der TM -- auf der ASK 23 waren das sechs falsche Daten.
+    authority: ['lba-lta', 'lta / ad', 'ad-nr']
+    number: ['tm-nr']
+
+    # "Ausgabedatum" steht ZWEIMAL im Kopf, unter der LTA-Nummer und unter der
+    # TM. Gemeint ist die zweite -- der Leser vergibt keine Spalte doppelt, und
+    # die Behördenspalte ist vorher schon vergeben.
+    date: ['ausgabedatum']
+    subject: ['betroffene']
+    title: ['gegenstand']
+
+    # Dieselbe Spalte, die DG "Dringlichkeit" nennt.
+    compliance: ['termin']
+
+  # Einsprachig: das englische Blatt ist eine eigene Datei (_TM_UE_E.pdf). Ein
+  # Gegenstand, der über drei Zeilen läuft, gehört deshalb ganz zum Titel.
+  bilingual: false
+
+  # Schleicher trennt seine Zeilen mit Leerzeilen, und die Nummer steht
+  # senkrecht mittig -- oft eine Zeile unter der LTA-Nummer, die zur selben
+  # Zeile gehört. Ohne diese Angabe bekäme die Zeile darüber deren LTA-Nummer.
+  blank_separates_rows: true
+
+  # Der Ausgabestand unter der Nummer ("Ausg. II"), keine Anweisung.
+  ignore: '/^Ausg\./ui'
+
+  # Die Adresse steht nicht hier: page.overview_pattern findet sie auf der
+  # Musterseite. Stichprobe über ASK 16, ASK 23, ASW 19 und ASH 25: jede
+  # Musterseite verlinkt ihr Blatt. Fehlt es doch einmal, bricht der Abruf mit
+  # einer Meldung ab, statt eine leere Liste zu liefern.
+
+index:
+  url: 'https://www.alexander-schleicher.de/tm-lta-wa/tm-flugzeuge/'
+
+  # Named groups, so the spec says which capture is which rather than depending
+  # on the order they were written in.
+  link_pattern: '#<a\s[^>]*href="(?P<url>https://www\.alexander-schleicher\.de/tm-lta-wa/tm-flugzeuge/[^"]+/)"[^>]*>(?P<model>.*?)</a>#is'
+
+  # The category page links its own siblings and the site navigation; only a type
+  # name looks like this.
+  model_filter: '/^(AS[KWHG]?|AS)\s?[0-9]/i'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AB HIER: das Dokumentverzeichnis, nicht mehr die Zeilenquelle.
+#
+# Die Tabelle auf der Musterseite führt je Nummer den Link auf das PDF -- das
+# ist, was die Übersicht nicht hat und wofür diese Beschreibung stehen bleibt.
+# Sie wird weiterhin gelesen (parseTypePage), nur nicht mehr importiert.
+# ─────────────────────────────────────────────────────────────────────────────
+
+page:
+  table_pattern: '#<table[^>]*class="[^"]*tableFormated[^"]*".*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+
+  # A data row has all eight columns; anything shorter is layout.
+  min_cells: 7
+
+  # Wo die Übersicht steht. War schon da -- "die reichen und können zum
+  # Hersteller verlinken" -- und wurde bisher nur eingesammelt; jetzt ist es die
+  # Adresse, unter der die Zeilen geholt werden.
+  overview_pattern: '#href="([^"]*_TM_UE_D\.pdf)"#i'
+
+# Which cell holds what. The table's columns are:
+#   TM/TN Dat. | TM/TN Download | LTA/AD Dat. | LTA/AD Download
+#   Gegenstand | betroffen | Dringlichkeit | Handbuch
+columns:
+  number: 0
+  authority_number: 2
+  title: 4
+  affected: 5
+  compliance: 6
+
+bindingness:
+  # Drawn from the real column values, not invented: 'wahlweise' alone accounts
+  # for 19 of the 56 rows on the ASK 21 page. Anything NOT listed here is treated
+  # as binding -- so an unanticipated wording makes a line show up rather than
+  # disappear.
+  optional_phrases:
+    - wahlweise
+    - optional
+    - 'bei bedarf'
+    - 'auf wunsch'
+    - 'nach wunsch'
+    - 'bei neubauten'
+    - 'bei neufertigung'
+    - 'bei neueinbau'
+    - 'als nachrüstung'
+    - 'bei auslieferung'
+    - 'bei ausfuhr'
+
+  # A wording that is optional AND names a hard moment is not optional:
+  # "A) wahlweise, nach Wunsch des Halters B) vor dem nächsten Flug mit
+  # Trudelballast" is a real value, and reading it as optional would waive part B.
+  mandatory_override: '/(vor dem nächsten (start|flug)|spätestens|bis zum|jahresnachprüfung)/u'
+
+# An EASA AD is recorded as an AD, an LBA LTA as an LTA. Both are binding; the
+# kind is recorded because an auditor asks about the document, not its force.
+authority_kind_pattern: '/EASA|AD/i'

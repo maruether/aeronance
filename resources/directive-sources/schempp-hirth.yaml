@@ -1,0 +1,78 @@
+# Schempp-Hirth Flugzeugbau -- Technische Mitteilungen und LTA/AD.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# THE THIRD WAY A MANUFACTURER GATES ITS LIST: a form login with a session
+# cookie. Schempp-Hirth runs TYPO3's felogin, whose form carries per-request
+# hidden fields (__referrer[...] and __trustedProperties), so the login cannot be
+# a fixed POST body -- the form is read first, then answered.
+#
+# Once past that it is an ordinary TABLE, which was the pleasant surprise: one
+# page with every note for every type, columns TM Nummer | Betreff | Datum |
+# LTA/AD Nummer. No per-type index at all.
+#
+# CREDENTIALS ARE NOT HERE. `auth: schempp` names a profile; the values live in
+# .env as DIRECTIVES_SCHEMPP_USER and DIRECTIVES_SCHEMPP_PASSWORD.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: schempp
+label: 'Schempp-Hirth (Kundenbereich)'
+issuer: 'Schempp-Hirth'
+type: table
+
+auth: schempp
+
+default_kind: tm
+subject_kind: aircraft_model
+
+login:
+  url: 'https://www.schempp-hirth.com/mein-schempp-hirth/login?pageId=83'
+
+  # felogin's own form, told apart from the site search and the registration form
+  # that sit on the same page.
+  form_pattern: '#<form[^>]*action="([^"]*felogin[^"]*)"[^>]*>(.*?)</form>#is'
+
+  user_field: user
+  password_field: pass
+
+  extra:
+    logintype: login
+    permalogin: '1'
+
+  # Without this a wrong password yields the login page again -- HTTP 200, no
+  # rows, and an import that looks like "the manufacturer published nothing".
+  success_pattern: '/Logout/i'
+
+page:
+  # One page for everything: no index, no per-type request.
+  url: 'https://www.schempp-hirth.com/mein-schempp-hirth/tms-ltas'
+
+  table_pattern: '#<table[^>]*class="[^"]*tx_tn[^"]*".*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 4
+
+# TM Nummer | Betreff | Datum | LTA/AD Nummer
+# The date has its own column here, unlike Schleicher, who puts it in with the
+# number.
+columns:
+  number: 0
+  title: 1
+  date: 2
+  authority_number: 3
+
+# No tls block, and no ca_bundle: the driver completes Schempp-Hirth's chain by
+# itself now. Their server omits the RapidSSL intermediate, which strict clients
+# cannot verify; CertificateChainResolver fetches it the way a browser does and
+# checks it reaches a trusted root. A ca_bundle key is still honoured as a manual
+# override for the rare server that AIA cannot help.
+bindingness:
+  optional_phrases:
+    - wahlweise
+    - optional
+    - empfohlen
+    - 'bei bedarf'
+    - 'auf wunsch'
+
+  mandatory_override: '/(vor dem nächsten (start|flug)|spätestens|bis zum|jahresnachprüfung)/u'
+
+authority_kind_pattern: '/EASA|AD/i'

@@ -1,0 +1,59 @@
+# Zlin Aircraft a.s. -- Bulletins für die Z-Muster.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE SAUBERSTE TABELLE IM GANZEN FELD: Datum, Nummer, Muster und Art stehen je
+# in einer eigenen Spalte, 577 Zeilen auf EINER Seite, keine Pagination,
+# Abdeckung 1973 bis 2024, kein Login.
+#
+# BEIDE SPRACHFASSUNGEN KOMMEN HEREIN, und das ist eine Entscheidung, keine
+# Nachlässigkeit. Jede TM liegt tschechisch und englisch vor -- aber KEINE der
+# beiden Mengen enthält die andere:
+#
+#   nur tschechisch vorhanden : 85 Nummern
+#   nur englisch vorhanden    : 54 Nummern
+#
+# Ein Sprachfilter würde also in beide Richtungen Anweisungen verschwinden
+# lassen, und zwar still. Dieselbe Lage wie bei DG (docs/LTA-TM.md §13), wo
+# ebenfalls beide Fassungen hereinkommen und das Zusammenführen ausdrücklich
+# eine offene Entscheidung ist und keine Ableitung.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: zlin
+label: 'Zlin Aircraft (Bulletins)'
+issuer: 'Zlin Aircraft'
+type: table
+
+default_kind: tm
+subject_kind: aircraft_model
+
+page:
+  url: 'https://www.zlinaircraft.eu/en/service/bulletins/'
+
+  table_pattern: '#<table[^>]*class="[^"]*tabulka1[^"]*".*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 5
+
+  # Der Link steckt in der Namenszelle; die Sprache entscheidet über _cze/_eng.
+  document_pattern: '#href="(/download/bulletin/[^"]+)"#i'
+
+# Publication date | Name | Language | Plane | Bulletin type | (leer)
+columns:
+  date: 0
+  number: 1
+  title: 1
+  affected: 3
+  compliance: 4
+
+# ─────────────────────────────────────────────────────────────────────────────
+# KEINE bindingness-Regel, weil es bei Zlin nichts Unverbindliches gibt.
+# Ausgezählt über alle 577 Zeilen kennt die Typspalte genau zwei Werte:
+#
+#   'Závazné'                          495   = verbindlich
+#   'Závazné s vlivem na způsobilost'   82   = verbindlich, mit Wirkung auf die
+#                                              Lufttüchtigkeit
+#
+# Beide sind verbindlich; eine „optional"-Kategorie existiert nicht. Der
+# Tschechische Text bleibt auch auf der englischen Seite stehen -- er wandert
+# unverändert in die Zusammenfassung, weil es die Worte des Herstellers sind.
+# ─────────────────────────────────────────────────────────────────────────────

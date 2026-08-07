@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+#
+# Refuses to push a commit nobody signed.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# commit.gpgsign=true makes signing the DEFAULT. It does not make it a rule:
+# --no-gpg-sign overrides it, a rebase or cherry-pick can drop a signature
+# without saying so, and a commit made in a checkout that has not seen the
+# config is simply unsigned. Each of those is a quiet failure -- the commit
+# looks perfectly normal in the log.
+#
+# This hook is the last point where that is still cheap to fix. Once it is on
+# the remote, correcting it means rewriting history somebody may already have
+# pulled.
+#
+# It verifies signature PRESENCE, not trust -- checking trust here would fail
+# for every contributor whose key this machine does not have. Trust is CI's job
+# (the "signatures" stage), where there is one keyring and one answer.
+#
+# Enable with:   git config core.hooksPath .githooks
+# Bypass with:   git push --no-verify   (deliberately still possible -- CI is
+#                                        the gate that cannot be talked out of)
+# ─────────────────────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+zero='0000000000000000000000000000000000000000'
+unsigned=0
+
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+    # Branch deletion: nothing is being added, nothing to check.
+    [ "$local_sha" = "$zero" ] && continue
+
+    if [ "$remote_sha" = "$zero" ]; then
+        # A new branch. Everything not already on some other branch is new here,
+        # which is the honest reading -- --not --all would let a commit through
+        # merely because an unpushed local branch also contains it.
+        range="$local_sha --not --remotes"
+    else
+        range="$remote_sha..$local_sha"
+    fi
+
+    # %G? is N for "no signature at all". Every other letter means something was
+    # signed, whether or not this machine can judge it.
+    while read -r sha state subject; do
+        [ "$state" != 'N' ] && continue
+        echo "  unsigniert: ${sha:0:10}  $subject" >&2
+        unsigned=$((unsigned + 1))
+    # shellcheck disable=SC2086
+    done < <(git log --format='%H %G? %s' $range 2>/dev/null || true)
+done
+
+if [ "$unsigned" -gt 0 ]; then
+    cat >&2 <<MSG
+
+Push abgelehnt: $unsigned Commit(s) ohne Signatur.
+
+Nachträglich signieren:
+  git rebase --exec 'git commit --amend --no-edit -S' <letzter-guter-commit>
+
+Ist der Stick nicht gesteckt, warte damit — ein Push mit --no-verify kommt
+durch diesen Hook, aber nicht durch die Signaturprüfung der Pipeline.
+MSG
+    exit 1
+fi

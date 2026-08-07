@@ -1,0 +1,261 @@
+# Hansjörg Streifeneder Glasfaser-Flugzeug-Service -- die Glasflügel-Muster.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DER MUSTERBETREUER, NICHT DER HERSTELLER. Glasflügel gibt es seit 1981 nicht
+# mehr; Streifeneder hält als DE.21G.0080/DE.145.0100 die Musterzulassung
+# EASA.A.241 am Leben. Ohne ihn verlören diese Flugzeuge ihre Zulassung -- das
+# steht so auf seiner eigenen TM-Seite. Für einen Verein heisst das: die Liste
+# unten IST die Liste, es gibt keine zweite Quelle.
+#
+# Ein Muster = ein Blatt "LTA- und TM-Übersicht", verlinkt auf der Musterseite
+# unter dem Text "TM-Übersicht". Rechts steht die Spalte "durchgeführte
+# Maßnahme, Befund, prüfende Stelle, Prüfstempel, Unterschrift des Prüfers" --
+# das Blatt, das ein Prüfer bei der Jahresnachprüfung abzeichnet.
+#
+# WAS DIESES BLATT HAT UND WAS NICHT -- wichtig, weil hier nichts ergänzt wird,
+# was nicht dasteht:
+#
+#   hat:     LTA-Nr., TM-Nr. (mit Ausgabe als Suffix, z. B. 401-11/2),
+#            Gegenstand, und eine Spalte "Intervall" mit Fristen und
+#            Wiederholungen ("bis 31.03.96", "jede JNP", "alle 100 h oder JNP")
+#
+#   hat NICHT: ein Ausgabedatum. Die Spalte "Datum" auf dem Blatt ist die des
+#            PRÜFERS -- dort trägt er ein, wann er die Maßnahme durchgeführt
+#            hat. Sie wird deshalb bewusst NICHT als Ausgabedatum gelesen
+#            (siehe headings unten). Jede Zeile kommt ohne issued_at.
+#
+#   hat NICHT: eine Spalte für die Betroffenheit. Die Werknummern stehen im
+#            Fliesstext des Gegenstands ("ab Werknr. 28 serienmäßig",
+#            "betroffen Werknr. 1-19"), nicht in einer eigenen Zelle.
+#
+#   hat NICHT: eine Dringlichkeitsspalte. "wahlweise" und "optional" stehen
+#            im Gegenstand, nie im Intervall -- siehe bindingness unten.
+#
+# GEGENGEZÄHLT, Spalteninhalt gegen gelesene Zeilen, über alle elf Blätter:
+#
+#   H 301 Libelle      51 Zeilen   301-1 … 301-44 + 7 Allgemein-TM
+#   Std. Libelle 201   50 Zeilen   1/68, 1/69, 201-1 … 201-43 (17 und 18 fehlen
+#                                  im Blatt) + 7 Allgemein
+#   Std. Libelle 203   26 Zeilen   203-1 … 203-3 und 201-6 … 201-40 gemischt
+#   Club Libelle 205   35 Zeilen   205-1 … 205-28 + 7 Allgemein
+#   Hornet 206         35 Zeilen   206-1 … 206-28 + 7 Allgemein
+#   Mosquito 303       31 Zeilen   303-1 US/NL, 303-2 … 303-27 + 7 Allgemein
+#   Glasflügel 304     20 Zeilen   304-1 … 304-13 + 7 Allgemein
+#   Glasflügel 304/17  15 Zeilen   englisches Blatt, 304-1 … 304-13 + 2
+#   Kestrel 401        39 Zeilen   401-1 … 401-32 + 7 Allgemein
+#   Glasflügel 604     20 Zeilen   604-1 … 604-13 + 7 Allgemein
+#   BS 1 (501)         18 Zeilen   501-01, 501-1 … 501-10 + 7 Allgemein
+#
+# Die Differenz zwischen "was in der Nummernspalte steht" und "was gelesen
+# wurde" ist auf jedem Blatt exakt die Kopfzeile je Seite (Musterbezeichnung,
+# "TM-Nr.:", "Ausgabe") -- keine einzige Anweisung.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: streifeneder
+label: 'Streifeneder Glasflügel (Übersicht)'
+issuer: 'Hansjörg Streifeneder Glasfaser-Flugzeug-Service'
+
+type: overview
+
+# Was eine Zeile IST, wenn sie die Nummer des Musterbetreuers trägt.
+default_kind: tm
+subject_kind: aircraft_model
+
+overview:
+  # Wie eine Anweisungsnummer auf Streifeneders Blättern aussieht.
+  #
+  # Vier Formen, alle aus den Blättern selbst:
+  #
+  #   205-1 · 401-32 · 501-01 · 201-30/2 · 401-11/2
+  #     <Musternummer>-<lfd. Nr.>, dahinter optional die Ausgabe nach Schrägstrich.
+  #     Die Musternummern sind dreistellig (201, 203, 205, 206, 301, 303, 304,
+  #     401, 501, 604) -- deshalb {3}, und nicht {2,4}: das ist genau die
+  #     Grenze, die die LTA-Spalte draussen hält. Dort stehen Jahreszahlen
+  #     ("84-11", "96-133", "02-051", "2000-318"), und ein Muster, das auch
+  #     zweistellig anfangen dürfte, würde die halbe LTA-Spalte für
+  #     TM-Nummern halten -- der Leser zählt die Nummernspalte aus, und die
+  #     LTA-Spalte hätte sie ihm streitig gemacht.
+  #
+  #   303-1 US · 303-1 NL
+  #     Länderfassungen auf dem Mosquito-Blatt: "Abweichung in USA
+  #     zuzulassender Werknr. vom deutschen Muster" ist eine andere Anweisung
+  #     als die niederländische. Ohne das Kürzel wären beide "303-1" und die
+  #     zweite ginge als Dublette der ersten unter.
+  #
+  #   1-2005 · 4-2013 · 5-2018 · 7-2020
+  #     Die allgemeinen Glasflügel-TMs. Sie stehen am Fuss JEDES Musterblatts,
+  #     mit eigener Zeile und eigenem Intervall -- anders als bei DG, wo sie
+  #     ein Blatt für sich haben. Sie gehören also dazu und werden mitgelesen.
+  #
+  #   1/68 · 1/69
+  #     Die zwei ältesten TMs der Standard Libelle, noch in der alten
+  #     Schreibweise <Nr.>/<Jahr>.
+  #
+  #   Allgemein-TM · General-TN
+  #     KEINE Nummer, sondern das, was Streifeneder in die Nummernspalte
+  #     schreibt, wo die Anweisung nur eine EASA-AD-Nummer hat
+  #     (EASA AD 2018-0143-E, Abweiswinkel an der Schwerpunktkupplung, jede
+  #     JNP). Wörtlich übernommen, weil die zwei Alternativen schlechter sind:
+  #     die Zeile über `ignore` wegzuwerfen hiesse, eine verbindliche AD
+  #     stillschweigend zu verlieren, und ohne eigene Nummer nimmt der Treiber
+  #     das erste Wort der Behördenspalte -- die Anweisung hiesse dann "EASA".
+  #     Was hier steht, steht so im Dokument.
+  number_pattern: '~^(?:TM\s*)?(\d{3}-\d{1,3}(?:/\d+)?(?:\s+(?:US|NL))?|\d{1,2}-(?:19|20)\d{2}|\d{1,2}/\d{2}|Allgemein-TM|General-TN)(?![\w./-])~'
+
+  headings:
+    # Zweisprachig zu lesen, weil die Blätter es sind: das 304/17-Blatt heisst
+    # "Airworthiness Directives and Technical Notes Overview" und überschreibt
+    # dieselben Spalten englisch. Es ist kein zweisprachiges Blatt (siehe
+    # bilingual), sondern ein englisches -- eine eigene Datei für dasselbe
+    # Muster.
+    authority: ['lta-nr', 'lta-/ad-no', 'ad-no']
+    number: ['tm-nr', 'tn-no']
+    title: ['gegenstand', 'subject']
+
+    # "Hinweise für Flugbetrieb" steht als Sammelüberschrift über "Intervall"
+    # und "nächste Prüfung". Beide Schreibweisen, weil der Kopf zwei bis vier
+    # Zeilen hoch ist und der Leser nur zwei Zeilen um die Ankerzeile herum
+    # sucht: auf dem BS-1-Blatt steht "Intervall" vier Zeilen tiefer und wäre
+    # sonst nicht gefunden worden -- das Blatt käme ohne Fristen.
+    compliance: ['intervall', 'interval', 'hinweise für flugbetrieb']
+
+    # KEIN `date`. Bewusst, und der einzige Punkt hier, an dem etwas Naheliegendes
+    # NICHT konfiguriert ist: die Spalte "Datum" gehört dem Prüfer, nicht der TM.
+    # Auf dem Mosquito-Blatt ist genau dieser Bereich schon ausgefüllt ("Nicht
+    # betroffen", "vorgefunden", "beachtet") -- Streifeneder hat dort eine
+    # bearbeitete Fassung veröffentlicht. Würde die Spalte als Ausgabedatum
+    # gelesen, machte das erste eingetragene Prüfdatum aus einer fremden
+    # Eintragung das Ausgabedatum einer Anweisung. Die Übersicht hat kein
+    # Ausgabedatum, also bleibt das Feld leer.
+
+  # Einsprachig je Datei. Deutsch und Englisch sind getrennte Dokumente
+  # (LTA-TM-Uebersicht_… gegen AD-TN-Overview…), nicht zwei Zeilen im selben
+  # Blatt. Ein Gegenstand, der über drei Zeilen läuft, gehört deshalb ganz zum
+  # Titel.
+  bilingual: false
+
+  # Leerzeilen stehen hier INNERHALB einer Zeile so oft wie zwischen zweien --
+  # das Blatt setzt seine Zeilen nicht durch Leerraum ab, sondern durch die
+  # Höhe der Zelle. Auf `true` gestellt zerfiele jede zweite Anweisung in zwei.
+  blank_separates_rows: false
+
+  # Streifeneder setzt die TM-Nummer in die MITTE der Zeilenhöhe, nicht nach
+  # oben. Die erste Textzeile einer Anweisung steht damit ÜBER ihrer Nummer:
+  #
+  #   LTA 2012-105                 Überprüfung/Austausch der HR-
+  #   EASA AD 2011-   201-40       Stoßstange (Werknr. 169 und
+  #   213                          Std. Libelle 203 Werknr. 1 und 2)
+  #
+  # Ohne diesen Schalter landete „LTA 2012-105" bei 201-39 — eine
+  # Lufttüchtigkeitsanweisung an der falschen TM. Gemessen, nicht befürchtet.
+  numbers_centred_in_row: true
+
+  # Was Streifeneder sonst noch in die Nummernspalte setzt.
+  #
+  # "Technische Mitteilungen Glasflügel Allgemein" ist die Zwischenüberschrift
+  # vor dem Allgemein-Teil am Blattfuss. Sie beginnt links in der LTA-Spalte und
+  # reicht in die Nummernspalte hinein, wo ihre zweite Hälfte landet. Eine
+  # Überschrift, keine Anweisung -- und die einzige, die auf diesen Blättern
+  # vorkommt.
+  ignore: '/^(Technische Mitteilungen|Glasflügel Allgemein)/u'
+
+  # Die Musterseiten, ausgeschrieben -- als ADRESSE DER SEITE, nie der PDF.
+  #
+  # Der Dateiname des Blattes trägt sein Stand-Datum
+  # ("LTA-TM-Ubersicht401Kestrel20251023.pdf") und ändert sich mit jeder
+  # Neuausgabe; die Seite darunter ist ein WordPress-Permalink und bleibt. Die
+  # PDF-Adresse wird deshalb jedes Mal frisch von der Seite geholt
+  # (document_pattern).
+  #
+  # Warum überhaupt eine Liste, wo der Index unten dieselben Seiten führt:
+  # Streifeneder beschriftet seine Musterknöpfe "Standard Libelle (201/201B)"
+  # und "Hornet/Hornet C (206)". Ein Verein trägt bei seinem Flugzeug "Standard
+  # Libelle 201 B" ein, und das trifft keine dieser Beschriftungen. Die Liste
+  # ist die Übersetzung zwischen beiden; für alles, was nicht darin steht,
+  # greift weiterhin der Index.
+  documents:
+    'H 301': 'https://streifly.de/libelle-301-de/'
+    'H 301 Libelle': 'https://streifly.de/libelle-301-de/'
+    'Standard Libelle': 'https://streifly.de/libelle-201-de/'
+    'Std. Libelle': 'https://streifly.de/libelle-201-de/'
+    'Standard Libelle 201': 'https://streifly.de/libelle-201-de/'
+    'Std. Libelle 201': 'https://streifly.de/libelle-201-de/'
+    'Standard Libelle 203': 'https://streifly.de/libelle-203-de/'
+    'Std. Libelle 203': 'https://streifly.de/libelle-203-de/'
+    'Club Libelle': 'https://streifly.de/clublibelle205-de/'
+    'Club Libelle 205': 'https://streifly.de/clublibelle205-de/'
+    'Hornet': 'https://streifly.de/hornet-de-2/'
+    'Hornet C': 'https://streifly.de/hornet-de-2/'
+    'Mosquito': 'https://streifly.de/mosquito-de-2/'
+    'Mosquito B': 'https://streifly.de/mosquito-de-2/'
+    'Glasflügel 304': 'https://streifly.de/glasflugel304/'
+    'Glasflügel 304/17': 'https://streifly.de/30417-de/'
+    'Kestrel 401': 'https://streifly.de/kestrel-401/'
+    'Glasflügel 604': 'https://streifly.de/604-de-2/'
+    'BS 1': 'https://streifly.de/glasflugel-bs-1-de/'
+
+  # Der Link auf das Blatt, auf einer Musterseite.
+  #
+  # Am Dateinamen erkannt und nicht am Linktext, obwohl der Linktext auf allen
+  # elf Seiten "TM-Übersicht" heisst -- der Text steckt in verschachteltem
+  # WordPress-Markup, der Dateiname nicht.
+  #
+  # "bersicht" ohne Anfang ist Absicht: Streifeneder schreibt denselben
+  # Dateinamen auf vier Arten, und alle vier stehen heute online --
+  # "LTA-TM-Uebersicht_205_…", "LTA-TM-Ubersicht201Libelle…" (ohne e),
+  # "LTA-TM-bersicht303Mosquito…" (das Ü ganz verschluckt) und für das
+  # 304/17-Blatt englisch "AD-TN-Overview304…".
+  document_pattern: '#href="([^"]*(?:bersicht|Overview)[^"]*\.pdf)"#i'
+
+index:
+  url: 'https://streifly.de/tm/'
+
+  # Die Musterknöpfe auf der TM-Seite. Named groups, damit die Beschreibung
+  # sagt, welcher Treffer was ist.
+  #
+  # Auf `grve-btn` verankert (das Theme setzt die Knöpfe so) und auf Adressen
+  # mit Schrägstrich am Ende: derselbe Knopfkasten enthält auch das EASA-
+  # Kennblatt als PDF, und das ist kein Muster.
+  link_pattern: '#<a\s+class="grve-btn[^"]*"\s+href="(?P<url>https://streifly\.de/[^"]+/)"[^>]*>\s*<span>(?P<model>[^<]+)</span>#is'
+
+  # Was auf der Seite kein Muster ist: der Knopf "Allgemeine technische
+  # Mitteilungen Glasflügel". Dahinter liegt keine Übersicht, sondern die
+  # Sammlung der Allgemein-TMs als Einzeldokumente -- und deren Zeilen stehen
+  # ohnehin am Fuss jedes Musterblatts.
+  model_filter: '/^(?!Allgemeine\b)\S/ui'
+
+page:
+  # Dieselbe Adresse wie overview.document_pattern, für den anderen Weg dorthin:
+  # ein Muster, das oben nicht gelistet ist, wird über den Index gesucht, und
+  # dann steht der Link auf seiner Musterseite.
+  #
+  # Fehlt er, bricht der Abruf mit einer Meldung ab, statt eine leere Liste zu
+  # liefern -- was auch nötig ist: die Falcon-Seite ist leer, und ein leeres
+  # Ergebnis läse sich als "für dieses Muster gibt es nichts".
+  overview_pattern: '#href="([^"]*(?:bersicht|Overview)[^"]*\.pdf)"#i'
+
+bindingness:
+  # ABSICHTLICH LEER, und das ist die einzige ehrliche Antwort für diesen
+  # Hersteller.
+  #
+  # Die Spalte, die bei DG "Dringlichkeit" und bei Schleicher "Termin" heisst,
+  # ist hier "Intervall" -- und sie enthält ausschliesslich Fristen und
+  # Wiederholungen. Über alle elf Blätter ausgezählt: "jede JNP" (17×), "bis
+  # 31.3.96", "alle 100 h oder JNP", "30 Tage / bis 31.12.12", "vor 3000 h",
+  # "jährlich". Kein einziges "wahlweise", kein einziges "optional".
+  #
+  # Die Wahlfreiheit steht bei Streifeneder im Gegenstand ("ab Werknr. 170
+  # wahlweise", "Optionaler Einbau einer neuen Rückenlehne"). Dort danach zu
+  # suchen wäre ein Freitext-Urteil über die Verbindlichkeit einer Anweisung --
+  # genau die Sorte Schluss, die dieses Modul nicht zieht.
+  #
+  # Folge: jede Zeile kommt als verbindlich herein. Das ist die Richtung, in
+  # der ein Fehler harmlos ist -- eine wahlweise Maßnahme bleibt auf der Liste
+  # stehen, bis jemand sie beurteilt; eine fälschlich als wahlweise gelesene
+  # verbindliche wäre mit einem Satz vom Tisch.
+  optional_phrases: []
+
+# Eine EASA-AD wird als AD verbucht, eine LBA-LTA als LTA. Greift auf diesen
+# Blättern nur, wenn eine Zeile einmal gar keine TM-Nummer trägt -- heute hat
+# jede eine.
+authority_kind_pattern: '/EASA|AD/i'

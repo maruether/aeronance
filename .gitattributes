@@ -1,0 +1,48 @@
+* text=auto eol=lf
+
+*.blade.php diff=html
+*.css diff=css
+*.html diff=html
+*.md diff=markdown
+*.php diff=php
+
+/.github export-ignore
+CHANGELOG.md export-ignore
+.styleci.yml export-ignore
+
+# Diese Fixtures sind das, was der Server tatsächlich geliefert hat -- byte-genau.
+# Ohne das normalisiert Git die Zeilenenden (Rotax und Zlin liefern CRLF), und
+# eine Fixture, die sich beim Klonen ändert, prüft nicht mehr die echte Seite.
+#
+# Bewusst nur die neuen Verzeichnisse: Die älteren Fixtures liegen seit ihrem
+# ersten Commit normalisiert im Repo und werden gegen genau diesen Stand
+# geprüft -- sie nachträglich umzustellen änderte Dateien, um die es hier nicht
+# geht.
+tests/Fixtures/Ceapr/** -text
+tests/Fixtures/Continental/** -text
+tests/Fixtures/FaaAd/** -text
+tests/Fixtures/Limbach/** -text
+tests/Fixtures/MtPropeller/** -text
+tests/Fixtures/Rotax/** -text
+tests/Fixtures/Solo/** -text
+tests/Fixtures/Stemme/** -text
+tests/Fixtures/Zlin/** -text
+tests/Fixtures/Hartzell/** -text
+tests/Fixtures/Aviat/** -text
+tests/Fixtures/Ica/** -text
+tests/Fixtures/Grob/** -text
+tests/Fixtures/Korff/** -text
+tests/Fixtures/HoffmannPropeller/** -text
+tests/Fixtures/Aquila/** -text
+tests/Fixtures/Piper/** -text
+tests/Fixtures/Grob/** -text
+tests/Fixtures/Lange/** -text
+tests/Fixtures/Extra/** -text
+tests/Fixtures/AmericanChampion/** -text
+tests/Fixtures/Maule/** -text
+tests/Fixtures/Easa/** -text
+tests/Fixtures/Nfl/** -text
+
+# Die ausgelesenen Textfassungen der Uebersichtsblaetter -- byte-genau, weil
+# ein Test Spaltenpositionen darin behauptet.
+tests/Fixtures/Grob/*.txt -text

@@ -1,0 +1,110 @@
+# BRP-Rotax -- Service Bulletins, Alert SB, Service Instructions und Letters.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE WICHTIGSTE ANTRIEBSQUELLE. Ein Rotax hängt unter fast jedem Motorsegler
+# und den meisten Motorflugzeugen dieser Größe; seine TMs gelten unabhängig vom
+# Flugzeugmuster.
+#
+# DER WEG ZUR LISTE. flyrotax.com/p/service/technical-documentation ist eine
+# leere Hülle -- 0 Tabellen, 0 PDF-Links. Die Bibliothek steckt in einem
+# <iframe> auf eine Visualforce-Seite, deren Suchformular an
+# /DocumentsSearch/CtrlEngineDocumentSearch postet und dann auf eine REINE
+# GET-Adresse umleitet. Die ist unten eingetragen: ohne Cookies, ohne ViewState,
+# ohne Login, live geprüft.
+#
+# ZWEI STILLE FALLEN, beide vom Typ „antwortet 200 und liefert nichts":
+#
+#   1. NEBEN der Ergebnistabelle steht eine ZWEITE mit identischen sieben
+#      Spalten, überschrieben „...this engine/engine type might also be affected
+#      by following documents". Ein table_pattern ohne Verankerung auf
+#      `topTable` mischt beide Listen -- fremde Dokumente landeten dann als
+#      Anweisungen am Muster. Deshalb die Klasse im Muster, nicht nur <table>.
+#
+#   2. `language=German` liefert HTTP 200, eine gültige Tabelle und
+#      „Number of documents found: 0". Kein Fehler, keine Meldung. Rotax
+#      veröffentlicht nach eigener Aussage ohnehin nur auf Englisch, deshalb
+#      steht `language=English` fest in der Adresse.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: rotax
+label: 'BRP-Rotax (Dokumentensuche)'
+issuer: 'BRP-Rotax'
+type: table
+
+default_kind: sb
+subject_kind: engine
+
+# Rotax' Nummer sagt selbst, was sie ist -- ASB-2026-001, SB-2026-002R00,
+# SI-05-1998. Die Art voranzustellen ergäbe „SB ASB-2026-001", eine Bezeichnung,
+# die es beim Hersteller nicht gibt und die nicht mehr auf das Dokument passt,
+# das sie benennt.
+number_prefix: false
+
+page:
+  # dtype als Mehrfachwert in eckigen Klammern -- so baut die Seite die Abfrage
+  # selbst. Bewusst NUR die vier Anweisungsarten: IM, IPC, MMH, OM und Video
+  # sind Handbücher und Kataloge, keine Anweisungen. Vorgabe zu Lindner: „eine ti
+  # ist keine tm, bleibt draußen."
+  url: 'https://rotax.my.salesforce-sites.com/DocumentsSearch/DocumentHeader_Output?dtype=%5BSB%2C+ASB%2C+SI%2C+SL%5D&esn=&etype=Any&language=English&title='
+
+  # Auf topTable verankert -- siehe Falle 1 oben.
+  table_pattern: '#<table[^>]*class="[^"]*topTable[^"]*".*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 7
+
+  # Die Download-Zelle trägt ZWEI Links: zuerst die echte absolute Adresse, dann
+  # einen versteckten Dummy ("d00016.pdf", display:none). Auf https verankert,
+  # damit der Dummy nicht gewinnt.
+  document_pattern: '#href="(https://[^"]+/servlet\.shepherd/version/download/[^"]+)"#i'
+
+# INFO # | TITLE | ISSUE | REVISION | DATE | ENGINE TYPE | DOWNLOAD
+columns:
+  number: 0
+  title: 1
+  date: 4
+  affected: 5
+  document: 6
+
+# ─────────────────────────────────────────────────────────────────────────────
+# KEINE bindingness-Regel, und das ist eine bewusste Entscheidung.
+#
+# Anders als bei Diamond und Continental trägt die NUMMER bei Rotax die
+# Verbindlichkeit NICHT. Am Dokument nachgewiesen:
+#
+#   ASB-2026-001    (Propellergetriebe, 22.06.2026)   -> MANDATORY
+#   SB-2026-002R00  ("TBO 1200 h -> 2000 h")          -> OPTIONAL
+#
+# Ein ASB kann verbindlich, ein SB optional sein. Ein `number_marker` im Stil
+# von diamond.yaml würde hier verbindliche Anweisungen still entschärfen.
+#
+# Rotax druckt die Verbindlichkeit stattdessen als angekreuzten Block auf die
+# TITELSEITE jedes ASB/SB, vierstufig:
+#
+#   MANDATORY · OBLIGATORY · RECOMMENDED · OPTIONAL
+#
+# SI, SI-PAC und SL haben den Block gar nicht (§1.5 Compliance: „NONE - For
+# Information Only").
+#
+# Vorgabe vom 31.07.2026, zur vierten Stufe: „obligatory ist verbindlich."
+# Die Stufe wird also nicht neu eingeführt, sondern auf die bestehende
+# verbindliche abgebildet -- Rotax' eigene Definition („kein unsicherer Zustand,
+# aber BRP-Rotax verlangt die Umsetzung") liegt bei verbindlich, nicht bei
+# empfohlen. Eine vom Hersteller verlangte Maßnahme darf nicht abwählbar sein.
+#
+# Damit bleibt hier alles verbindlich -- der Default und die sichere
+# Asymmetrie. Wer die vier Stufen automatisch lesen will, müsste die
+# PDF-Titelseite öffnen; das ist ein eigener Verarbeitungsschritt und kein Feld
+# in dieser Datei.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Zur Nummernsystematik, belegt aus SL-2026-001R00 („Change of designation of
+# service documents", 27.01.2026): Seit Januar 2026 gilt Typ-Jahr-Nummer-Revision
+# (`SL-2026-001R01`), das Muster steht nicht mehr in der Bezeichnung. Für den
+# Altbestand -- rund 99 % -- gilt weiter das alte Schema, wörtlich: „Already
+# issued service documents remain effective and will keep the old numbering
+# system." Eine Zeile trägt dort oft MEHRERE kommagetrennte Nummern
+# (`ASB-914-034,ASB-912-051`), und der UL-Marker steht in zwei Schreibweisen
+# (`SB-912-026-UL` neben `SB-914-053UL`). Beides bleibt unangetastet in der
+# Nummer stehen: Es zu zerlegen hieße zu entscheiden, welche der Nummern die
+# „richtige" ist -- eine Entscheidung, die dem Hersteller gehört.

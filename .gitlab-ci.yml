@@ -1,0 +1,609 @@
+# Aeronance CI
+#
+# Zwei Dinge sind hier bewusst anders als in der Laravel-Vorlage:
+#
+#   * Getestet wird gegen einen echten MariaDB-Service, nicht gegen SQLite
+#     in-memory. Das ist eine Architektur-Leitplanke, keine Vorliebe — geprüft
+#     wird die Datenbank, die auch produktiv läuft. Der Service unten legt die
+#     Mindestversion fest.
+#   * Die Abhängigkeiten werden geprüft, nicht nur installiert. `composer audit`
+#     bricht ab, wenn ein Paket eine bekannte Schwachstelle hat.
+#
+# Die Release-Pipeline (Tarball, Docker-Image) kommt später und hängt sich an
+# `build` an.
+
+stages:
+  - verify
+  - test
+  - quality
+  - release
+
+default:
+  # Getestet wird auf der MINDESTversion, nicht auf der des Entwicklungsrechners.
+  # Andersherum fällt erst dem Verein auf, dass eine 8.5-Schreibweise im Code
+  # steht -- und zwar beim Aufrufen der Seite.
+  image: php:8.4-cli
+  interruptible: true
+
+variables:
+  # Mindestversion nach D8 — was der Zielserver können muss, nicht was die
+  # Entwicklungsumgebung zufällig hat.
+  MARIADB_VERSION: "10.11"
+  MARIADB_ROOT_PASSWORD: ci
+  MARIADB_DATABASE: aeronance_test
+  MARIADB_USER: aeronance
+  MARIADB_PASSWORD: ci
+
+  DB_CONNECTION: mariadb
+  DB_HOST: mariadb
+  DB_PORT: "3306"
+  DB_DATABASE: aeronance_test
+  DB_USERNAME: aeronance
+  DB_PASSWORD: ci
+
+  COMPOSER_ALLOW_SUPERUSER: "1"
+  COMPOSER_NO_INTERACTION: "1"
+
+.php_setup: &php_setup
+  before_script:
+    # poppler-utils liefert pdftotext. Die Kennblatt-Listen des LBA richten ihre
+    # Spalten per Leerzeichen aus; ohne -layout sind sie unlesbar. Systempaket,
+    # kein Composer-Paket — siehe PdfLayoutText und docs/INFRASTRUKTUR.md.
+    - apt-get update -yqq && apt-get install -yqq git unzip libzip-dev libicu-dev libpng-dev poppler-utils mariadb-client >/dev/null
+    - docker-php-ext-install -j"$(nproc)" pdo_mysql zip intl bcmath exif gd >/dev/null
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - composer install --no-progress --prefer-dist --no-interaction
+    - cp .env.example .env
+    - php artisan key:generate
+
+cache:
+  key:
+    files:
+      - composer.lock
+  paths:
+    - vendor/
+
+test:
+  stage: test
+  <<: *php_setup
+  services:
+    - name: mariadb:10.11
+      alias: mariadb
+  script:
+    # Warten, bis der Service wirklich antwortet -- ohne das schlägt der erste
+    # Testlauf gelegentlich zu, was als Testfehler aussieht und keiner ist.
+    - |
+      for i in $(seq 1 30); do
+        php -r 'exit(@fsockopen(getenv("DB_HOST"), 3306) ? 0 : 1);' && break
+        echo "warte auf MariaDB ($i/30)"; sleep 2
+      done
+    # Welche Poppler-Version hier laeuft. Bleibt im Protokoll stehen: die
+    # Uebersichtsblaetter werden ueber pdftotext gelesen, und die Version
+    # entscheidet, ueber wie viele Zeilen ein Tabellenkopf verteilt wird. Als
+    # das einmal auseinanderlief, war die Pipeline rot und die lokale Suite
+    # gruen -- ohne diese Zeile im Log sucht das der naechste wieder von vorn.
+    - pdftotext -v 2>&1 | head -2 || true
+    - php artisan migrate --force
+    # phpunit direkt statt "php artisan test": der Umweg über artisan reicht
+    # Optionen nicht zuverlässig durch, und ohne --log-junit blieben die
+    # Artefakte unten leer -- die Pipeline war grün konfiguriert und hätte
+    # trotzdem nie einen Testbericht gezeigt.
+    - vendor/bin/phpunit --log-junit storage/logs/junit.xml
+  artifacts:
+    when: always
+    reports:
+      junit: storage/logs/junit.xml
+    expire_in: 1 week
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Die Oberflaechen-Tests, PARALLEL zum normalen Lauf.
+#
+# Sie fahren je Test die Anwendung neu hoch, damit die Modul-Ressourcen
+# ueberhaupt Routen bekommen -- gemessen 67 Sekunden je Test. Im selben Job
+# haetten sie den Testlauf von 24 auf 31 Minuten verlaengert; als eigener Job
+# laufen sie NEBEN ihm und kosten die Pipeline nichts.
+#
+# Warum ueberhaupt: Bis vor Kurzem hat in diesem Projekt kein Test je eine
+# Modul-Seite gerendert. Der erste, der es tat, fand sofort zwei HTTP 500 --
+# einen falschen Namespace und eine Seite, die beim ersten Oeffnen brach.
+#
+# Eigener Service-Container: Zwei Jobs teilen sich keine Datenbank, und diese
+# Tests legen ihr Schema mehrfach neu an (migrate:fresh je Test, weil ein
+# App-Neustart die Transaktion von RefreshDatabase nicht ueberlebt).
+# ─────────────────────────────────────────────────────────────────────────────
+render:
+  stage: test
+  <<: *php_setup
+  services:
+    - name: mariadb:10.11
+      alias: mariadb
+  script:
+    - |
+      for i in $(seq 1 30); do
+        php -r 'exit(@fsockopen(getenv("DB_HOST"), 3306) ? 0 : 1);' && break
+        echo "warte auf MariaDB ($i/30)"; sleep 2
+      done
+    - php artisan migrate --force
+    - vendor/bin/phpunit --group rendering --log-junit storage/logs/junit-render.xml
+  artifacts:
+    when: always
+    reports:
+      junit: storage/logs/junit-render.xml
+
+audit:
+  stage: quality
+  <<: *php_setup
+  script:
+    # Bricht ab, sobald ein Paket eine bekannte Schwachstelle meldet.
+    - composer audit --locked
+  allow_failure: false
+
+# Die Shell-Skripte der Auslieferung.
+#
+# update.sh laeuft auf dem Server eines Vereins und fasst Datenbank und
+# storage/ an; entrypoint.sh laeuft in jedem Container-Start. Ein Tippfehler
+# darin faellt sonst erst dort auf, wo er am teuersten ist.
+shell:
+  stage: quality
+  image: koalaman/shellcheck-alpine:stable
+  script:
+    - shellcheck deploy/*.sh deploy/docker/*.sh deploy/lxc/*.sh
+  allow_failure: false
+
+style:
+  stage: quality
+  # Bewusst OHNE das volle Setup: pint ist reines PHP und braucht weder
+  # DB-Extensions noch eine Datenbank. --ignore-platform-reqs, weil die
+  # Plattform-Anforderungen (intl, gd) hier absichtlich nicht installiert
+  # sind -- geprüft wird der Stil, nicht die Lauffähigkeit.
+  before_script:
+    - apt-get update -yqq && apt-get install -yqq git unzip >/dev/null
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - composer install --no-progress --prefer-dist --no-interaction --ignore-platform-reqs
+  script:
+    - vendor/bin/pint --test
+  allow_failure: false
+
+# Dass die Assets uebersetzen -- und zwar auf JEDEM Push, nicht erst auf einem
+# Tag.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# WARUM DAS EIN EIGENER JOB IST UND NICHT TEIL VON test.
+#
+# Das Filament-Layout ruft @vite auf; ohne gebautes Manifest sterben alle Tests,
+# die eine Seite abrufen. Der naheliegende Griff waere gewesen, npm in den
+# test-Job zu holen -- damit haenge aber jede Rechteprueferei an einem
+# npm-Build, und ein Fehler im Stylesheet liesse die AuthZ-Tests rot werden.
+# Stattdessen ruft das Test-Setup withoutVite() (siehe tests/TestCase.php), und
+# der Build wird hier geprueft, wo er hingehoert.
+#
+# Bis hierher wurde er ueberhaupt nur im pack-Job gebaut, und der laeuft auf
+# SemVer-Tags. Ein kaputter Frontend-Build waere also erst beim Release
+# aufgefallen -- im denkbar unguenstigsten Moment.
+# ─────────────────────────────────────────────────────────────────────────────
+assets:
+  stage: quality
+  # MIT dem PHP-Setup, obwohl hier nur Assets gebaut werden -- und das ist kein
+  # Versehen: resources/css/filament/admin importiert
+  # vendor/filament/filament/resources/css/theme.css. Ohne composer install
+  # bricht der Build mit "Can't resolve ../../../../vendor/…" ab. Ein reines
+  # Node-Image reicht dafuer nicht, genau wie beim pack-Job.
+  <<: *php_setup
+  script:
+    - curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null
+    - apt-get install -yqq nodejs >/dev/null
+    - npm ci --no-audit --no-fund
+    - npm run build
+    # Gebaut heisst nicht vorhanden: ein Build, der durchlaeuft und kein
+    # Manifest hinterlaesst, waere genau der Zustand, der die Tests umbrachte.
+    - test -f public/build/manifest.json
+  artifacts:
+    paths:
+      - public/build/
+    expire_in: 1 week
+  allow_failure: false
+
+signatures:
+  stage: verify
+  # Zuerst, und ohne PHP: was nicht signiert ist, muss gar nicht erst getestet
+  # werden.
+  #
+  # ───────────────────────────────────────────────────────────────────────────
+  # Warum das hier steht und nicht nur im pre-push-Hook: ein lokaler Hook ist
+  # eine Bitte. `git push --no-verify` übergeht ihn, ein frischer Klon hat ihn
+  # gar nicht, und `commit.gpgsign` ist eine Voreinstellung, keine Regel —
+  # ein Rebase oder Cherry-Pick kann eine Signatur verlieren, ohne das zu
+  # erwähnen. Der Commit sieht danach völlig normal aus.
+  #
+  # Serverseitige Push-Rules („Reject unsigned commits") gibt es nur in den
+  # kostenpflichtigen GitLab-Editionen. Auf CE ist diese Pipeline-Stufe die
+  # Stelle, an der sich die Regel wirklich durchsetzen lässt.
+  #
+  # Geprüft wird VERTRAUEN, nicht nur Anwesenheit: der öffentliche Schlüssel
+  # liegt in .gitlab/signing-keys.asc, wird hier importiert, und nur ein
+  # Commit, dessen Signatur zu einem dieser Schlüssel passt, gilt als gültig.
+  # Eine Signatur mit irgendeinem selbstgebauten Schlüssel besteht diese
+  # Prüfung nicht — sonst wäre die Regel Kosmetik.
+  # ───────────────────────────────────────────────────────────────────────────
+  image: alpine:3.21
+  variables:
+    # Die Standardtiefe von 20 reicht nicht, um bis zum Abzweigpunkt eines
+    # längeren Branches zu sehen — und ein Commit, den wir nicht sehen, wäre
+    # ungeprüft durchgelaufen.
+    GIT_DEPTH: "0"
+  before_script:
+    - apk add --no-cache git gnupg >/dev/null
+    - gpg --batch --quiet --import .gitlab/signing-keys.asc
+    # Ohne Ultimate-Vertrauen meldet git jede Signatur als „gut, aber
+    # unbekannter Herkunft" (%G? = U). Der Schlüssel im Repo IST hier die
+    # Vertrauensankerung — genau dafür liegt er dort.
+    - |
+      gpg --batch --list-keys --with-colons \
+        | awk -F: '/^fpr:/ {print $10":6:"}' \
+        | gpg --batch --import-ownertrust
+  script:
+    - |
+      set -eu
+
+      # Welche Commits sind mit diesem Push dazugekommen? Auf einem Branch
+      # alles seit dem Abzweig vom Zielbranch; auf dem Standardbranch der
+      # Bereich, den GitLab meldet. Ist beides nicht zu ermitteln, wird die
+      # Spitze geprüft — lieber zu wenig prüfen als hier still durchwinken,
+      # denn jeder Commit war irgendwann einmal die Spitze.
+      base="${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}"
+
+      if [ -z "$base" ] && [ "$CI_COMMIT_REF_NAME" != "$CI_DEFAULT_BRANCH" ]; then
+        git fetch --quiet origin "$CI_DEFAULT_BRANCH" 2>/dev/null || true
+        base="$(git merge-base HEAD FETCH_HEAD 2>/dev/null || true)"
+      fi
+
+      if [ -z "$base" ] \
+        && [ -n "${CI_COMMIT_BEFORE_SHA:-}" ] \
+        && [ "$CI_COMMIT_BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+        base="$CI_COMMIT_BEFORE_SHA"
+      fi
+
+      if [ -n "$base" ]; then
+        range="$base..$CI_COMMIT_SHA"
+      else
+        range="-1 $CI_COMMIT_SHA"
+        echo "Kein Abzweigpunkt ermittelbar — es wird nur die Spitze geprüft."
+      fi
+
+      bad=0
+
+      # %h statt %H: der Kurz-Hash kommt von git, nicht aus einer
+      # Shell-Expansion, die beim Lesen niemand nachvollzieht.
+      # shellcheck disable=SC2086
+      git log --format='%h %G? %an <%ae> %s' $range > /tmp/commits.txt
+
+      while read -r sha state rest; do
+        case "$state" in
+          G|U) echo "  ok          $sha  $rest" ;;
+          N)   echo "  UNSIGNIERT  $sha  $rest"; bad=$((bad + 1)) ;;
+          E)   echo "  FREMDER KEY $sha  $rest"; bad=$((bad + 1)) ;;
+          *)   echo "  UNGUELTIG ($state) $sha  $rest"; bad=$((bad + 1)) ;;
+        esac
+      done < /tmp/commits.txt
+
+      if [ "$bad" -gt 0 ]; then
+        echo
+        echo "$bad Commit(s) ohne gueltige Signatur."
+        echo "Erwartet wird eine Signatur mit einem Schluessel aus .gitlab/signing-keys.asc."
+        echo "Ein neuer Mitwirkender traegt seinen oeffentlichen Schluessel dort ein."
+        exit 1
+      fi
+
+      echo
+      echo "Alle geprueften Commits sind gueltig signiert."
+  allow_failure: false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Release
+#
+# Ein getaggtes Release ist die einzige Quelle; alle Auslieferungskanäle
+# konsumieren dasselbe Artefakt (CLAUDE.md, Distribution). Diese Stufe baut das
+# Artefakt — Docker-Image und LXC-Skript hängen sich später hier an.
+#
+# Das Tarball trägt `vendor/` und die gebauten Frontend-Assets. Auf dem
+# Zielsystem sind damit weder Composer noch Node nötig, nur PHP-FPM und die
+# vorausgesetzten Dienste. Das ist der ganze Zweck: ein Verein soll ein Archiv
+# auspacken und nicht eine Toolchain aufbauen.
+# ─────────────────────────────────────────────────────────────────────────────
+
+pack:
+  stage: release
+  rules:
+    # Nur für SemVer-Tags. Ein Release entsteht durch Taggen, nicht durch einen
+    # Push auf master.
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+  image: php:8.4-cli
+  variables:
+    GIT_DEPTH: "0"
+  before_script:
+    - apt-get update -yqq
+    - apt-get install -yqq git unzip libzip-dev libicu-dev libpng-dev curl gnupg >/dev/null
+    - docker-php-ext-install -j"$(nproc)" pdo_mysql zip intl bcmath exif gd >/dev/null
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null
+    - apt-get install -yqq nodejs >/dev/null
+  script:
+    # Gebaut wird gegen die Mindestversion aus composer.json. Der Lock enthielt
+    # eine Zeit lang Pakete, die 8.4.1 verlangten, während composer.json 8.3
+    # versprach -- aufgefallen ist das erst, als diese Stufe zum ersten Mal auf
+    # der versprochenen Version baute. `config.platform.php` hält die beiden
+    # jetzt zusammen.
+    - php -v | head -n1
+    - composer check-platform-reqs --no-dev
+
+    - composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+    - npm ci
+    - npm run build
+
+    # Alles, was der Zielserver nicht braucht oder nicht bekommen darf: die
+    # Entwicklungswerkzeuge, die Testdaten, und vor allem nichts aus .env.
+    #
+    # AUCH NICHT docs/ UND CLAUDE.md. Beides ist Arbeitsmaterial dieses
+    # Projekts -- Entscheidungsprotokoll, Analyse des Vorgaengersystems,
+    # Infrastrukturnotizen -- und keine Betriebsdokumentation. Wer Aeronance
+    # installiert, braucht README, CHANGELOG und deploy/; die zweieinhalbtausend
+    # Zeilen Analyse braucht er nicht, und in einem Auslieferungsartefakt sind
+    # sie schlicht Ballast.
+    - |
+      NAME="aeronance-${CI_COMMIT_TAG}"
+      mkdir -p "dist/${NAME}"
+      tar -cf - \
+        --exclude='./dist' \
+        --exclude='./.git' \
+        --exclude='./.githooks' \
+        --exclude='./node_modules' \
+        --exclude='./tests' \
+        --exclude='./.env' \
+        --exclude='./.gitlab-ci.yml' \
+        --exclude='./CLAUDE.md' \
+        --exclude='./docs' \
+        --exclude='./phpunit.xml' \
+        --exclude='./pint.json' \
+        --exclude='./storage/app/backups' \
+        --exclude='./storage/framework/cache/*' \
+        --exclude='./storage/framework/sessions/*' \
+        --exclude='./storage/framework/views/*' \
+        --exclude='./storage/logs/*' \
+        . | (cd "dist/${NAME}" && tar -xf -)
+
+      # Die Version im Artefakt, damit eine Installation sagen kann, was sie ist,
+      # ohne ein Git-Verzeichnis zu haben.
+      echo "${CI_COMMIT_TAG}" > "dist/${NAME}/VERSION"
+
+      cd dist
+      tar -czf "${NAME}.tar.gz" "${NAME}"
+      sha256sum "${NAME}.tar.gz" > "${NAME}.tar.gz.sha256"
+      rm -rf "${NAME}"
+      ls -la
+
+      # Geprüft wird das FERTIGE Archiv, nicht die Absicht: "aus Versehen
+      # mitgepackt" und "still fehlend" sind genau die zwei Fehler, die man
+      # einem Tarball nicht ansieht. Im selben Block wie das Packen, weil jeder
+      # script-Eintrag im Arbeitsverzeichnis des Jobs startet -- ein zweiter
+      # Block mit `cd dist` läuft ins Leere.
+      LIST="$(tar -tzf "${NAME}.tar.gz")"
+
+      if grep -qE '/\.env$' <<< "$LIST"; then
+        echo "FEHLER: .env ist im Archiv gelandet."
+        exit 1
+      fi
+
+      for MUST in '/\.env\.example$' '/vendor/autoload\.php$' '/public/build/manifest\.json$' '/VERSION$'; do
+        grep -qE "$MUST" <<< "$LIST" || { echo "FEHLER: im Archiv fehlt: $MUST"; exit 1; }
+      done
+
+      for MUSTNOT in '/tests/' '/node_modules/' '/\.git/'; do
+        grep -qE "$MUSTNOT" <<< "$LIST" && { echo "FEHLER: im Archiv steckt: $MUSTNOT"; exit 1; }
+      done
+
+      echo "Archiv geprüft: $(wc -l <<< "$LIST") Einträge."
+  artifacts:
+    paths:
+      - dist/*.tar.gz
+      - dist/*.sha256
+    expire_in: never
+
+# Das Container-Image, aus DEMSELBEN Tarball wie der Webserver-Kanal.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# CLAUDE.md: "Ein getaggtes Release ist die einzige Quelle; alle Kanäle
+# konsumieren dasselbe Artefakt." Deshalb baut dieser Job NICHT noch einmal --
+# er nimmt dist/*.tar.gz aus pack. Zwei Builds könnten auseinanderlaufen, und
+# die Abweichung fiele frühestens einem Verein auf.
+#
+# BUILDAH UND NICHT docker:dind: Der Runner fährt Docker rootless, also gibt es
+# keinen privilegierten Modus, auf den dind angewiesen wäre. Buildah braucht
+# weder Daemon noch Privilegien -- die Runner-Konfiguration bleibt unangetastet.
+#
+# GESCHOBEN WIRD NUR, WENN EIN ZIEL DA IST. Die Registry der Instanz ist derzeit
+# nicht in Betrieb (kein container_registry_image_prefix, /v2/ antwortet nicht).
+# Ohne AERONANCE_REGISTRY baut der Job das Image trotzdem und prüft es -- was
+# die eigentliche Absicherung ist -- und legt es als Artefakt ab, statt mit
+# einem Login-Fehler abzubrechen, den niemand beheben kann.
+# ─────────────────────────────────────────────────────────────────────────────
+container:
+  stage: release
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+  # ───────────────────────────────────────────────────────────────────────────
+  # KANIKO, UND ZWAR AUS EINEM GEMESSENEN GRUND.
+  #
+  # Zuerst stand hier Buildah -- der uebliche Weg, wenn kein docker:dind
+  # moeglich ist. Es scheiterte zweimal am selben Punkt:
+  #
+  #     Error during unshare(CLONE_NEWUSER): Operation not permitted
+  #
+  # Nachgemessen mit einem eigenen Diagnose-Job: der Job laeuft als uid 0,
+  # /proc/sys/user/max_user_namespaces steht auf 2147483647 -- es ist also
+  # weder fehlendes root noch ein Limit. Selbst `buildah info` faellt darueber.
+  # Das Standard-seccomp-Profil von Docker verbietet unprivilegierten
+  # Containern das Anlegen von User-Namespaces, und Buildah legt fuer seinen
+  # Speicher grundsaetzlich einen an. Weder --isolation chroot noch
+  # Root-Speicher aendern daran etwas.
+  #
+  # Kaniko baut rein im Userspace: kein Daemon, kein Namespace, kein
+  # privilegierter Modus. Damit bleibt die Runner-Konfiguration unangetastet --
+  # die Alternative waere gewesen, seccomp fuer diesen Runner abzuschalten, und
+  # das ist ein hoher Preis fuer einen Build-Schritt.
+  # ───────────────────────────────────────────────────────────────────────────
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: [""]
+  needs:
+    - job: pack
+      artifacts: true
+  script:
+    - |
+      RELEASE="$(ls dist/aeronance-*.tar.gz | head -n1)"
+      test -n "$RELEASE" || { echo "Kein Release-Tarball aus pack."; exit 1; }
+      echo "Image aus $RELEASE"
+      cp "$RELEASE" deploy/docker/release.tar.gz
+
+    # GESCHOBEN WIRD NUR, WENN EIN ZIEL DA IST. Die Registry der Instanz ist
+    # nicht in Betrieb; ohne AERONANCE_REGISTRY wird das Image gebaut, GEPRUEFT
+    # und danach verworfen, statt dass der Job an einem Login scheitert, den
+    # niemand beheben kann.
+    #
+    # NICHT ALS ARTEFAKT: gemessen im Lauf zu v0.0.5 -- das OCI-Archiv einer
+    # PHP-Basis samt Anwendung sprengt das Upload-Limit der Instanz
+    # ("413 Request Entity Too Large"). Ein Bau, der erfolgreich war und am
+    # Hochladen scheitert, sieht aus wie ein kaputter Bau und ist keiner.
+    # ─────────────────────────────────────────────────────────────────────────
+    # ANMELDUNG UND BILDPFAD SIND ZWEIERLEI, und das war hier verwechselt.
+    #
+    # Kaniko meldet sich am HOST an (ghcr.io), schiebt aber an den vollen
+    # BILDPFAD (ghcr.io/maruether/aeronance). Stand beides in einer Variablen,
+    # landete bei ghcr.io ein Eintrag fuer den Host "ghcr.io/maruether" in der
+    # config.json -- den findet Kaniko beim Anmelden nie, und der Job waere mit
+    # "unauthorized" gescheitert. Bei einer Registry ohne Pfadanteil
+    # (registry.example.org) faellt es nicht auf, weil Host und Pfad dort
+    # zufaellig zusammenfallen.
+    #
+    # Deshalb: AERONANCE_IMAGE_REPO traegt den vollen Pfad, der Host wird davon
+    # abgeschnitten.
+    #
+    #     AERONANCE_IMAGE_REPO=ghcr.io/maruether/aeronance
+    #     AERONANCE_REGISTRY_USER=maruether
+    #     AERONANCE_REGISTRY_TOKEN=<GitHub-Token mit write:packages>
+    #
+    # AERONANCE_REGISTRY bleibt als alter Name gueltig; dann wird wie frueher
+    # "/aeronance" angehaengt.
+    # ─────────────────────────────────────────────────────────────────────────
+    - |
+      REPO="${AERONANCE_IMAGE_REPO:-}"
+      if [ -z "$REPO" ] && [ -n "${AERONANCE_REGISTRY:-}" ]; then
+        REPO="${AERONANCE_REGISTRY}/aeronance"
+      fi
+
+      if [ -n "$REPO" ]; then
+        HOST="${REPO%%/*}"
+        echo "Ziel: $REPO (Anmeldung an $HOST)"
+        mkdir -p /kaniko/.docker
+        AUTH="$(printf '%s:%s' "${AERONANCE_REGISTRY_USER}" "${AERONANCE_REGISTRY_TOKEN}" | base64 | tr -d '\n')"
+        printf '{"auths":{"%s":{"auth":"%s"}}}' "$HOST" "$AUTH" > /kaniko/.docker/config.json
+        /kaniko/executor \
+          --context deploy/docker \
+          --dockerfile deploy/docker/Dockerfile \
+          --build-arg RELEASE=release.tar.gz \
+          --destination "${REPO}:${CI_COMMIT_TAG}" \
+          --destination "${REPO}:latest"
+        exit 0
+      fi
+
+      echo "Kein Ziel gesetzt (AERONANCE_IMAGE_REPO) -- das Image wird gebaut, geprueft und verworfen."
+      /kaniko/executor \
+        --context deploy/docker \
+        --dockerfile deploy/docker/Dockerfile \
+        --build-arg RELEASE=release.tar.gz \
+        --destination "aeronance:${CI_COMMIT_TAG}" \
+        --no-push \
+        --tarPath /tmp/image.tar
+
+      echo "Archivgroesse: $(du -h /tmp/image.tar | cut -f1)"
+
+    # Was im fertigen Image fehlen kann, ohne dass der Bau es merkt.
+    #
+    # Geprueft wird am Archiv, denn Kaniko baut, es startet nicht. Das reicht
+    # fuer das, was hier historisch schiefging: ein Tarball, der im Image an der
+    # falschen Stelle landet, hinterlaesst ein Image ohne public/index.php --
+    # der Webserver liefert dann 404 statt der Anwendung. Dass die Anwendung
+    # LAEUFT, prueft pack schon am ausgepackten Artefakt.
+    - |
+      test -f /tmp/image.tar || exit 0
+
+      mkdir -p /tmp/img && tar -xf /tmp/image.tar -C /tmp/img
+      : > /tmp/inhalt.txt
+      for L in $(find /tmp/img -name '*.tar.gz' -o -name 'layer.tar' -o -name '*.tar'); do
+        tar -tzf "$L" 2>/dev/null >> /tmp/inhalt.txt || tar -tf "$L" 2>/dev/null >> /tmp/inhalt.txt || true
+      done
+
+      for PFAD in \
+        'var/www/aeronance/public/index.php' \
+        'var/www/aeronance/artisan' \
+        'var/www/aeronance/VERSION' \
+        'var/www/aeronance/vendor/autoload.php' \
+        'usr/bin/pdftotext' ; do
+        if grep -qx "./$PFAD" /tmp/inhalt.txt || grep -qx "$PFAD" /tmp/inhalt.txt; then
+          echo "  vorhanden: $PFAD"
+        else
+          echo "FEHLT im Image: $PFAD"
+          exit 1
+        fi
+      done
+
+      rm -rf /tmp/image.tar /tmp/img
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Renovate — die Abhängigkeiten im Blick behalten
+#
+# CLAUDE.md verlangt "Renovate/Dependabot". Bei einem selbst gehosteten GitLab
+# gibt es keine App zum Anklicken: Renovate läuft als eigener Job auf einem
+# geplanten Zeitplan (Projekt → CI/CD → Schedules, z. B. montags 5 Uhr).
+#
+# WARUM DAS HIER MEHR IST ALS HYGIENE: CspScriptHashesTest schlägt genau in
+# dem Merge Request an, der composer.lock anfasst -- also in einem
+# Renovate-MR, der Filament hebt. Ohne Bot fällt die Abweichung erst auf,
+# wenn jemand von Hand updatet, und dann womöglich zwischen anderen
+# Änderungen.
+#
+# EINRICHTUNG (einmalig, und ohne Geheimnis im Repo):
+#
+#   1. Projekt-Access-Token mit Rolle "Maintainer" und den Scopes
+#      api, read_repository, write_repository anlegen.
+#   2. Als CI/CD-Variable RENOVATE_TOKEN hinterlegen -- maskiert UND
+#      geschützt. Ein Token, das ein Merge Request lesen kann, darf nicht in
+#      einem Job-Log auftauchen.
+#   3. Pipeline-Schedule anlegen. Ohne Schedule läuft der Job nie: Die Regel
+#      unten lässt ihn ausschließlich in geplanten Pipelines zu, damit er
+#      nicht bei jedem Push mitläuft.
+#
+# Der Job schlägt fehl, wenn das Token fehlt, statt still nichts zu tun --
+# ein Bot, von dem man glaubt, er laufe, ist schlechter als keiner.
+# ─────────────────────────────────────────────────────────────────────────────
+renovate:
+  stage: verify
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $RENOVATE_SCHEDULE == "true"
+  image:
+    name: renovate/renovate:42
+    entrypoint: [""]
+  interruptible: false
+  variables:
+    RENOVATE_PLATFORM: gitlab
+    RENOVATE_ENDPOINT: $CI_API_V4_URL
+    RENOVATE_AUTODISCOVER: "false"
+    RENOVATE_REPOSITORIES: $CI_PROJECT_PATH
+    RENOVATE_GIT_AUTHOR: "Renovate <renovate@maruether.de>"
+    LOG_LEVEL: info
+  script:
+    - |
+      if [ -z "${RENOVATE_TOKEN:-}" ]; then
+        echo "RENOVATE_TOKEN fehlt. Siehe den Kommentar über diesem Job."
+        exit 1
+      fi
+    - renovate

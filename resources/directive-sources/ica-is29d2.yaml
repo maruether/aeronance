@@ -1,0 +1,47 @@
+# Aeroclubul României -- die IS-Muster von ICA Brașov.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# ICA Brașov gibt es nicht mehr; Musterhalter ist laut TCDS EASA.A.453
+# (Ausgabe 03, 15.12.2017) der Aeroclubul României in Bukarest. Der
+# veröffentlicht die Bulletins offen und auf Englisch.
+#
+# Diese Datei liest die IS-29 D2. Weitere Musterseiten liegen unter derselben
+# Struktur (/page/is-28b2, /page/is-29-d, /page/is-32a ...); jede ist eine
+# eigene Datei, weil die Adresse je Muster feststeht und geraten würde, wenn
+# man sie ableitet.
+#
+# NICHT dabei: der Motorsegler IS-28M2. Er steht in der TCDS, hat beim
+# Aeroclubul aber keine Seite -- fünf Adressvarianten und die vollständige
+# Seitenliste geprüft. TC-gelistet, aber unveröffentlicht.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: ica-is29d2
+label: 'Aeroclubul României -- IS-29 D2'
+issuer: 'Aeroclubul României'
+type: table
+
+default_kind: sb
+subject_kind: aircraft_model
+number_prefix: false
+
+page:
+  url: 'https://aeroclubulromaniei.ro/page/is-29-d2'
+
+  table_pattern: '#<table[^>]*>.*?</table>#is'
+  row_pattern: '#<tr[^>]*>(.*?)</tr>#is'
+  cell_pattern: '#<t[dh][^>]*>(.*?)</t[dh]>#is'
+  min_cells: 6
+
+  document_pattern: '#href="([^"]+\.pdf)"#i'
+
+  # Die Kopfzeile trägt sechs Zellen wie eine Datenzeile und rutscht deshalb
+  # durch min_cells; ihre "Nummer" ist das Wort SB. Ohne das stünde eine
+  # Anweisung namens "SB" mit dem Gegenstand "Description" in der Liste.
+  ignore: '/^SB$/i'
+
+# Language | SB | Description | Revision | Date | Applicability
+columns:
+  number: 1
+  title: 2
+  date: 4
+  affected: 5

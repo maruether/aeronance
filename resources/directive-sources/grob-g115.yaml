@@ -1,0 +1,108 @@
+# Grob G 115 -- Service Bulletins ueber das Uebersichtsblatt.
+#
+# ---------------------------------------------------------------------------
+# Baugleich zur G 109 (siehe grob-g109.yaml und docs/LTA-TM.md §18): dieselbe
+# dreizeilige Eintragsform, dieselbe Ankreuzmatrix, dieselbe zentrierte
+# Kopfzeile. 185 Zeilen, ALLE mit Ausgabedatum, Dokument und Verbindlichkeit.
+#
+# WAS NICHT STIMMT, und zwar bei jedem Eintrag: Der Titel beginnt in der
+# Satzmitte. Das Blatt setzt ihn auf Spalte 24, seine Ueberschrift "Title" steht
+# auf 50, und dazwischen liegt eine gemessene Spalte, die den Text zerschneidet
+# -- aus "Additional equipment, revision of flight manual (German Issue)" wird
+# "revision of flight manual (German".
+#
+# Geprueft und verworfen: Seitenweises Messen (aendert nichts),
+# text_mode -fixed 2 (verliert dabei alle Ausgabedaten), ohne
+# headings_centred (verliert zwei Daten, Titel unveraendert).
+#
+# Ausgeliefert wird sie trotzdem, weil Nummer, Datum, Verbindlichkeit und
+# Dokument stimmen und der Titel durchsuchbar bleibt -- nur eben ab der Mitte.
+# Ein Test haelt den Zustand fest, damit er nicht unbemerkt schlechter wird.
+# ---------------------------------------------------------------------------
+
+name: grob-g115
+label: 'Grob G 115 (Übersicht — Titel unvollständig)'
+issuer: 'Grob Aircraft'
+type: overview
+
+default_kind: sb
+subject_kind: aircraft_model
+
+# "817-1", "MSB817-59" -- die Nummer trägt ihre Art selbst, wo sie eine hat.
+number_prefix: false
+
+overview:
+  # Zwei Generationen auf demselben Blatt: 817-1 und 4601-10 ohne Marker, die
+  # neueren mit Verbindlichkeit im Präfix. Ohne den optionalen Präfix meldete
+  # der Leser 20 unbekannte Einträge und übernahm -- richtigerweise -- nichts.
+  number_pattern: '/^(?:[MOAR]?SB)?\d{3,4}-\d+/'
+
+  # Grob zentriert seine Überschriften: "Title" steht auf 57 über einer Spalte,
+  # deren Einträge alle auf 24 beginnen.
+  headings_centred: true
+
+  # Jeder Titel beginnt in der Satzmitte (siehe Kopf dieser Datei). Das Zeichen
+  # steht deshalb VOR jedem Titel und nicht nur in dieser Datei: Wer die Liste
+  # abhakt, liest keine Spec-Kommentare.
+  title_prefix: '… '
+
+  # Ein Eintrag belegt drei Zeilen -- deutscher Text über der Nummer, englische
+  # Fassung darunter:
+  #
+  #     Änderung des Fluggewichtes von 810 kg auf
+  #     817-1   Zuladung                  X   12-May-1981
+  #     Increase of max. weight from 810 kg
+  #
+  # Beide Merkmale zusammen ergeben "die ersten beiden Zeilen nehmen, die dritte
+  # verwerfen". Einzeln kürzen sie sich gegenseitig.
+  numbers_centred_in_row: true
+  bilingual: true
+
+  headings:
+    number:
+      - 'sb no'
+    title:
+      - 'title'
+    # "Alert" ist die erste der vier Kategoriespalten und hier NICHT als
+    # Dringlichkeit gemeint, sondern als GRENZE: Ohne sie liefe der Titel nach
+    # rechts über die Ankreuzfelder hinweg weiter.
+    compliance:
+      - 'alert'
+    date:
+      - 'issue date'
+
+  documents:
+    'G 115': 'https://support.grob-aircraft.com/en/g-115-general.html?file=files/content/PDFs/G115/SB/List_of_SB_1078.pdf'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DIE VERBINDLICHKEIT KOMMT AUS DER NUMMER, NICHT AUS DER ANKREUZMATRIX.
+#
+# Grob führt vier Spalten -- Alert | Mandatory | Recommended | Optional -- und
+# setzt ein X in eine davon. Ein X ist ein Zeichen ohne Wort, und die Spalten
+# stehen dicht beieinander: eine Zuordnung eine Spalte daneben machte aus
+# "empfohlen" ein "optional", und optional heißt "darf abgelehnt werden".
+#
+# Dieselbe Auskunft steht bei den neueren Bulletins ausgeschrieben in der
+# Bezeichnung. Die zu lesen ist eine Messung; die Kreuze zu lesen wäre geraten.
+# Die älteren ohne Präfix bleiben verbindlich -- der Default.
+# ─────────────────────────────────────────────────────────────────────────────
+bindingness:
+  source: 'number'
+
+  recommended_phrases:
+    - rsb
+
+  optional_phrases:
+    - osb
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WAS BLEIBT, ausdrücklich benannt statt versteckt -- wie SZDs Restfehler in §15:
+#
+# 6 von 68 Titeln tragen die englische Fassung des VORHERGEHENDEN Eintrags als
+# Vorspann ("Increase of max. weight ... Abweichungen gegenüber dem
+# Gerätekennblatt ..."). Der eigene deutsche Titel steht vollständig dahinter,
+# die Zeile ist also auffindbar; sauber ist sie nicht.
+#
+# Nummer, Ausgabedatum, Verbindlichkeit und Betroffenheit sind davon NICHT
+# betroffen. Ein Test pinnt die Zahl fest, damit sie nicht unbemerkt wächst.
+# ─────────────────────────────────────────────────────────────────────────────

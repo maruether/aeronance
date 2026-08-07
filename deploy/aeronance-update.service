@@ -1,0 +1,39 @@
+# Automatische Aktualisierung -- eigener Server und LXC.
+#
+# Ausgelöst vom Timer daneben, nicht dauerhaft laufend. Das Skript prüft selbst,
+# ob die Automatik überhaupt eingeschaltet ist (AERONANCE_AUTO_UPDATE in der
+# .env) und ob es etwas zu tun gibt; ist nichts, endet es still.
+#
+#   install -m 644 deploy/aeronance-update.service /etc/systemd/system/
+#   install -m 644 deploy/aeronance-update.timer   /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now aeronance-update.timer
+#
+# ──────────────────────────────────────────────────────────────────────────────
+# WEITERE RECHTE ALS DIE ANDEREN UNITS, und das ist unvermeidlich: Ein Update
+# schreibt in das ganze Projektverzeichnis (git checkout, composer install), und
+# nicht nur nach storage/. Deshalb ReadWritePaths auf das Verzeichnis statt auf
+# zwei Unterordner -- alles andere wäre ein Recht, das so aussieht, als wäre es
+# eng, und beim ersten Lauf scheitert.
+# ──────────────────────────────────────────────────────────────────────────────
+
+[Unit]
+Description=Aeronance automatische Aktualisierung
+After=network-online.target mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/aeronance
+ExecStart=/var/www/aeronance/deploy/auto-update.sh
+
+# Ein Update, das haengt, darf nicht ewig haengen -- sonst steht die Instanz
+# im Wartungsmodus, bis jemand nachsieht.
+TimeoutStartSec=1800
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/www/aeronance

@@ -1,0 +1,100 @@
+# Austro Engine -- Service Bulletins über Diamonds Portal.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# KEIN NEUER MODUS UND KEIN NEUER CLIENT. Austro Engine veröffentlicht nicht auf
+# einer eigenen Seite: austroengine.at leitet auf diamondaircraft.com. Die
+# Dokumente liegen in DEMSELBEN Aura-Portal, das diamond.yaml schon anspricht --
+# nur in einer anderen Bibliothek.
+#
+# diamond.yaml schließt sie mit `library_pattern: /^TechPubs\s+(.+)$/i` bewusst
+# aus, weil "Engine Documentation" kein Flugzeugmuster ist. Genau die ist hier
+# gewollt: Ein Motor hat eigene TMs, eigene Laufzeiten und eigene ADs,
+# unabhängig vom Flugzeugmuster, an dem er hängt.
+#
+# Die Falle des Portals gilt unverändert: Ohne `member` antwortet die API mit
+# "erfolgreich" und einer LEEREN Liste, nie mit einem Fehler. AuraClient
+# behandelt jede leere Antwort deshalb als Fehler -- siehe diamond.yaml.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: austro
+label: 'Austro Engine (Diamond-Portal)'
+issuer: 'Austro Engine'
+
+type: aura
+default_kind: sb
+subject_kind: engine
+
+# Die Nummer sagt selbst, was sie ist (MSB-E4-042, RSB-E4-038, OSB-E4-041) --
+# ein vorangestelltes "SB" ergäbe "SB MSB-E4-042".
+number_prefix: false
+
+aura:
+  url: 'https://partners.diamondaircraft.com/s/sfsites/aura'
+  page: '/s/technical-publications'
+
+  classname: daiFilesController
+  methods:
+    libraries: getPublicLibraries
+    folders: getContentByFolder
+    files: getFilesByFolder
+
+  # Die Gast-Kennung der Seite, kein persönliches Konto -- dieselbe wie bei
+  # Diamond, weil es dasselbe Portal ist.
+  member: '0052p000009lEjPAAU'
+
+  # Genau eine Bibliothek, im Gegensatz zu Diamonds "TechPubs <Muster>".
+  library_pattern: '/^Engine Documentation$/i'
+
+  # EINE EBENE MEHR ALS BEI DIAMOND. Dort benennt die Bibliothek das Muster
+  # ("TechPubs DA40"); Austro legt alles in EINE Bibliothek und trennt darunter
+  # nach Motorbaureihe:
+  #
+  #   Engine Documentation
+  #     ├── AE300 - AE330
+  #     │     ├── Service Bulletins - Mandatory              (24)
+  #     │     ├── Service Bulletins - Recommended, Optional  (11)
+  #     │     └── Maintenance Manual, Service Information, … (keine Anweisungen)
+  #     └── AE50R
+  #           ├── Service Bulletins - Mandatory              (6)
+  #           └── Service Bulletins - Recommended, Optional  (2)
+  #
+  # Mit Diamonds Annahme gelesen kam GAR NICHTS heraus: Die Baureihenordner
+  # passen auf kein Dokumentenmuster, also wurde kein Ordner gewollt und die
+  # Quelle meldete eine leere Liste -- ununterscheidbar von „Austro hat nichts
+  # veröffentlicht".
+  model_folder_pattern: '/^(AE\S*.*)$/i'
+
+  # Nur Service Bulletins. Daneben liegen Wartungs- und Betriebshandbücher,
+  # Work Instructions und Service Information -- Vorgabe zu Lindner: „eine ti ist
+  # keine tm, bleibt draußen."
+  folder_pattern: '/^Service Bulletins/i'
+
+  document_url: 'https://partners.diamondaircraft.com/sfc/servlet.shepherd/document/download/{id}'
+
+  # Wie bei Diamond: Die Verbindlichkeit steckt in der Nummer, verankert
+  # gesucht. Eine lose Suche nach "osb" irgendwo in der Nummer würde Dokumente
+  # entschärfen, die zufällig diese Buchstaben tragen.
+  number_marker: '/^([MOR]SB)/i'
+
+# Die Felder, die das Portal je Datei liefert.
+#
+# ACHTUNG, Unterschied zu diamond.yaml: Der Titel steht hier in `Title`.
+# `Description` ist über die Austro-Dokumente durchgängig null -- die
+# Spaltenzuordnung aus diamond.yaml ist NICHT übertragbar, und übernommen hätte
+# sie jede Zeile ohne Titel gelassen.
+columns:
+  number: Doc_No__c
+  title: Title
+  date: Date__c
+  document: ContentDocumentId
+
+bindingness:
+  # Vorgabe: "Empfohlen bedeutet Optional, aber der hersteller empfielt es. Das
+  # ist eine eigene Kategorie."
+  recommended_phrases:
+    - rsb
+    - recommended
+
+  optional_phrases:
+    - osb
+    - optional

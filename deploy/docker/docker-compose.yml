@@ -1,0 +1,103 @@
+# Aeronance als Container-Verbund.
+#
+# ──────────────────────────────────────────────────────────────────────────────
+# Fünf Dienste, weil sie fünf verschiedene Lebensläufe haben: der Webserver wird
+# neu geladen, PHP-FPM neu gestartet, die Datenbank fast nie angefasst, und
+# Worker und Scheduler sterben und kommen wieder. In einen Container gepackt
+# nimmt ein Absturz alles mit.
+#
+# KONFIGURATION VOLLSTÄNDIG ÜBER ENV -- CLAUDE.md verlangt das ausdrücklich:
+# "Keine kanalspezifischen Codepfade." Es gibt kein Docker-Sonderverhalten im
+# Code, nur andere Werte in .env.
+#
+# Loslegen:
+#   cp .env.docker.example .env && $EDITOR .env
+#   docker compose up -d
+#   docker compose exec app php artisan key:generate
+# Danach die Oberfläche aufrufen -- der Erst-Setup-Assistent übernimmt.
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+  app:
+    image: ${AERONANCE_IMAGE:-registry.example.org/aeronance:latest}
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      # Nur was sich ändert. Der Code kommt aus dem Image und wird nicht
+      # gemountet -- ein Update ist ein neues Image, kein Dateikopieren.
+      - storage:/var/www/aeronance/storage
+      # Wohin der Entrypoint public/ spiegelt -- siehe entrypoint.sh. NICHT auf
+      # public/ selbst gemountet: ein benanntes Volume dort wuerde beim Update
+      # die alten Assets behalten.
+      - static:/srv/public-export
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      # Adresse UND Port aus der .env. Die Adresse ist kein Zierat: Steht ein
+      # Reverse Proxy davor, gehoert der Verbund an 127.0.0.1 und nicht an alle
+      # Schnittstellen -- sonst ist er am Proxy vorbei direkt erreichbar, mit
+      # allem was daran haengt (kein HTTPS, keine Zugriffsregeln des Proxys).
+      - "${AERONANCE_BIND:-0.0.0.0}:${AERONANCE_PORT:-8080}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Dasselbe public/, das der App-Entrypoint dorthin spiegelt. Der PFAD
+      # muss der der App sein: nginx schickt SCRIPT_FILENAME als Zeichenkette an
+      # PHP-FPM, und PHP oeffnet sie in SEINEM Dateisystem.
+      - static:/var/www/aeronance/public:ro
+    depends_on:
+      - app
+
+  db:
+    # MariaDB, Hard Limit aus CLAUDE.md. 10.11 ist die Mindestversion (Debian 12).
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_DATABASE:-aeronance}
+      MARIADB_USER: ${DB_USERNAME:-aeronance}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD fehlt in .env}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD fehlt in .env}
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      # Ohne das startet die App gegen eine Datenbank, die noch nicht antwortet,
+      # und die erste Migration schlägt fehl -- was wie ein Fehler im Programm
+      # aussieht und keiner ist.
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  worker:
+    image: ${AERONANCE_IMAGE:-registry.example.org/aeronance:latest}
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - storage:/var/www/aeronance/storage
+    # --max-time, damit ein Worker sich regelmässig erneuert: ein langlaufender
+    # PHP-Prozess hält Speicher und alten Code fest.
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    depends_on:
+      db:
+        condition: service_healthy
+
+  scheduler:
+    image: ${AERONANCE_IMAGE:-registry.example.org/aeronance:latest}
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - storage:/var/www/aeronance/storage
+    # schedule:work statt eines Cron im Container -- ein Dienst, ein Prozess.
+    command: php artisan schedule:work
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db:
+  storage:
+  static:
