@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Fleet\Models\ComponentLimit;
 use App\Modules\Fleet\Models\ExternalWorkOrder;
 use App\Modules\Fleet\Models\Installation;
+use App\Modules\Fleet\Models\MaintenanceManual;
 use App\Modules\TaskCards\Actions\CertifyTaskCard;
 use App\Modules\TaskCards\Actions\InspectCriticalTask;
 use App\Modules\TaskCards\Actions\IssuePartToCard;
@@ -169,12 +170,14 @@ final class ViewWorkOrder extends ViewRecord
             ])
             ->action(function (array $data): void {
                 try {
+                    // Auf Namen: drei ?string nebeneinander -- positionsgebunden
+                    // wuerde ein Einschub in der Mitte still alles verschieben.
                     $release = app(IssueRelease::class)->handle(
-                        $this->record,
-                        auth()->user(),
-                        $data['maintenance_data'] ?? null,
-                        $data['statement'] ?? null,
-                        $data['released_at'] ?? null,
+                        order: $this->record,
+                        user: auth()->user(),
+                        maintenanceData: $data['maintenance_data'] ?? null,
+                        statement: $data['statement'] ?? null,
+                        releasedAt: $data['released_at'] ?? null,
                     );
                 } catch (Throwable $e) {
                     Notification::make()
@@ -294,6 +297,22 @@ final class ViewWorkOrder extends ViewRecord
                     ->columnSpanFull(),
 
                 /*
+                 * Nach welchem Stand gearbeitet wird -- gespeichert als KOPIE
+                 * (MaintenanceManual::snapshot()), nie als Verweis: Ein Verweis
+                 * wuerde mitwandern und die Karte rueckwirkend behaupten
+                 * lassen, nach dem neuen Stand gearbeitet worden zu sein.
+                 * Sichtbar nur, wenn es fuer dieses Luftfahrzeug ueberhaupt
+                 * geltende Unterlagen gibt -- ein leeres Pflichtdropdown
+                 * waere eine Frage ohne moegliche Antwort.
+                 */
+                Select::make('maintenance_manual_id')
+                    ->label(__('taskcards.card.field.manual_reference'))
+                    ->options(fn (WorkOrder $record): array => self::currentManuals($record))
+                    ->searchable()
+                    ->helperText(__('taskcards.card.help.manual_reference'))
+                    ->visible(fn (WorkOrder $record): bool => self::currentManuals($record) !== []),
+
+                /*
                  * BEIM ANLEGEN, nicht spaeter: Wer die Markierung nachtraeglich
                  * setzen oder wegnehmen koennte, koennte die Kontrolle nach
                  * Bedarf an- und abschalten.
@@ -313,18 +332,28 @@ final class ViewWorkOrder extends ViewRecord
                     ->columnSpanFull(),
             ])
             ->action(function (array $data): void {
+                // Der Abdruck entsteht JETZT, beim Anlegen -- aus der gerade
+                // geltenden Unterlage, nicht aus einer gespeicherten ID.
+                $manual = isset($data['maintenance_manual_id'])
+                    ? MaintenanceManual::query()->find($data['maintenance_manual_id'])
+                    : null;
+
                 try {
+                    // Auf Namen: neun Parameter, mehrere gleichtypig -- die
+                    // Fehlerklasse "Einschub verschiebt still alles danach"
+                    // hat dieses Projekt schon zweimal erwischt.
                     app(ManageWorkOrder::class)->addCard(
-                        $this->record,
-                        (string) $data['title'],
-                        $data['instruction'] ?? null,
-                        ActivityKind::from($data['activity_kind']),
-                        $data['ata_chapter'] ?? null,
-                        isset($data['component_limit_id'])
+                        order: $this->record,
+                        title: (string) $data['title'],
+                        instruction: $data['instruction'] ?? null,
+                        kind: ActivityKind::from($data['activity_kind']),
+                        ataChapter: $data['ata_chapter'] ?? null,
+                        forLimit: isset($data['component_limit_id'])
                             ? ComponentLimit::find($data['component_limit_id'])
                             : null,
-                        (bool) ($data['critical'] ?? false),
-                        $data['critical_reason'] ?? null,
+                        critical: (bool) ($data['critical'] ?? false),
+                        criticalReason: $data['critical_reason'] ?? null,
+                        manualReference: $manual?->snapshot(),
                     );
                 } catch (Throwable $e) {
                     Notification::make()->danger()->title($e->getMessage())->persistent()->send();
@@ -334,6 +363,28 @@ final class ViewWorkOrder extends ViewRecord
 
                 Notification::make()->success()->title(__('taskcards.card.singular'))->send();
             });
+    }
+
+    /**
+     * Die geltenden Wartungsunterlagen dieses Luftfahrzeugs, fuer die Auswahl.
+     *
+     * @return array<int, string>
+     */
+    private static function currentManuals(WorkOrder $record): array
+    {
+        $aircraft = $record->aircraft;
+
+        if ($aircraft === null) {
+            return [];
+        }
+
+        return MaintenanceManual::query()
+            ->current()
+            ->for($aircraft)
+            ->orderBy('title')
+            ->get()
+            ->mapWithKeys(fn (MaintenanceManual $manual): array => [$manual->id => $manual->label()])
+            ->all();
     }
 
     private function recordTimeAction(): Action

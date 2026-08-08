@@ -6,9 +6,31 @@ die Versionierung [SemVer](https://semver.org/lang/de/).
 Jede Fassung nennt unter **Beim Update beachten** ausdrücklich, was ein Verein
 tun muss, bevor er sie einspielt. Steht dort nichts, reicht `deploy/update.sh`.
 
-## [Unveröffentlicht]
+## [0.1.0] — 2026-08-08
+
+Die erste Fassung, für die das Projekt Bruchfreiheit bei Updates verspricht —
+und damit die erste, die die selbsttätige Aktualisierung einspielt.
 
 ### Neu
+
+- **Benutzerhandbuch** (`HANDBUCH.md`). Alle Module und Abläufe aus Sicht der
+  Menschen, die damit arbeiten — vom Setup-Assistenten bis zur Freigabe, samt
+  vollständiger Kommandoreferenz für den Betrieb. Es liegt im
+  Wurzelverzeichnis und fährt im Release-Paket mit; das README ist im
+  Gegenzug kurz geworden und verweist dorthin.
+
+- **Der Setup-Assistent nimmt die MariaDB-Zugangsdaten entgegen.** Solange
+  die Verbindung nicht steht, bietet er ein Formular für Server, Port,
+  Datenbank, Benutzer und Passwort. Gespeichert wird erst nach erfolgreichem
+  Verbindungstest — ein Tippfehler ist eine Fehlermeldung, keine kaputte
+  Konfiguration. Die Bedenken gegen ein Webformular, das die eigene
+  Konfiguration schreibt, bleiben berechtigt und sind eingezäunt statt
+  umgangen: Das Formular existiert nur im uninstallierten Zustand, verlangt
+  bei vorhandenem Administrator dessen Anmeldung, und Werte mit
+  Steuerzeichen werden abgelehnt statt bereinigt — der Zeilenumbruch im
+  Passwortfeld wäre sonst eine eigene Konfigurationszeile. In Docker- und
+  LXC-Umgebungen kommen die Daten weiter aus der Umgebung, und der Schritt
+  bleibt übersprungen.
 
 - **Unabhängige Kontrolle kritischer Arbeiten** (Arbeitskarten). Eine Karte
   lässt sich beim Anlegen als *kritisch* markieren — gedacht für Arbeiten, bei
@@ -32,6 +54,11 @@ tun muss, bevor er sie einspielt. Steht dort nichts, reicht `deploy/update.sh`.
   Die Markierung wird beim Anlegen gesetzt und nicht später: Wer sie
   nachträglich entfernen könnte, könnte die Kontrolle nach Bedarf abschalten.
 
+  Auf der Vorgangsseite steht der Stand der Kontrolle — nur bei kritischen
+  Karten: ausstehend oder erledigt, wer nachgesehen hat und was festgehalten
+  wurde. Ohne diese Ansicht wäre der Nachweis zwar in der Datenbank, aber
+  nicht lesbar.
+
 - **Werkzeugausgabe** (Werkzeuge). Wer hat was, seit wann, und ist es zurück.
   Ein Werkzeug mit **überfälliger Kalibrierung wird gar nicht erst
   herausgegeben** — das ist der einzige Zeitpunkt, an dem die Sperre noch etwas
@@ -48,6 +75,11 @@ tun muss, bevor er sie einspielt. Steht dort nichts, reicht `deploy/update.sh`.
   Die Vorgangsnummer ist ein freies Feld und kein Verweis auf die
   Arbeitskarten: Das Werkzeugmodul bleibt damit allein lauffähig.
 
+  Am Werkzeug hängt die vollständige Ausgabehistorie als reine
+  Nachweis-Tabelle: wer, seit wann, zurück oder noch draußen. Bearbeiten
+  lässt sich dort nichts — Ausgabe und Rücknahme laufen über die Aktionen,
+  die Historie zeigt nur, was war.
+
 - **Zulassung am Betrieb** (Lager). Lieferanten können eine Zulassungsnummer,
   einen Umfang und ein Ablaufdatum tragen. Ein **Versand zur Instandsetzung an
   einen Betrieb mit abgelaufener Zulassung wird abgelehnt** — was von dort
@@ -58,6 +90,40 @@ tun muss, bevor er sie einspielt. Steht dort nichts, reicht `deploy/update.sh`.
   Leeres Ablaufdatum heißt ausdrücklich *unbefristet*, nicht *unbekannt*: Viele
   Zulassungen gelten, bis die Aufsicht sie entzieht. Wer es nicht weiß, trägt
   besser gar keine Nummer ein.
+
+- **Fremdvergabe ans Betriebsverzeichnis** (Flotte). Geht ein Luftfahrzeug
+  außer Haus, lässt sich der Betrieb aus dem Lieferantenverzeichnis wählen
+  statt frei einzutippen: Name und Zulassungsnummer werden **kopiert**, nicht
+  verwiesen — wohin es ging und unter welcher Nummer, muss lesbar bleiben,
+  auch wenn der Betrieb später umbenannt wird oder seine Zulassung wechselt.
+  Ein Betrieb mit **abgelaufener Zulassung wird abgelehnt** — dieselbe Regel
+  wie beim Teileversand zur Instandsetzung, und bei einem ganzen Luftfahrzeug
+  wiegt sie schwerer als bei einem Bauteil.
+
+  Die Flotte greift dafür nicht in die Lagertabellen: Eine Kapsel fragt
+  zuerst, ob das Lagermodul überhaupt aktiv ist. Ohne Lager gibt es schlicht
+  kein Verzeichnis, und die Fremdvergabe läuft wie bisher über Freitext —
+  die Flotte steht allein.
+
+- **Schulungsnachweise an der Person** (Kern). Neben Part-66-Lizenz und
+  Pilot/Owner-Berechtigung gibt es einen dritten Qualifikationstyp: den
+  Schulungsnachweis — Musterschulung (Rotax), Klebeverfahren, Human Factors,
+  was immer jemand belegen kann. Bewusst ohne Auswahlliste und ohne
+  Unterarten: Jede Liste wäre nach dem dritten Verein unvollständig, und die
+  fehlende Zeile hieße dann „das können wir nicht führen".
+
+  Getragen wird er von drei Feldern, die eine Lizenz nicht braucht:
+  **Gegenstand** (worum es ging), **Aussteller** (bei wem) und der Urkunde
+  selbst als Anhang — abgelegt auf der privaten Dokumentenablage wie Form 1,
+  denn sie enthält personenbezogene Daten und hat im Webroot nichts verloren.
+  Die Nummer bleibt die Nummer.
+
+  Er verleiht ausdrücklich **keine Befugnis**: Über Berechtigungen entscheidet
+  eine Positivliste, in der nur Lizenz und Pilot/Owner vorkommen — ein
+  Zertifikat sagt „diese Person wurde geschult", nicht „diese Person darf
+  freigeben". Ein eigener Test hält genau das fest. Und er hängt am
+  **Menschen**, nicht am Gerät: Wer auf Rotax geschult ist, bleibt es, auch
+  wenn der Verein den Motor verkauft.
 
 - **Wartungsunterlagen mit Revisionsstand** (Flotte). Welches Handbuch gilt, in
   welcher Revision, seit wann — für ein Muster oder für ein einzelnes
@@ -173,9 +239,11 @@ tun muss, bevor er sie einspielt. Steht dort nichts, reicht `deploy/update.sh`.
   gelieferte Charge ihr eigenes Form 1 hat. Form-1-Pflicht, Seriennummernregel,
   Losbildung und Etikett gelten unverändert weiter. Teillieferungen sind der
   Normalfall; erledigt ist eine Bestellung erst, wenn jede Position vollständig
-  angekommen ist. Stornieren geht jederzeit — mit Pflichtgrund, sonst ist die
-  Bestellung in einem halben Jahr eine offene Frage. Bereits Geliefertes bleibt
-  dabei eingebucht, es liegt ja im Regal.
+  angekommen ist. Storniert wird mit Pflichtgrund — sonst ist die Bestellung in
+  einem halben Jahr eine offene Frage — und nur, solange noch etwas aussteht:
+  Eine vollständig gelieferte Bestellung ist erledigt, dort gibt es nichts mehr
+  abzubrechen. Bereits Geliefertes bleibt beim Storno eingebucht, es liegt ja
+  im Regal.
 
   Bestellte Mengen sind **kein Bestand**. Sie liegen nicht im Regal und tauchen
   in keiner Bestandsauswertung auf; erst das Einbuchen erzeugt eine Bewegung.
@@ -230,7 +298,113 @@ tun muss, bevor er sie einspielt. Steht dort nichts, reicht `deploy/update.sh`.
   Migration. Automatisch ist die Benachrichtigung (`aeronance:update-check`),
   nicht die Ausführung.
 
+- **Update-Weg für Tarball-Installationen** (`deploy/update.sh`). Bisher setzte
+  das Update-Skript eine Git-Installation voraus — die es im Webserver-Pack und
+  im LXC nie gab: Beide entstehen aus dem Release-Tarball, ohne `.git`. Und
+  selbst ein Checkout hätte nicht geholfen, denn `vendor/` und die gebauten
+  Assets liegen bewusst nicht im Repo, sondern nur im Artefakt. **Diese
+  Installationen konnten sich schlicht nicht aktualisieren.**
+
+  Jetzt erkennt das Skript die Installationsart selbst. Ohne `.git` lädt es den
+  Release-Tarball aus den GitHub-Releases, prüft dessen **abgetrennte Signatur**
+  gegen den mitgelieferten Schlüsselbund — dieselbe Aussage, die im Git-Modus
+  `git tag -v` trifft — und spielt ihn per rsync ein; `.env`, `storage/` und
+  der `storage`-Link bleiben unberührt. Composer und Node sind weiterhin nicht
+  nötig. Wer aus einem eigenen Spiegel installiert, setzt `AERONANCE_RELEASE_URL`.
+
+  Dazu gehört die andere Hälfte: `deploy/publish.sh` signiert das pack-Artefakt
+  der CI und lädt es als GitHub-Release hoch. Ein Tag ohne Artefakt hieße für
+  diesen Kanal „nichts zu holen" — das Skript sagt das jetzt deutlich, statt
+  still fertig zu sein.
+
 ### Behoben
+
+- **Der Notzugang läuft jetzt wirklich ab.** `--hours` schrieb ein „gültig
+  bis" in den Datensatz, aber nichts las es je wieder: Der Zugang blieb
+  bestehen, bis jemand von Hand widerrief — eine Frist, die nicht abläuft,
+  ist ein Versprechen, das keiner hält. Der Scheduler zieht abgelaufene
+  Gewährungen jetzt alle fünf Minuten zurück; überlappende Gewährungen
+  nehmen sich dabei nicht gegenseitig den Boden weg. Der Handweg
+  (`aeronance:break-glass-revoke`) bleibt der verlässliche — auch für den
+  Fall, dass ausgerechnet der Scheduler zu den kaputten Dingen gehört.
+
+- **`deploy/update.sh` endete bei jedem Lauf mit Exitcode 1.** Die Aufräum-Trap
+  referenzierte Variablen einer älteren Fassung, die längst niemand mehr setzte
+  — mit `set -u` starb daran auch das erfolgreiche Update, ganz am Ende.
+  systemd hätte jede gelungene automatische Aktualisierung als Fehlschlag
+  gemeldet, und im LXC wäre der Update-Pfad hörbar gescheitert.
+
+- **Das Docker-Image konnte weder sichern noch aktualisiert werden.** Es fehlte
+  `mariadb-client` — `aeronance:backup` verlangt `mariadb-dump` und brach ab,
+  womit die nächtliche Sicherung des Schedulers strukturell fehlschlug und
+  `deploy/docker/update.sh` zwingend am Sicherungs-Schritt scheiterte.
+  Ausgerechnet der CHANGELOG nannte das Paket längst als Voraussetzung.
+
+- **Mengenprüfungen im Lager greifen jetzt unter Zeilensperre.** Verfügbarkeit
+  wurde auf ungesperrten Daten geprüft und erst danach gebucht — zwei parallele
+  Ausgaben desselben Loses lasen beide „5 übrig", beide bestanden, das Los
+  stand negativ; im append-only-Journal ist das nur per Gegenbuchung
+  reparabel. Betroffen waren Ausgabe, Vernichtung, Zustandswechsel und der
+  Rückläufer aus der Reparatur (ein Doppelklick buchte dort dieselbe Sendung
+  doppelt ein). Alle Pfade sperren jetzt die betroffene Zeile und prüfen
+  innerhalb der Transaktion erneut — das Muster stand mit Begründung schon in
+  der Freigabe, nur das Lager hatte es nicht. Ein Storno derselben Buchung ist
+  zusätzlich per Unique-Index unmöglich gemacht, wie bei den
+  Freigabekorrekturen.
+
+- **Eine rückdatierte Inventur rechnet gegen den Stand des Zähltags.** Bisher
+  rechnete sie gegen den heutigen: Samstag gezählt, Sonntag ausgegeben, Montag
+  erfasst — und der Buchbestand lag um genau die Sonntags-Ausgabe zu hoch.
+  `stockAsOf()` gab es längst und dokumentierte selbst, wofür; benutzt hat es
+  die Inventur nur nicht. Ein Zähldatum in der Zukunft wird abgelehnt.
+
+- **Ein nie abgelesener Zähler ist jetzt „unbekannt", nicht null.** Die
+  tröstliche 0,0 wurde in die Einbau-Schnappschüsse eingefroren: Wer eine
+  Komponente vor der ersten Zählerablesung einbaute und danach den echten
+  Stand eintrug (etwa 3000 h), dessen Komponente bekam die gesamte Lebenszeit
+  des Luftfahrzeugs als Laufzeit geschenkt. Jetzt gilt: Nie abgelesen und
+  weiterhin ohne Ablesung — die Betriebszeiten aus den Papieren sind die ganze
+  Antwort. Abgelesen ohne Einbau-Basis — die Differenz ist unbeantwortbar, und
+  genau das steht dann da.
+
+- **Das Backup-Aufräumen sah verschlüsselte Sicherungen nicht.** Mit
+  eingeschalteter Verschlüsselung heißen die Dateien `.enc`, und beide
+  Suchmuster griffen ins Leere — `--keep` löschte nie etwas, das Verzeichnis
+  wuchs täglich, bis die Platte voll war; und da ein Auslagerungsziel die
+  Verschlüsselung erzwingt, war das der Regelfall, nicht die Ausnahme.
+  Außerdem wird das Dokumenten-Archiv jetzt beim Schreiben geprüft — eine
+  volle Platte meldete sonst ein kaputtes Archiv als Erfolg.
+
+- **Wer Benutzer verwalten darf, bearbeitet kein Konto mehr, das mehr darf als
+  er selbst.** Das Formular enthält ein Passwortfeld — die Berechtigung allein
+  hätte gereicht, einem Administrator ein neues Passwort zu setzen und sich als
+  er anzumelden. Die Regel ist eine Teilmengenprüfung der Rechte, keine
+  Rollenliste; Gleichstand bleibt erlaubt, sonst könnte kein Administrator den
+  anderen pflegen.
+
+- **Eine Karte aus der LTA-Liste anzulegen verlangt jetzt auch das
+  Arbeitskarten-Recht.** Bisher genügte das Leserecht der LTA-Liste — eine
+  zweite Tür mit niedrigerer Schwelle in denselben Vorgang, dessen reguläre
+  Tür `CARDS_WORK` verlangt.
+
+- **Arbeitskarten schreiben Audit-Trail.** Das Modul war das einzige fachliche
+  ohne activitylog — ausgerechnet das mit den Wartungsakten. Die
+  Unveränderlichkeit nach der Freigabe war erzwungen; was fehlte, war die Spur
+  für die editierbare Phase davor: wer einen Vorgang umbenannt, geschlossen,
+  eine Stunde geändert hat.
+
+- **Ein deaktiviertes Modul redet nicht mehr im Lufttüchtigkeits-Check mit.**
+  Die Beiträge der Arbeitskarten und der LTA-Liste wurden bedingungslos
+  registriert — mit dem Kommentar, jeder Beitrag frage selbst beim
+  ModuleManager nach. Das tat keiner: Ein bewusst abgeschaltetes Modul meldete
+  weiter offene Punkte und hätte eine Freigabe blockieren können.
+
+- **`TRUSTED_PROXIES` wird jetzt gelesen.** Die Zeile stand in der
+  Docker-Vorlage als Zusage — und nichts im Code kannte sie. Hinter einem
+  vertrauten Proxy stimmen damit Client-IP (Audit-Log, Login-Drossel) und
+  Schema (HSTS, signierte URLs) auch app-seitig; der Docker-nginx wertet
+  `X-Forwarded-Proto` außerdem nur noch bei `https` als verschlüsselt, statt
+  jeden nicht leeren Wert.
 
 - **`league/commonmark` auf 2.9.0.** Sechs neu veröffentlichte Meldungen, vier
   davon *high* — Denial of Service beim Parsen präparierter Markdown-Eingaben,
@@ -244,6 +418,15 @@ Damit die Erinnerungsmail rausgeht, muss der Laravel-Scheduler laufen — im
 Webserver-Pack und im LXC über die mitgelieferte systemd-Unit, im Docker-Setup
 über den `scheduler`-Dienst. Läuft er nicht, bleibt der Hinweis auf der
 Startseite trotzdem.
+
+Bestehende Tarball-Installationen (Webserver-Pack, LXC) brauchen für den neuen
+Update-Weg einmalig `rsync` (`apt-get install rsync`); neue LXC-Installationen
+bringen es mit. Der Weg lädt aus den GitHub-Releases — diese Fassung selbst
+wird noch von Hand eingespielt, ab ihr trägt der Mechanismus.
+
+Mit 0.1.0 endet der Vorabstand: Die selbsttätige Aktualisierung
+(`AERONANCE_AUTO_UPDATE=true`) weigert sich ab jetzt nicht mehr und spielt
+künftige Fassungen nachts ein — mit Sicherung, Wartungsmodus und Migration.
 
 ## [0.0.2] — 2026-08-06
 

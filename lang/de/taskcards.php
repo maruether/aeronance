@@ -120,6 +120,9 @@ return [
                 .'Unterschrift. Dafür gibt es eine neue Karte.',
             'certify_discharges' => 'Wurde die Karte gegen eine Laufzeitgrenze angelegt, '
                 .'ist diese mit dem Abzeichnen erledigt.',
+            'manual_reference' => 'Nach welcher Unterlage in welcher Revision gearbeitet '
+                .'wird. Wird als Abschrift auf der Karte festgehalten — eine spätere '
+                .'Revision ändert nichts daran, was hier stand.',
         ],
     ],
 

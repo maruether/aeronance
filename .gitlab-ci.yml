@@ -114,6 +114,12 @@ test:
 render:
   stage: test
   <<: *php_setup
+  # Zwei Stunden statt der GitLab-Vorgabe von einer: Der Lauf braucht auf dem
+  # Runner knapp 60 Minuten (jeder Test faehrt die Anwendung neu hoch), und
+  # das v0.1.0-Release ist exakt an der 1h0m0s-Grenze gestorben -- bei Test
+  # 12 von 13, Sekunden vor dem Ziel. Ein Timeout, das den Normalfall toetet,
+  # ist keins.
+  timeout: 2h
   services:
     - name: mariadb:10.11
       alias: mariadb

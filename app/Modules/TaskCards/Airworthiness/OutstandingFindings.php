@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\TaskCards\Airworthiness;
 
+use App\Core\Modules\ModuleManager;
 use App\Modules\Fleet\Airworthiness\ContributesOpenItems;
 use App\Modules\Fleet\Airworthiness\OpenItem;
 use App\Modules\Fleet\Models\Aircraft;
@@ -24,6 +25,17 @@ final class OutstandingFindings implements ContributesOpenItems
     /** @return list<OpenItem> */
     public function openItemsFor(Aircraft $aircraft): array
     {
+        /*
+         * Der Provider registriert diesen Beitrag bedingungslos und verlaesst
+         * sich darauf, dass HIER nachgefragt wird -- sein Kommentar sagt das
+         * woertlich zu. Ohne diese Zeile redete ein deaktiviertes Modul im
+         * Lufttuechtigkeits-Check weiter mit: "Deaktivieren blendet Funktionen
+         * aus" waere dann nur fuer die Navigation wahr.
+         */
+        if (! app(ModuleManager::class)->isEnabled('taskcards')) {
+            return [];
+        }
+
         $items = [];
 
         foreach (Finding::where('aircraft_id', $aircraft->id)->outstanding()->get() as $finding) {

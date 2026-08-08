@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Directives;
 
 use App\Core\Models\Qualification;
+use App\Core\Modules\ModuleManager;
 use App\Models\User;
 use App\Modules\Directives\Actions\AssessDirective;
 use App\Modules\Directives\Airworthiness\OutstandingDirectives;
@@ -37,6 +38,13 @@ final class AirworthinessContributionTest extends TestCase
         parent::setUp();
 
         Permission::findOrCreate(Permissions::DIRECTIVES_ASSESS, 'web');
+
+        // Der Beitrag fragt inzwischen selbst beim ModuleManager nach -- ein
+        // abgeschaltetes Modul redet im Check nicht mehr mit. Diese Tests
+        // pruefen den eingeschalteten Fall, also wird eingeschaltet.
+        app(ModuleManager::class)->enable('directives');
+        app(ModuleManager::class)->forgetCache();
+
         app(AirworthinessCheck::class)->register(OutstandingDirectives::class);
     }
 

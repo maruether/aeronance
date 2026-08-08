@@ -48,6 +48,58 @@ final class SetupWizardTest extends TestCase
     }
 
     #[Test]
+    public function database_credentials_are_probed_before_anything_is_written(): void
+    {
+        // Erst die Probe, dann der Stift: Ein Tippfehler ist eine
+        // Fehlermeldung, keine kaputte Konfiguration.
+        $env = (string) tempnam(sys_get_temp_dir(), 'aeronance-env');
+        file_put_contents($env, "DB_HOST=alt\n");
+
+        $result = app(SetupWizard::class)->configureDatabase([
+            'host' => '127.0.0.1',
+            'port' => 3306,
+            'database' => 'gibt_es_nicht_'.uniqid(),
+            'username' => 'niemand_'.uniqid(),
+            'password' => 'falsch',
+        ], $env);
+
+        $this->assertFalse($result['ok']);
+        $this->assertStringContainsString(
+            'DB_HOST=alt',
+            (string) file_get_contents($env),
+            'Bei fehlgeschlagener Probe wird nichts geschrieben.',
+        );
+
+        unlink($env);
+    }
+
+    #[Test]
+    public function working_credentials_end_up_in_the_env_file(): void
+    {
+        $env = (string) tempnam(sys_get_temp_dir(), 'aeronance-env');
+        file_put_contents($env, "APP_NAME=Aeronance\nDB_HOST=alt\n");
+
+        $conn = (array) config('database.connections.'.config('database.default'));
+
+        $result = app(SetupWizard::class)->configureDatabase([
+            'host' => (string) $conn['host'],
+            'port' => (int) $conn['port'],
+            'database' => (string) $conn['database'],
+            'username' => (string) $conn['username'],
+            'password' => (string) ($conn['password'] ?? ''),
+        ], $env);
+
+        $inhalt = (string) file_get_contents($env);
+        unlink($env);
+
+        $this->assertTrue($result['ok'], $result['message']);
+        $this->assertStringContainsString('DB_CONNECTION="mariadb"', $inhalt);
+        $this->assertStringContainsString('DB_HOST="'.$conn['host'].'"', $inhalt);
+        $this->assertStringContainsString('APP_NAME=Aeronance', $inhalt, 'Fremde Zeilen bleiben.');
+        $this->assertStringNotContainsString('DB_HOST=alt', $inhalt);
+    }
+
+    #[Test]
     public function the_front_page_leads_to_the_wizard_when_nothing_is_set_up(): void
     {
         $this->get('/')->assertRedirect(route('setup.index'));

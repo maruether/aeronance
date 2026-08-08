@@ -21,6 +21,14 @@ Artisan::command('inspire', function () {
 Schedule::command('aeronance:expire-stock')->dailyAt('04:00');
 
 /*
+ * Abgelaufene Notzugaenge einloesen -- alle fuenf Minuten, denn `--hours`
+ * ist ein Versprechen und war eine Zeit lang nur eine Notiz im Datensatz.
+ * Bei einer Vorgabe von vier Stunden ist fuenf Minuten Aufloesung genau
+ * genug; der Handweg (break-glass-revoke) bleibt davon unberuehrt.
+ */
+Schedule::command('aeronance:break-glass-expire')->everyFiveMinutes();
+
+/*
  * Erinnerung an ueberfaellige Lieferungen -- der Zweck des Bestellteils.
  *
  * Um 07:30, also zum Arbeitsbeginn und nicht mitten in der Nacht: Eine

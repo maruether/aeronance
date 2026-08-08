@@ -13,6 +13,7 @@ use App\Modules\Tooling\Enums\GapReason;
 use App\Modules\Tooling\Models\Tool;
 use App\Modules\Tooling\Models\ToolCalibration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -408,6 +409,30 @@ final class CalibrationTest extends TestCase
             now()->subYear()->toDateString(),
             $schlecht->gap_started_at->toDateString(),
             'Ohne guten Befund faellt der Zeitraum auf die erste Kalibrierung ueberhaupt zurueck.',
+        );
+    }
+
+    #[Test]
+    public function the_uploaded_certificate_ends_up_on_the_record(): void
+    {
+        // Das Formular schreibt die Datei auf die private Disk -- und eine
+        // Zeit lang blieb sie genau dort liegen: geschrieben, an nichts
+        // gehaengt, im System unauffindbar. Ein Nachweis, den keiner findet,
+        // ist keiner.
+        Storage::fake('documents');
+        Storage::disk('documents')->put('tool-calibrations/schein.pdf', '%PDF-1.4 Kalibrierschein');
+
+        $kalibrierung = app(RecordCalibration::class)->handle(
+            tool: $this->torqueWrench(intervalMonths: 12),
+            performedAt: now()->toDateString(),
+            result: CalibrationResult::InTolerance,
+            certificateFile: 'tool-calibrations/schein.pdf',
+        );
+
+        $this->assertCount(1, $kalibrierung->getMedia(ToolCalibration::CERTIFICATES));
+        $this->assertSame(
+            'schein.pdf',
+            $kalibrierung->getFirstMedia(ToolCalibration::CERTIFICATES)?->file_name,
         );
     }
 

@@ -154,14 +154,16 @@ final class IssueStockPage extends Page
         }
 
         try {
+            // Auf Namen: Vier ?string-Parameter nebeneinander -- ein Dreher
+            // oder ein Einschub verschiebt positionsgebunden alles still.
             app(IssueStock::class)->handle(
-                $part,
-                (float) $data['quantity'],
-                isset($data['stock_lot_id']) ? StockLot::find($data['stock_lot_id']) : null,
-                auth()->user(),
-                $data['work_order_reference'] ?? null,
-                $data['aircraft_reference'] ?? null,
-                $data['note'] ?? null,
+                partType: $part,
+                quantity: (float) $data['quantity'],
+                lot: isset($data['stock_lot_id']) ? StockLot::find($data['stock_lot_id']) : null,
+                user: auth()->user(),
+                workOrderReference: $data['work_order_reference'] ?? null,
+                aircraftReference: $data['aircraft_reference'] ?? null,
+                note: $data['note'] ?? null,
             );
         } catch (Throwable $e) {
             Notification::make()

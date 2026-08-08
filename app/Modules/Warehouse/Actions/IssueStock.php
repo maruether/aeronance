@@ -47,23 +47,45 @@ final class IssueStock
             );
         }
 
-        if ($lot !== null) {
-            $this->assertIssuable($lot, $partType, $quantity, $aircraftReference);
-        } elseif ($partType->currentStock() < $quantity) {
-            throw new RuntimeException('There is not that much in stock.');
-        }
+        /*
+         * The availability check binds only under lock. Stock is a SUM over an
+         * append-only journal (E1) -- there is no quantity column a database
+         * constraint could guard. Checked on unlocked data, two parallel issues
+         * both read "5 left", both pass, and the lot ends up negative; in an
+         * append-only journal that is only repairable by a counter-booking.
+         *
+         * So the check runs INSIDE the transaction, after taking the row lock
+         * on the lot (or, for bulk stock, the part type): every quantity path
+         * serialises on that row, the second transaction waits here and then
+         * sees the first one's movement. Same pattern, same reason as the
+         * release in IssueRelease::handle().
+         */
+        $movement = DB::transaction(function () use (
+            $partType, $quantity, $lot, $user, $workOrderReference, $aircraftReference, $note, $occurredAt
+        ): StockMovement {
+            if ($lot !== null) {
+                $lot = StockLot::query()->lockForUpdate()->findOrFail($lot->id);
+                $this->assertIssuable($lot, $partType, $quantity, $aircraftReference);
+            } else {
+                PartType::query()->lockForUpdate()->findOrFail($partType->id);
 
-        $movement = DB::transaction(fn (): StockMovement => StockMovement::create([
-            'part_type_id' => $partType->id,
-            'stock_lot_id' => $lot?->id,
-            'type' => MovementType::Issue,
-            'quantity' => -1 * abs($quantity),
-            'occurred_at' => $occurredAt !== null ? Carbon::parse($occurredAt) : now(),
-            'user_id' => $user?->id,
-            'work_order_reference' => $workOrderReference,
-            'aircraft_reference' => $aircraftReference,
-            'note' => $note,
-        ]));
+                if ($partType->currentStock() < $quantity) {
+                    throw new RuntimeException('There is not that much in stock.');
+                }
+            }
+
+            return StockMovement::create([
+                'part_type_id' => $partType->id,
+                'stock_lot_id' => $lot?->id,
+                'type' => MovementType::Issue,
+                'quantity' => -1 * abs($quantity),
+                'occurred_at' => $occurredAt !== null ? Carbon::parse($occurredAt) : now(),
+                'user_id' => $user?->id,
+                'work_order_reference' => $workOrderReference,
+                'aircraft_reference' => $aircraftReference,
+                'note' => $note,
+            ]);
+        });
 
         /*
          * Told, not asked. The warehouse announces that a part went to an

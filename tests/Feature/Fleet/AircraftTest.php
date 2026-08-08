@@ -125,10 +125,14 @@ final class AircraftTest extends TestCase
     #[Test]
     public function an_unread_counter_reads_nothing_rather_than_guessing(): void
     {
+        // "Nothing" is null, not 0.0. The zero WAS the guess: frozen into an
+        // installation snapshot it handed every part fitted before the first
+        // reading the aircraft's whole life as usage, the moment the real
+        // figure was entered.
         $aircraft = Aircraft::create(['registration' => 'D-KABC', 'model' => 'ASK 21']);
 
         $this->assertNull($aircraft->latestReading(CounterKind::FlightHours));
-        $this->assertSame(0.0, $aircraft->currentValue(CounterKind::FlightHours));
+        $this->assertNull($aircraft->currentValue(CounterKind::FlightHours));
     }
 
     #[Test]

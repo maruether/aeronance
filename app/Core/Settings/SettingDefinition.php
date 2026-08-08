@@ -20,9 +20,6 @@ namespace App\Core\Settings;
  */
 final readonly class SettingDefinition
 {
-    /**
-     * @param  array<string, string>  $options
-     */
     public function __construct(
         /** Der Schlüssel in der Tabelle, z. B. "backup.encryption.mode". */
         public string $key,
@@ -50,15 +47,10 @@ final readonly class SettingDefinition
 
         public string $group,
 
-        public string $label,
-
         /** string | text | bool | int | select | secret | file */
         public string $type = 'string',
 
         public mixed $default = null,
-
-        /** @var array<string, string> */
-        public array $options = [],
 
         /**
          * Ob der Wert nach dem Speichern nie wieder angezeigt wird.
@@ -67,9 +59,50 @@ final readonly class SettingDefinition
          * leeres Feld: Wer nichts einträgt, ändert nichts.
          */
         public bool $secret = false,
-
-        public ?string $help = null,
     ) {}
+
+    /*
+     * ─────────────────────────────────────────────────────────────────────────
+     * DIE TEXTE WOHNEN IN DER SPRACHDATEI, NICHT HIER.
+     *
+     * Der Katalog beschreibt die STRUKTUR einer Einstellung -- Schluessel,
+     * Typ, Vorgabe, Geheimnisstatus. Was ein Mensch dazu liest, ist
+     * Oberflaeche, und Oberflaeche ist uebersetzbar (Leitplanke: "UI deutsch,
+     * uebersetzbar ueber Laravel-Sprachdateien"). Eine Zeit lang standen die
+     * Texte als Literale im Katalog -- die einzige Stelle der Anwendung, an
+     * der eine zweite Sprache ein Code-Edit gewesen waere.
+     *
+     * Die Aufloesung laeuft ueber den Einstellungs-Schluessel:
+     * settings.catalogue.<key>.label / .help / .options -- die Punkte im
+     * Schluessel sind in der Sprachdatei einfach Verschachtelung.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    public function label(): string
+    {
+        return __('settings.catalogue.'.$this->key.'.label');
+    }
+
+    public function help(): ?string
+    {
+        $key = 'settings.catalogue.'.$this->key.'.help';
+
+        return trans()->has($key) ? __($key) : null;
+    }
+
+    /**
+     * Die Auswahloptionen eines select-Feldes, Wert => Beschriftung.
+     *
+     * Die SCHLUESSEL sind gespeicherte Werte und bleiben beim Uebersetzen
+     * unangetastet -- nur die Beschriftungen sind Sprache.
+     *
+     * @return array<string, string>
+     */
+    public function options(): array
+    {
+        $key = 'settings.catalogue.'.$this->key.'.options';
+
+        return trans()->has($key) ? (array) __($key) : [];
+    }
 
     public function isSecret(): bool
     {

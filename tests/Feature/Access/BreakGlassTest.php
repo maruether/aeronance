@@ -169,6 +169,69 @@ final class BreakGlassTest extends TestCase
     }
 
     #[Test]
+    public function the_grant_lapses_by_itself_once_the_hours_are_up(): void
+    {
+        // --hours war eine Zeit lang nur eine Notiz im Datensatz: Der Zugang
+        // blieb bestehen, bis jemand von Hand widerrief. Eine Frist, die
+        // nicht ablaeuft, ist ein Versprechen, das keiner haelt.
+        Notification::fake();
+        $user = User::factory()->create(['email' => 'vorstand@example.org']);
+
+        $this->artisan('aeronance:break-glass', [
+            'email' => 'vorstand@example.org',
+            '--reason' => 'Test',
+            '--hours' => 2,
+        ])->expectsConfirmation(
+            'Grant vorstand@example.org administrator access for 2 hours?', 'yes'
+        )->assertSuccessful();
+
+        // Noch in der Frist: Der Lauf tut nichts.
+        $this->artisan('aeronance:break-glass-expire')->assertSuccessful();
+        $this->assertTrue($user->fresh()->hasRole(CoreRoles::ADMIN));
+
+        $this->travel(3)->hours();
+
+        $this->artisan('aeronance:break-glass-expire')->assertSuccessful();
+
+        $this->assertFalse($user->fresh()->hasRole(CoreRoles::ADMIN));
+
+        $record = BreakGlassRecord::sole();
+        $this->assertNotNull($record->revoked_at, 'Der Datensatz ist als beendet markiert.');
+        $this->assertSame(1, BreakGlassRecord::count(), 'Der Datensatz selbst bleibt.');
+    }
+
+    #[Test]
+    public function an_overlapping_grant_keeps_the_role_alive(): void
+    {
+        // Zwei Gewaehrungen fuer dasselbe Konto: Die ablaufende darf der
+        // laengeren nicht den Boden wegziehen.
+        Notification::fake();
+        $user = User::factory()->create(['email' => 'vorstand@example.org']);
+
+        $this->artisan('aeronance:break-glass', [
+            'email' => 'vorstand@example.org', '--reason' => 'Erster Grund', '--hours' => 1,
+        ])->expectsConfirmation(
+            'Grant vorstand@example.org administrator access for 1 hours?', 'yes'
+        )->assertSuccessful();
+
+        $this->artisan('aeronance:break-glass', [
+            'email' => 'vorstand@example.org', '--reason' => 'Zweiter Grund', '--hours' => 8,
+        ])->expectsConfirmation(
+            'Grant vorstand@example.org administrator access for 8 hours?', 'yes'
+        )->assertSuccessful();
+
+        $this->travel(2)->hours();
+
+        $this->artisan('aeronance:break-glass-expire')->assertSuccessful();
+
+        $this->assertTrue(
+            $user->fresh()->hasRole(CoreRoles::ADMIN),
+            'Die laengere Gewaehrung traegt den Zugang weiter.',
+        );
+        $this->assertSame(1, BreakGlassRecord::query()->whereNotNull('revoked_at')->count());
+    }
+
+    #[Test]
     public function revoking_ends_the_access_but_keeps_the_record(): void
     {
         Notification::fake();

@@ -106,6 +106,10 @@ final class ToolsTable
                         certificateReference: $data['certificate_reference'] ?? null,
                         user: auth()->user(),
                         note: $data['note'] ?? null,
+                        // Ohne diese Zeile lag die hochgeladene Datei verwaist
+                        // auf der Disk: geschrieben vom Formular, an nichts
+                        // gehaengt, im System unauffindbar.
+                        certificateFile: $data['certificate'] ?? null,
                     );
 
                     Notification::make()->success()->title(__('tooling.action.calibrated'))->send();

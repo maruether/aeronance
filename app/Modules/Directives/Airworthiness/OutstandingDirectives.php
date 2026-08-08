@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Directives\Airworthiness;
 
+use App\Core\Modules\ModuleManager;
 use App\Modules\Directives\Enums\ComplianceState;
 use App\Modules\Directives\Models\Directive;
 use App\Modules\Directives\Models\DirectiveApplication;
@@ -40,6 +41,17 @@ final class OutstandingDirectives implements ContributesOpenItems
     /** @return list<OpenItem> */
     public function openItemsFor(Aircraft $aircraft): array
     {
+        /*
+         * Der Provider registriert diesen Beitrag bedingungslos und verlaesst
+         * sich darauf, dass HIER nachgefragt wird. Ohne diese Zeile meldete
+         * ein deaktiviertes Directives-Modul weiter offene Punkte -- und
+         * blockierte im schlimmsten Fall eine Freigabe mit einer Liste, die
+         * der Verein bewusst abgeschaltet hat.
+         */
+        if (! app(ModuleManager::class)->isEnabled('directives')) {
+            return [];
+        }
+
         $items = [];
 
         $applications = DirectiveApplication::query()

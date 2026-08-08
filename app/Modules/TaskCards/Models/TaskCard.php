@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use RuntimeException;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * One job.
@@ -30,7 +32,7 @@ use RuntimeException;
  */
 final class TaskCard extends Model
 {
-    use SoftDeletes;
+    use LogsActivity, SoftDeletes;
 
     protected $attributes = [
         'state' => 'open',
@@ -126,6 +128,23 @@ final class TaskCard extends Model
                 throw new RuntimeException(
                     'A card stays in the visit it was raised in. Its number and the '
                     .'records that refer to it depend on that.'
+                );
+            }
+
+            /*
+             * "Beim Anlegen gesetzt und nicht spaeter" stand bisher nur am
+             * Formular -- es gab schlicht keinen Edit-Pfad. Kein Pfad ist aber
+             * keine Sperre: critical stand in $fillable, und ein
+             * programmatisches Update haette die Markierung still gesetzt oder
+             * entfernt -- und mit ihr die Pflicht zur unabhaengigen Kontrolle.
+             * Wer sie nachtraeglich wegnehmen kann, kann die Kontrolle nach
+             * Bedarf abschalten.
+             */
+            if ($card->isDirty('critical')) {
+                throw new RuntimeException(
+                    'Whether a job is critical is decided when the card is raised, '
+                    .'not afterwards -- otherwise the independent inspection could be '
+                    .'switched off on demand.'
                 );
             }
 
@@ -244,5 +263,20 @@ final class TaskCard extends Model
     public function label(): string
     {
         return sprintf('%s — %s', $this->number, $this->title);
+    }
+
+    // Audit-Trail fuer die editierbare Phase vor der Freigabe -- Begruendung
+    // am WorkOrder. Die drei Unterschriften-Zeitpunkte stehen mit drin, weil
+    // "wer hat wann abgezeichnet" die erste Frage jedes Audits ist.
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly([
+                'number', 'title', 'state', 'critical', 'ata_chapter', 'activity_kind',
+                'completed_at', 'inspected_at', 'certified_at',
+            ])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges()
+            ->useLogName('workorders');
     }
 }

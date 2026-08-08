@@ -48,8 +48,11 @@ niemanden für Datenbankrätsel.
 
 **Commit-Nachrichten erklären das WARUM.** Was geändert wurde, steht im Diff.
 Warum es geändert wurde und was passiert wäre, wenn nicht, steht nirgends sonst
-— und genau das braucht der Mensch, der in zwei Jahren davorsitzt. Schau dir
-die Historie an, dort ist der Ton zu sehen.
+— und genau das braucht der Mensch, der in zwei Jahren davorsitzt. Den Ton
+zeigen die Kommentare im Code: Jede unübliche Entscheidung trägt ihre
+Begründung an Ort und Stelle. (Die öffentliche Historie ist bewusst eine
+Release-Historie — ein Commit je Fassung; die Entwicklungs-Commits siehst du
+dort nicht.)
 
 **Tests gehören dazu.** Nicht als Pflichtübung: Ein Test, der beschreibt, was
 schiefginge, ist die haltbarste Form der Begründung. Bei sicherheitsrelevanten
@@ -59,7 +62,7 @@ Stellen mindestens ein Test, der beweist, dass es *nicht* geht.
 Deutsch über Sprachdateien. Kommentare dürfen deutsch sein — Hauptsache, sie
 erklären den Grund und nicht die Zeile darunter.
 
-## Bevor du den Merge Request aufmachst
+## Bevor du den Pull Request aufmachst
 
 ```
 ./vendor/bin/pint            # Formatierung

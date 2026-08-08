@@ -246,6 +246,49 @@ final class HandoverTest extends TestCase
         );
     }
 
+    #[Test]
+    public function a_part_fitted_before_the_first_reading_has_unknown_usage_not_a_jump(): void
+    {
+        // The trap this guards: currentValue() used to answer 0.0 for a counter
+        // that had never been read, and that zero got FROZEN into the snapshot.
+        // When the real reading arrived later (3000 h), usage() computed
+        // 3000 - 0 -- TSN/TSO high by the aircraft's whole life, for every part
+        // fitted in that window. "Never read" is "unknown", and unknown must
+        // stay unknown instead of turning into a comforting zero.
+        $aircraft = $this->aircraft();
+
+        $filters = $this->filterPart();
+        app(ReceiveStock::class)->handle($filters, 4, '2026-07-01', lotData: [
+            'document_type' => StockLot::DOCUMENT_FORM_ONE,
+            'document_reference' => 'F1-2026-0001',
+        ]);
+        app(IssueStock::class)->handle(
+            $filters->fresh(), 1, StockLot::sole(), $this->mechanic(),
+            aircraftReference: 'D-KABC',
+        );
+
+        $installation = Installation::sole();
+
+        // The snapshot records what was known: nothing.
+        $this->assertArrayNotHasKey(
+            'flight_hours',
+            $installation->counters_at_installation ?? [],
+        );
+
+        // The first real reading arrives -- and the part inherits NOTHING.
+        CounterReading::create([
+            'aircraft_id' => $aircraft->id,
+            'kind' => CounterKind::FlightHours,
+            'value' => 3000.0,
+            'read_at' => '2026-07-15',
+        ]);
+
+        $this->assertNull(
+            $installation->fresh()->timeSinceNew(CounterKind::FlightHours),
+            'Usage since an unknown starting point is unknown, not 3000 h.',
+        );
+    }
+
     private function aircraft(string $registration = 'D-KABC'): Aircraft
     {
         return Aircraft::create(['registration' => $registration, 'model' => 'ASK 21']);

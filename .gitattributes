@@ -6,9 +6,10 @@
 *.md diff=markdown
 *.php diff=php
 
-/.github export-ignore
-CHANGELOG.md export-ignore
-.styleci.yml export-ignore
+# Kein export-ignore auf CHANGELOG.md und Co. -- das waren Laravel-Skeleton-
+# Reste (.github und .styleci.yml gab es hier nie). Der eigene pack-Job packt
+# per tar und war nie betroffen; GitHubs automatische Quellarchive ("Download
+# ZIP") nutzen aber git archive, und denen fehlte ausgerechnet der Changelog.
 
 # Diese Fixtures sind das, was der Server tatsächlich geliefert hat -- byte-genau.
 # Ohne das normalisiert Git die Zeilenenden (Rotax und Zlin liefern CRLF), und

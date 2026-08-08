@@ -14,6 +14,7 @@ use App\Modules\TaskCards\Actions\ManageWorkOrder;
 use App\Modules\TaskCards\Enums\ActivityKind;
 use App\Modules\TaskCards\Models\TaskCard;
 use App\Modules\TaskCards\Models\WorkOrder;
+use App\Modules\TaskCards\Permissions as TaskCardPermissions;
 use RuntimeException;
 
 /**
@@ -64,6 +65,20 @@ final readonly class ScheduleDirectiveCard
             throw new RuntimeException(sprintf(
                 'Raising a card for a directive requires the "%s" permission.',
                 Permissions::DIRECTIVES_VIEW,
+            ));
+        }
+
+        /*
+         * AND the task-card permission, not instead of it. This action writes
+         * into somebody's work order; inside the task cards module that takes
+         * CARDS_WORK, and a second door with a lower sill would make the rule
+         * over there decorative. Reading the directive list must never be
+         * enough to put work onto a visit.
+         */
+        if (! $this->authority->permits($user, TaskCardPermissions::CARDS_WORK)) {
+            throw new RuntimeException(sprintf(
+                'Raising a card also requires the "%s" permission -- it writes into the visit.',
+                TaskCardPermissions::CARDS_WORK,
             ));
         }
 

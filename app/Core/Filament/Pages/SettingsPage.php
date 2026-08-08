@@ -256,7 +256,7 @@ class SettingsPage extends Page implements HasForms
                 $name = $this->fieldName($definition->key);
 
                 $hinweis = trim(implode(' ', array_filter([
-                    $definition->help,
+                    $definition->help(),
                     $definition->isSecret() && $settings->get($definition->key) !== null
                         ? __('settings.secret_set')
                         : null,
@@ -266,7 +266,7 @@ class SettingsPage extends Page implements HasForms
                 $feld = match ($definition->type) {
                     'bool' => Toggle::make($name),
                     'int' => TextInput::make($name)->numeric(),
-                    'select' => Select::make($name)->options($definition->options),
+                    'select' => Select::make($name)->options($definition->options()),
                     'secret' => TextInput::make($name)->password()->revealable(),
                     'file' => Textarea::make($name)->rows(4),
                     'image' => FileUpload::make($name)
@@ -311,7 +311,7 @@ class SettingsPage extends Page implements HasForms
                 }
 
                 $felder[] = $feld
-                    ->label($definition->label)
+                    ->label($definition->label())
                     ->helperText($hinweis !== '' ? $hinweis : null);
             }
 

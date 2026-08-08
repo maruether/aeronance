@@ -187,6 +187,14 @@ final class WorkOrderInfolist
                                 ->placeholder('—')
                                 ->columnSpanFull(),
 
+                            // Der Abdruck der Wartungsunterlage -- nur wenn er
+                            // erfasst wurde: eine leere Zeile auf jeder Karte
+                            // machte die wenigen vollen unsichtbar.
+                            TextEntry::make('manual_reference')
+                                ->label(__('taskcards.card.field.manual_reference'))
+                                ->visible(fn (TaskCard $c): bool => filled($c->manual_reference))
+                                ->columnSpanFull(),
+
                             TextEntry::make('work_performed')
                                 ->label(__('taskcards.card.field.work_performed'))
                                 ->placeholder('—')

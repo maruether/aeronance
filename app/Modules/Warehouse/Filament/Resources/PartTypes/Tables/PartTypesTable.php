@@ -23,6 +23,17 @@ final class PartTypesTable
     public static function configure(Table $table): Table
     {
         return $table
+            /*
+             * Der Bestand kommt als EIN Aggregat pro Seite mit, nicht als eine
+             * SUM-Query je Zeile: availableStock() liest den vorberechneten
+             * Wert, sobald der Scope ihn geliefert hat -- genau dafuer wurde
+             * er gebaut, benutzt hat ihn nur nie jemand. Bei fuenfzig Zeilen
+             * sind das fuenfzig gesparte Queries pro Seitenaufbau, mal drei,
+             * weil auch Farbe und Fettdruck der Spalte nachrechnen.
+             */
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query
+                ->withAvailableStock()
+                ->with('storageCompartment.location'))
             ->columns([
                 TextColumn::make('name')
                     ->label(__('warehouse.part_type.field.name'))

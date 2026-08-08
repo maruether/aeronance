@@ -6,6 +6,8 @@ namespace Tests\Feature\TaskCards;
 
 use App\Core\Models\Qualification;
 use App\Models\User;
+use App\Modules\Fleet\Actions\RecordManualRevision;
+use App\Modules\Fleet\Enums\ManualKind;
 use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\TaskCards\Actions\CertifyTaskCard;
 use App\Modules\TaskCards\Actions\ManageWorkOrder;
@@ -156,6 +158,40 @@ final class CardLifecycleTest extends TestCase
 
         app(RecordFinding::class)->schedule(
             $finding->fresh(), $this->workOrder($aircraft), $this->inspector(),
+        );
+    }
+
+    #[Test]
+    public function the_manual_reference_is_a_copy_that_survives_the_next_revision(): void
+    {
+        // "Die Arbeitskarte kann festhalten, nach welchem Stand gearbeitet
+        // wurde, und zwar als Kopie." Ein Verweis würde mitwandern und die
+        // Karte rückwirkend behaupten lassen, nach dem neuen Stand gearbeitet
+        // worden zu sein.
+        $aircraft = $this->aircraft();
+        $order = $this->workOrder($aircraft);
+
+        $handbuch = app(RecordManualRevision::class)->add(
+            for: $aircraft,
+            kind: ManualKind::Maintenance,
+            title: 'Wartungshandbuch',
+            revision: 'Rev. 12',
+        );
+
+        $card = app(ManageWorkOrder::class)->addCard(
+            order: $order,
+            title: 'Ölwechsel',
+            manualReference: $handbuch->snapshot(),
+        );
+
+        $this->assertStringContainsString('Rev. 12', (string) $card->manual_reference);
+
+        app(RecordManualRevision::class)->supersede($handbuch, revision: 'Rev. 13');
+
+        $this->assertStringContainsString(
+            'Rev. 12',
+            (string) $card->fresh()->manual_reference,
+            'Die Kopie wandert nicht mit zur neuen Revision.',
         );
     }
 

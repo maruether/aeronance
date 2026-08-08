@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Warehouse;
 
 use App\Models\User;
+use App\Modules\Warehouse\Actions\IssueStock;
 use App\Modules\Warehouse\Actions\ReceiveStock;
 use App\Modules\Warehouse\Actions\RecordStocktake;
 use App\Modules\Warehouse\Enums\LotState;
@@ -201,6 +202,70 @@ final class StocktakeTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         app(RecordStocktake::class)->recordFound($this->lotPart(), 1, $this->user(), '   ');
+    }
+
+    #[Test]
+    public function a_backdated_count_measures_the_stock_of_that_day(): void
+    {
+        // Counted Saturday, issued Sunday, entered Monday -- the normal case,
+        // not the exception. Measured against TODAY the difference would
+        // silently re-add Sunday's issue: counted 10, booked-as-of-today 8,
+        // "+2" -- and the books end high by exactly the movements between
+        // counting and entering.
+        $nuts = $this->bulkPart();
+        app(ReceiveStock::class)->handle($nuts, 12, '2026-07-01');
+
+        // Sunday: four leave the shelf.
+        app(IssueStock::class)->handle($nuts->fresh(), 4, occurredAt: '2026-07-05');
+
+        // Monday: Saturday's count of 10 is entered.
+        app(RecordStocktake::class)->correctBulk(
+            $nuts->fresh(), 10, $this->user(), 'Inventur', countedAt: '2026-07-04',
+        );
+
+        // As of Saturday the books said 12, so the correction is -2, dated
+        // Saturday -- and today's stock is 12 - 2 - 4 = 6, not 10.
+        $correction = StockMovement::where('type', MovementType::Correction)->sole();
+        $this->assertSame(-2.0, (float) $correction->quantity);
+        $this->assertSame('2026-07-04', $correction->occurred_at->toDateString());
+        $this->assertSame(6.0, $nuts->fresh()->currentStock());
+    }
+
+    #[Test]
+    public function a_backdated_lot_count_measures_that_day_too(): void
+    {
+        $filters = $this->lotPart();
+        app(ReceiveStock::class)->handle($filters, 10, '2026-07-01', lotData: [
+            'document_type' => StockLot::DOCUMENT_FORM_ONE,
+            'document_reference' => 'F1-2026-8842',
+        ]);
+
+        $lot = StockLot::sole();
+        app(IssueStock::class)->handle($filters->fresh(), 2, $lot, occurredAt: '2026-07-05');
+
+        app(RecordStocktake::class)->correctLotShortfall(
+            $lot, 9, $this->user(), 'Inventur', countedAt: '2026-07-04',
+        );
+
+        // As of Saturday the lot held 10 on the books, counted were 9 -> the
+        // correction is -1. With Sunday's issue of 2 the lot holds 7 today.
+        $this->assertSame(7.0, $lot->fresh()->remainingQuantity());
+    }
+
+    #[Test]
+    public function a_count_dated_tomorrow_is_refused(): void
+    {
+        // A correction booked on a future date would sit in the journal ahead
+        // of the movements it claims to correct.
+        $nuts = $this->bulkPart();
+        app(ReceiveStock::class)->handle($nuts, 500, '2026-07-01');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/future/');
+
+        app(RecordStocktake::class)->correctBulk(
+            $nuts->fresh(), 480, $this->user(), 'Inventur', countedAt: now()->addDay()->toDateString(),
+        );
     }
 
     #[Test]

@@ -83,10 +83,39 @@ final class UserResource extends Resource
         return auth()->user()?->can(CorePermissions::USERS_MANAGE) ?? false;
     }
 
-    /** @param  User  $record */
+    /**
+     * Wer bearbeiten darf — und WEN.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * NIEMAND BEARBEITET EIN KONTO, DAS MEHR DARF ALS ER SELBST.
+     *
+     * Die Berechtigung allein hat hier einmal gereicht, und das war eine
+     * Rechteausweitung mit Anlauf: Das Formular enthält ein Passwortfeld, und
+     * wer Benutzer verwalten darf, hätte damit einem Administrator ein neues
+     * Passwort gesetzt und sich anschließend als er angemeldet. Der Umweg über
+     * das fremde Konto lieferte genau die Rechte, die die eigene Rolle
+     * absichtlich nicht enthält.
+     *
+     * Die Regel ist eine Teilmengenprüfung statt einer Rollenliste: Wer alles
+     * hält, was das Ziel hält, kann durch das Ziel nichts dazugewinnen — egal,
+     * wie die Rollen gerade heißen oder was ein Verein daraus gemacht hat.
+     * Gleichstand ist erlaubt, sonst könnte kein Administrator den anderen
+     * pflegen.
+     * ─────────────────────────────────────────────────────────────────────────
+     *
+     * @param  User  $record
+     */
     public static function canEdit($record): bool
     {
-        return auth()->user()?->can(CorePermissions::USERS_MANAGE) ?? false;
+        $handelnder = auth()->user();
+
+        if (! $handelnder instanceof User || ! $handelnder->can(CorePermissions::USERS_MANAGE)) {
+            return false;
+        }
+
+        return $record->getAllPermissions()->pluck('name')
+            ->diff($handelnder->getAllPermissions()->pluck('name'))
+            ->isEmpty();
     }
 
     /**

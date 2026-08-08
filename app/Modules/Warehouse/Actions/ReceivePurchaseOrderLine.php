@@ -56,7 +56,17 @@ final readonly class ReceivePurchaseOrderLine
         }
 
         return DB::transaction(function () use ($line, $quantity, $receivedAt, $user, $lotData): StockMovement {
-            $bestellung = $line->purchaseOrder;
+            /*
+             * Beide Zeilen gesperrt, und zwar bevor irgendetwas gelesen wird.
+             * `quantity_received += x` auf einem vorher geladenen Model ist ein
+             * Read-Modify-Write: Buchen zwei Personen dieselbe Position im
+             * selben Moment ein, addieren beide auf denselben alten Stand --
+             * zwei Teillieferungen zu je 5 ergeben 5 statt 10, und die
+             * Bestellung gilt weiter als offen. Unter der Zeilensperre wartet
+             * die zweite Buchung, bis die erste geschrieben hat.
+             */
+            $bestellung = $line->purchaseOrder()->lockForUpdate()->firstOrFail();
+            $line = PurchaseOrderLine::query()->lockForUpdate()->findOrFail($line->id);
 
             /*
              * Auf eine stornierte Bestellung wird nicht gebucht. Nicht aus

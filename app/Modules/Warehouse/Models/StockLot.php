@@ -134,7 +134,24 @@ final class StockLot extends Model implements HasMedia
      */
     public function remainingQuantity(): float
     {
+        // Set by scopeWithRemainingQuantity when the caller asked for it --
+        // saves a SUM query per row in a list. Same construction as
+        // PartType::availableStock().
+        if (array_key_exists('remaining_quantity', $this->attributes)) {
+            return (float) $this->attributes['remaining_quantity'];
+        }
+
         return (float) $this->movements()->sum('quantity');
+    }
+
+    /**
+     * Preloads the remaining quantity as one aggregate per page.
+     *
+     * @param  Builder<self>  $query
+     */
+    public function scopeWithRemainingQuantity(Builder $query): void
+    {
+        $query->withSum('movements as remaining_quantity', 'quantity');
     }
 
     /**

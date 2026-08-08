@@ -1,8 +1,9 @@
 # Betrieb
 
-Beispieldateien für den **Webserver-Kanal**: eigener Server oder Container mit
-Root-Zugriff, kein Shared Webspace. Docker und das Proxmox-LXC-Skript kommen
-später und benutzen dieselben Releases.
+Beispieldateien und Skripte für alle drei Wege: den **Webserver-Kanal**
+(eigener Server mit Root-Zugriff, kein Shared Webspace — Vorlagen in diesem
+Verzeichnis), **Docker** (`deploy/docker/`) und das **Proxmox-LXC-Skript**
+(`deploy/lxc/`). Alle drei konsumieren dieselben Releases.
 
 ## Voraussetzungen
 
@@ -38,12 +39,23 @@ php artisan aeronance:requirements
 
 ```
 sudo -u www-data deploy/update.sh v1.2.0
-sudo -u www-data deploy/update.sh            # neuestes Tag
+sudo -u www-data deploy/update.sh            # neuestes Release
 ```
 
-Der Ablauf: Signatur des Tags prüfen → **Sicherung** (Datenbank + Dokumente) →
-Wartungsmodus → Code → Abhängigkeiten → Voraussetzungen → Migrationen → Caches →
-Worker neu starten → Wartungsmodus aus.
+Das Skript erkennt selbst, was für eine Installation hier steht:
+
+- **Tarball-Installation** (der Normalfall: aus dem Release ausgepackt, kein
+  `.git`): Es lädt den Release-Tarball aus den GitHub-Releases, prüft dessen
+  abgetrennte Signatur (`.asc`) gegen den mitgelieferten Schlüsselbund und
+  spielt ihn per rsync ein — `.env`, `storage/` und der `storage`-Link bleiben
+  unberührt. Composer und Node sind weiterhin nicht nötig; `vendor/` und die
+  Assets kommen fertig aus dem Artefakt. Eigener Spiegel: `AERONANCE_RELEASE_URL`.
+- **Git-Installation** (Entwicklung): `git fetch`, Signatur des Tags prüfen,
+  Checkout, `composer install`.
+
+In beiden Fällen gilt dieselbe Reihenfolge: beschaffen und prüfen → **Sicherung**
+(Datenbank + Dokumente) → Wartungsmodus → Code → Voraussetzungen → Migrationen →
+Caches → Worker neu starten → Wartungsmodus aus.
 
 Bricht ein Schritt ab, bricht das Update ab — und der Wartungsmodus wird in
 jedem Fall wieder aufgehoben. Eine halb aktualisierte Installation ist der
@@ -113,6 +125,13 @@ Augenblick ein Update für jede laufende Installation.
 Das Skript nimmt den Baum des internen Tags, prüft dessen Signatur, baut einen
 signierten Commit mit der Changelog-Passage dieser Fassung als Nachricht und
 schiebt ihn samt Tag. Der Arbeitsbaum wird dabei nicht angefasst.
+
+Liegt das pack-Artefakt der CI unter `dist/aeronance-<tag>.tar.gz` (oder
+`AERONANCE_ARTEFAKT` zeigt darauf), signiert das Skript es (`.asc`), ergänzt
+die Prüfsumme und lädt alles als GitHub-Release hoch — das ist die Quelle, aus
+der sich Tarball-Installationen aktualisieren. **Ein Tag ohne Artefakt heißt:
+dieser Kanal hat nichts zu holen**; das Skript sagt das dann deutlich, statt
+still fertig zu sein.
 
 ## Sichern
 

@@ -59,4 +59,271 @@ return [
             .'die Zuordnung im Kern — die Freigabeberechtigung wird grundsätzlich nicht '
             .'übernommen.',
     ],
+
+    /*
+     * ─────────────────────────────────────────────────────────────────────────
+     * DIE TEXTE ZU JEDER EINSTELLUNG DES KATALOGS.
+     *
+     * Struktur je Einstellung: label, optional help, bei select-Feldern
+     * options. Der Pfad ist der Einstellungs-Schlüssel aus dem Katalog
+     * (SettingsCatalogue); die Punkte darin sind hier Verschachtelung.
+     *
+     * BEIM ÜBERSETZEN: Die SCHLÜSSEL unter options sind gespeicherte WERTE
+     * ('none', 'recipient', '1', …) — sie bleiben, wie sie sind. Nur die
+     * Beschriftungen sind Sprache.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    'catalogue' => [
+        'organisation' => [
+            'name' => [
+                'label' => 'Name der Organisation',
+                'help' => 'Steht in der Kopfzeile und auf jedem Ausdruck.',
+            ],
+            'logo' => [
+                'label' => 'Logo',
+                'help' => 'Erscheint in der Kopfzeile, auf der Anmeldeseite und auf '
+                    .'jedem Ausdruck. PNG, JPEG oder WebP, höchstens 1 MB.',
+            ],
+            'timezone' => [
+                'label' => 'Zeitzone',
+                'help' => 'Die Anwendung rechnet in UTC; Papierdokumente wie der '
+                    .'Sperrzettel tragen diese Zeit. Ein Teil, das um 00:30 '
+                    .'Ortszeit gesperrt wird, darf nicht den Vortag tragen.',
+            ],
+        ],
+
+        'mail' => [
+            'host' => [
+                'label' => 'SMTP-Server',
+                'help' => 'Leer lassen heisst: Es werden keine Mails verschickt. Anmeldung '
+                    .'und Passwortwechsel laufen dann ausschliesslich ueber den Admin '
+                    .'oder einen Identity-Provider.',
+            ],
+            'port' => [
+                'label' => 'Port',
+                'help' => '587 mit STARTTLS ist der Regelfall, 465 fuer implizites TLS.',
+            ],
+            'username' => [
+                'label' => 'Benutzername',
+            ],
+            'password' => [
+                'label' => 'Passwort',
+            ],
+            'encryption' => [
+                'label' => 'Verschluesselung',
+                'options' => [
+                    'smtp' => 'STARTTLS (Port 587)',
+                    'smtps' => 'TLS (Port 465)',
+                ],
+                'help' => 'Unverschluesselt gibt es hier bewusst nicht: Ueber diese '
+                    .'Verbindung gehen Einladungslinks, und wer sie mitliest, hat ein '
+                    .'Konto.',
+            ],
+            'from_address' => [
+                'label' => 'Absenderadresse',
+                'help' => 'Muss zum SMTP-Zugang passen -- die meisten Anbieter weisen eine '
+                    .'fremde Absenderadresse ab, und der Fehler steht dann nur im Log.',
+            ],
+            'invite_automatically' => [
+                'label' => 'Einladungen automatisch versenden',
+                'help' => 'Jedes neu angelegte Konto bekommt sofort eine Einladung. Aus '
+                    .'heisst nicht "nie", sondern "auf Knopfdruck" -- in der '
+                    .'Benutzerliste steht dafuer eine Schaltflaeche. Beim ersten '
+                    .'Mitgliederabgleich koennen auf einen Schlag hunderte Konten '
+                    .'entstehen; ob die alle sofort eine Mail bekommen sollen, ist '
+                    .'eine Entscheidung und keine Voreinstellung.',
+            ],
+            'from_name' => [
+                'label' => 'Absendername',
+                'help' => 'Leer lassen: Dann steht der Name der Organisation davor.',
+            ],
+        ],
+
+        'backup' => [
+            'encryption' => [
+                'mode' => [
+                    'label' => 'Verschlüsselung',
+                    'options' => [
+                        'none' => 'aus (nur lokal zulässig)',
+                        'recipient' => 'öffentlicher Schlüssel (empfohlen)',
+                        'passphrase' => 'Passwort',
+                    ],
+                    'help' => 'Ohne Verschlüsselung verlässt keine Sicherung das System: '
+                        .'Ist ein Auslagerungsziel eingerichtet, scheitert der Lauf.',
+                ],
+                'public_key' => [
+                    'label' => 'Öffentlicher Schlüssel',
+                    'help' => 'Der ÖFFENTLICHE Teil (PEM). Der private bleibt bei der Organisation '
+                        .'— geht er verloren, sind die Sicherungen wertlos.',
+                ],
+                'passphrase' => [
+                    'label' => 'Backup-Passwort',
+                    'help' => 'Mindestens 12 Zeichen. Unbedingt ausserhalb dieses Systems '
+                        .'notieren — ohne es sind die Sicherungen nicht zu öffnen.',
+                ],
+            ],
+            'offsite' => [
+                'disk' => [
+                    'label' => 'Ziel',
+                    'options' => [
+                        '' => 'keines — die Sicherung liegt nur hier',
+                        'offsite_local' => 'eingehängtes Verzeichnis',
+                        'offsite_sftp' => 'SFTP (z. B. Storage Box)',
+                        'offsite_s3' => 'S3-kompatibel',
+                    ],
+                ],
+                'prefix' => [
+                    'label' => 'Unterverzeichnis am Ziel',
+                    'help' => 'Damit sich zwei Organisationen einen Speicher teilen können.',
+                ],
+                'keep' => [
+                    'label' => 'Sicherungen am Ziel behalten',
+                ],
+                'path' => [
+                    'label' => 'Pfad (eingehängtes Verzeichnis)',
+                ],
+            ],
+            'sftp' => [
+                'host' => [
+                    'label' => 'SFTP-Server',
+                ],
+                'port' => [
+                    'label' => 'SFTP-Port',
+                ],
+                'username' => [
+                    'label' => 'SFTP-Benutzer',
+                ],
+                'password' => [
+                    'label' => 'SFTP-Passwort',
+                    'help' => 'Nur nötig, wenn kein Schlüssel hinterlegt ist.',
+                ],
+                'private_key' => [
+                    'label' => 'Privater SFTP-Schlüssel',
+                    'help' => 'Wird verschlüsselt in der Datenbank abgelegt — und damit '
+                        .'auch in jeder Sicherung. Wer das nicht will, nimmt ein Passwort.',
+                ],
+                'root' => [
+                    'label' => 'Verzeichnis auf dem SFTP-Server',
+                ],
+            ],
+            's3' => [
+                'key' => [
+                    'label' => 'S3 Access Key',
+                ],
+                'secret' => [
+                    'label' => 'S3 Secret',
+                ],
+                'region' => [
+                    'label' => 'S3-Region',
+                ],
+                'bucket' => [
+                    'label' => 'S3-Bucket',
+                ],
+                'endpoint' => [
+                    'label' => 'S3-Endpunkt',
+                    'help' => 'Bei Backblaze, Wasabi oder MinIO nötig; bei AWS leer lassen.',
+                ],
+            ],
+        ],
+
+        'retention' => [
+            'activity_log' => [
+                'enabled' => [
+                    'label' => 'Aktivitätsprotokoll aufräumen',
+                ],
+                'days' => [
+                    'label' => 'Aufbewahrung Aktivitätsprotokoll (Tage)',
+                    'help' => 'Nicht kürzer als die Frist der Aufzeichnungen, über die es '
+                        .'Auskunft gibt — für uns drei Jahre (145.A.55).',
+                ],
+            ],
+            'break_glass_log' => [
+                'enabled' => [
+                    'label' => 'Break-glass-Protokoll aufräumen',
+                ],
+                'days' => [
+                    'label' => 'Aufbewahrung Break-glass-Protokoll (Tage)',
+                    'help' => 'Überlebt das Aktivitätsprotokoll bewusst — ein '
+                        .'privilegierter Zugriff ist das, was man am ehesten '
+                        .'rekonstruieren will.',
+                ],
+            ],
+            'pseudonymise_former_members' => [
+                'enabled' => [
+                    'label' => 'Ausgetretene Mitglieder pseudonymisieren',
+                    'help' => 'Lässt Freigabeinhalte unberührt: Ein Name in einer '
+                        .'Freigabe ist der Inhalt der Bescheinigung, und die '
+                        .'Aufbewahrungspflicht sticht das Löschrecht (E3a).',
+                ],
+                'days' => [
+                    'label' => 'Frist nach Austritt (Tage)',
+                ],
+            ],
+        ],
+
+        'vereinsflieger' => [
+            'workhours' => [
+                'enabled' => [
+                    'label' => 'Arbeitsstunden nach Vereinsflieger schreiben',
+                    'help' => 'Schreibt in ein fremdes, produktives System — und zwar '
+                        .'endgültig: Vereinsflieger kann eine gebuchte Stunde weder '
+                        .'ändern noch löschen. Ab Werk aus.',
+                ],
+                'category' => [
+                    'label' => 'Kategorie (Nummer)',
+                    'help' => 'Die Nummer aus Vereinsflieger, z. B. „7265" für Wartung/Werkstatt. '
+                        .'Eine Kategorie darf dort auch abgeschaltet sein — über die '
+                        .'Schnittstelle ist sie trotzdem beschreibbar, und genau so lässt '
+                        .'sich trennen, was aus Aeronance kommt.',
+                ],
+                'status' => [
+                    'label' => 'Status der gebuchten Stunde',
+                    'options' => [
+                        '1' => 'Nicht bewertet — der Verein bewertet wie gewohnt',
+                        '2' => 'Akzeptiert — sofort gültig und unveränderlich',
+                    ],
+                    'help' => 'GEMESSEN: Vereinsflieger übernimmt den Status beim Anlegen. '
+                        .'„Akzeptiert" spart dem Werkstattleiter die Freigabe UND macht '
+                        .'den Eintrag drüben unveränderlich — solange er „nicht bewertet" '
+                        .'ist, kann das Mitglied ihn dort noch ändern. Ein Bewerter wird '
+                        .'nicht mitgeschrieben; wer akzeptiert hat, steht nur in Aeronance.',
+                ],
+            ],
+            'writeback' => [
+                'maintenance' => [
+                    'label' => 'Instandhaltungspunkte zurückschreiben',
+                    'help' => 'Ohne Wirkung, und das bleibt vermutlich so: Vereinsflieger hat '
+                        .'für Wartung genau einen Endpunkt, und der ist LESEND. Nachgesehen '
+                        .'in allen 48 Methoden des offiziellen Clients — einen Schreibweg '
+                        .'gibt es nicht.',
+                ],
+            ],
+        ],
+
+        'documents' => [
+            'max_size_mb' => [
+                'label' => 'Grösste Dokumentgrösse (MB)',
+            ],
+        ],
+        'due_window_days' => [
+            'label' => 'Vorschau auf Fälligkeiten (Tage)',
+        ],
+        'virus_scanner' => [
+            'label' => 'Virenscanner',
+            'options' => ['none' => 'keiner', 'clamav' => 'ClamAV'],
+        ],
+        'clamav' => [
+            'host' => [
+                'label' => 'ClamAV-Server',
+            ],
+            'port' => [
+                'label' => 'ClamAV-Port',
+            ],
+            'fail_closed' => [
+                'label' => 'Ohne erreichbaren Scanner keine Uploads',
+                'help' => 'Aus bedeutet: Fällt der Scanner aus, werden Dateien '
+                    .'ungeprüft angenommen.',
+            ],
+        ],
+    ],
 ];

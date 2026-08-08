@@ -18,11 +18,13 @@ use Throwable;
  * Every route here sits behind BlockSetupWhenInstalled, so none of this exists
  * once the installation is done.
  *
- * The database credentials are NOT edited here. The wizard reports whether the
- * connection works and otherwise says what to put in the .env file -- a web
- * form that rewrites the application's own configuration is a bigger opening
- * than it saves work, and in the Docker and LXC channels the credentials are
- * handed in anyway.
+ * The database credentials CAN be entered here -- a deliberate reversal of an
+ * earlier decision. The concern (a web form rewriting the application's own
+ * configuration) stands, so the form is fenced in instead of avoided: it only
+ * exists while the connection does not work, it only writes what a throwaway
+ * probe has verified, and the writer refuses control characters outright
+ * (EnvFileWriter). In the Docker and LXC channels the credentials still come
+ * from the environment and the step stays skipped.
  */
 final class SetupController
 {
@@ -40,6 +42,33 @@ final class SetupController
             'preconfigured' => $this->state->databaseIsPreconfigured(),
             'modules' => $this->availableModules(),
         ]);
+    }
+
+    public function configureDatabase(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'db_host' => ['required', 'string', 'max:255'],
+            'db_port' => ['required', 'integer', 'between:1,65535'],
+            'db_database' => ['required', 'string', 'max:64'],
+            'db_username' => ['required', 'string', 'max:64'],
+            // Leer ist zulaessig -- eine frische lokale MariaDB kann ohne
+            // Passwort laufen; ob das klug ist, entscheidet der Betreiber.
+            'db_password' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $result = $this->wizard->configureDatabase([
+            'host' => $data['db_host'],
+            'port' => (int) $data['db_port'],
+            'database' => $data['db_database'],
+            'username' => $data['db_username'],
+            'password' => (string) ($data['db_password'] ?? ''),
+        ]);
+
+        if (! $result['ok']) {
+            return back()->withErrors(['database' => $result['message']])->withInput();
+        }
+
+        return back()->with('status', $result['message']);
     }
 
     public function migrate(): RedirectResponse

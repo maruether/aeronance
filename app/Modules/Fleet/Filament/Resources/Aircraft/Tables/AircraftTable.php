@@ -49,19 +49,21 @@ final class AircraftTable
                     ->searchable()
                     ->toggleable(),
 
+                // "—" statt 0: null heisst "nie abgelesen", und eine Null an
+                // dieser Stelle sieht aus wie ein fabrikneues Luftfahrzeug.
                 TextColumn::make('flight_hours')
                     ->label(__('fleet.counter.flight_hours'))
                     ->alignEnd()
-                    ->state(fn (Aircraft $r): string => number_format(
-                        $r->currentValue(CounterKind::FlightHours), 2, ',', '.',
-                    ).' h'),
+                    ->state(fn (Aircraft $r): string => ($v = $r->currentValue(CounterKind::FlightHours)) === null
+                        ? '—'
+                        : number_format($v, 2, ',', '.').' h'),
 
                 TextColumn::make('landings')
                     ->label(__('fleet.counter.landings'))
                     ->alignEnd()
-                    ->state(fn (Aircraft $r): string => number_format(
-                        $r->currentValue(CounterKind::Landings), 0, ',', '.',
-                    )),
+                    ->state(fn (Aircraft $r): string => ($v = $r->currentValue(CounterKind::Landings)) === null
+                        ? '—'
+                        : number_format($v, 0, ',', '.')),
 
                 TextColumn::make('review')
                     ->label(__('fleet.review.singular'))

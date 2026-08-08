@@ -8,6 +8,7 @@ use App\Core\Access\Authority;
 use App\Core\Access\PermissionRegistry;
 use App\Core\Console\BackupCommand;
 use App\Core\Console\BreakGlassCommand;
+use App\Core\Console\BreakGlassExpireCommand;
 use App\Core\Console\BreakGlassRevokeCommand;
 use App\Core\Console\MailTestCommand;
 use App\Core\Console\RequirementsCommand;
@@ -70,6 +71,21 @@ use League\Flysystem\Filesystem as Flysystem;
  * All three services are singletons: the registry reads the shipped list once,
  * and the manager caches the active set for the request instead of asking the
  * database on every isEnabled() call.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * HIER WIRD GESTECKT, NICHT GERECHNET.
+ *
+ * Diese Datei ist der Kompositions-Root: die EINE Stelle, die alle Module beim
+ * Namen kennen muss, um sie zu registrieren und zu verdrahten. Genau deshalb
+ * scannt ModuleBoundaryTest sie nicht -- ein Test, der die Steckleiste flaggt,
+ * bräuchte eine Ausnahme für exakt diese Datei und prüfte dann nichts mehr.
+ *
+ * Die Grenze, die stattdessen HIER gilt und die kein grep prüfen kann: Was
+ * eine fachliche Entscheidung trifft, gehört ins Modul, nicht hierher. Wer an
+ * dieser Datei mehr tut, als einen Baustein einzuhängen -- eine Bedingung
+ * formuliert, einen Wert ausrechnet, eine Regel auslegt --, verschiebt das in
+ * das Modul, dem die Regel gehört, und hängt hier nur das Ergebnis ein.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 final class ModuleServiceProvider extends ServiceProvider
 {
@@ -392,6 +408,7 @@ final class ModuleServiceProvider extends ServiceProvider
             $this->commands([
                 SyncAccessCommand::class,
                 BreakGlassCommand::class,
+                BreakGlassExpireCommand::class,
                 BreakGlassRevokeCommand::class,
                 RetentionCommand::class,
                 RequirementsCommand::class,

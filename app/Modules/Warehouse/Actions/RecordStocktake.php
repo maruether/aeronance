@@ -67,20 +67,36 @@ final class RecordStocktake
             throw new InvalidArgumentException('A counted quantity cannot be negative.');
         }
 
-        $difference = $counted - $partType->currentStock();
+        $when = $this->countedWhen($countedAt);
 
-        if (abs($difference) < 0.0005) {
-            return null;
-        }
+        return DB::transaction(function () use ($partType, $counted, $user, $note, $when): ?StockMovement {
+            // Same lock as every other quantity path -- see IssueStock.
+            PartType::query()->lockForUpdate()->findOrFail($partType->id);
 
-        return StockMovement::create([
-            'part_type_id' => $partType->id,
-            'type' => MovementType::Correction,
-            'quantity' => $difference,
-            'occurred_at' => $countedAt !== null ? Carbon::parse($countedAt) : now(),
-            'user_id' => $user->id,
-            'note' => $note,
-        ]);
+            /*
+             * Against the stock AS OF THE COUNTED DAY, not today's. A count is
+             * a statement about a date, and that date has usually passed by the
+             * time it is entered: counted Saturday, issued Sunday, entered
+             * Monday. Measured against today the difference would silently
+             * re-add Sunday's issue -- the books would end up high by exactly
+             * the movements between counting and entering. stockAsOf() exists
+             * for precisely this sentence.
+             */
+            $difference = $counted - $partType->stockAsOf($when->toDateString());
+
+            if (abs($difference) < 0.0005) {
+                return null;
+            }
+
+            return StockMovement::create([
+                'part_type_id' => $partType->id,
+                'type' => MovementType::Correction,
+                'quantity' => $difference,
+                'occurred_at' => $when,
+                'user_id' => $user->id,
+                'note' => $note,
+            ]);
+        });
     }
 
     /**
@@ -100,29 +116,36 @@ final class RecordStocktake
             throw new InvalidArgumentException('A counted quantity cannot be negative.');
         }
 
-        $difference = $counted - $lot->remainingQuantity();
+        $when = $this->countedWhen($countedAt);
 
-        if (abs($difference) < 0.0005) {
-            return null;
-        }
+        return DB::transaction(function () use ($lot, $counted, $user, $note, $when): ?StockMovement {
+            $lot = StockLot::query()->lockForUpdate()->findOrFail($lot->id);
 
-        if ($difference > 0) {
-            throw new RuntimeException(
-                'A surplus cannot be added to an existing lot: it would claim the extra '
-                .'part is covered by that lot\'s certificate. Record it as stock of '
-                .'unknown origin instead.'
-            );
-        }
+            // Against the day of the count, not today -- see correctBulk().
+            $difference = $counted - $lot->remainingQuantityAsOf($when->toDateString());
 
-        return StockMovement::create([
-            'part_type_id' => $lot->part_type_id,
-            'stock_lot_id' => $lot->id,
-            'type' => MovementType::Correction,
-            'quantity' => $difference,
-            'occurred_at' => $countedAt !== null ? Carbon::parse($countedAt) : now(),
-            'user_id' => $user->id,
-            'note' => $note,
-        ]);
+            if (abs($difference) < 0.0005) {
+                return null;
+            }
+
+            if ($difference > 0) {
+                throw new RuntimeException(
+                    'A surplus cannot be added to an existing lot: it would claim the extra '
+                    .'part is covered by that lot\'s certificate. Record it as stock of '
+                    .'unknown origin instead.'
+                );
+            }
+
+            return StockMovement::create([
+                'part_type_id' => $lot->part_type_id,
+                'stock_lot_id' => $lot->id,
+                'type' => MovementType::Correction,
+                'quantity' => $difference,
+                'occurred_at' => $when,
+                'user_id' => $user->id,
+                'note' => $note,
+            ]);
+        });
     }
 
     /**
@@ -151,7 +174,7 @@ final class RecordStocktake
             );
         }
 
-        $when = $countedAt !== null ? Carbon::parse($countedAt) : now();
+        $when = $this->countedWhen($countedAt);
 
         return DB::transaction(function () use ($partType, $quantity, $user, $note, $when): StockLot {
             $lot = StockLot::create([
@@ -187,5 +210,27 @@ final class RecordStocktake
 
             return $lot;
         });
+    }
+
+    /**
+     * When the counting actually happened.
+     *
+     * The date is free precisely so that a weekend count can be entered on
+     * Monday -- but free backwards only. A count dated in the future is a
+     * statement about a shelf nobody has looked at yet, and a correction booked
+     * on that date would sit in the journal ahead of the movements it claims to
+     * correct.
+     */
+    private function countedWhen(?string $countedAt): Carbon
+    {
+        $when = $countedAt !== null ? Carbon::parse($countedAt) : now();
+
+        if ($when->isAfter(now())) {
+            throw new InvalidArgumentException(
+                'A stocktake cannot be dated in the future -- that shelf has not been counted yet.'
+            );
+        }
+
+        return $when;
     }
 }

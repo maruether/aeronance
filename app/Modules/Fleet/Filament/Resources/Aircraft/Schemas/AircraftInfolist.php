@@ -65,17 +65,15 @@ final class AircraftInfolist
                 ->schema([
                     TextEntry::make('counters')
                         ->hiddenLabel()
+                        // "—" statt 0: null heisst "nie abgelesen" -- eine Null
+                        // saehe aus wie ein Zaehler auf Werksstand.
                         ->state(fn (Aircraft $record): string => collect($record->counters())
                             ->map(fn (CounterKind $kind): string => sprintf(
-                                '%s: %s %s',
+                                '%s: %s',
                                 $kind->label(),
-                                number_format(
-                                    $record->currentValue($kind),
-                                    $kind->isWhole() ? 0 : 2,
-                                    ',',
-                                    '.',
-                                ),
-                                $kind->unit(),
+                                ($v = $record->currentValue($kind)) === null
+                                    ? '—'
+                                    : number_format($v, $kind->isWhole() ? 0 : 2, ',', '.').' '.$kind->unit(),
                             ))
                             ->implode(' · ')),
                 ]),

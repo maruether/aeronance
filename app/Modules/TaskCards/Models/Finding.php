@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * Something noticed that was not what anybody set out to do.
@@ -27,7 +29,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 final class Finding extends Model
 {
-    use SoftDeletes;
+    use LogsActivity, SoftDeletes;
 
     protected $attributes = [
         'state' => 'open',
@@ -124,5 +126,21 @@ final class Finding extends Model
     public function label(): string
     {
         return sprintf('%s — %s', $this->number, $this->title);
+    }
+
+    // Audit-Trail fuer die editierbare Phase vor der Freigabe -- Begruendung
+    // am WorkOrder. Bei Befunden zaehlt vor allem der Wechsel von "blockiert"
+    // und das Zurueckstellen: beides sind Entscheidungen ueber ein
+    // Luftfahrzeug, das derweil fliegt.
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly([
+                'number', 'title', 'state', 'is_blocking',
+                'deferred_until', 'resolving_task_card_id', 'resolved_on',
+            ])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges()
+            ->useLogName('workorders');
     }
 }

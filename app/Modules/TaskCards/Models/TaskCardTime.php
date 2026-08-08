@@ -9,6 +9,8 @@ use App\Modules\TaskCards\Enums\ParticipationKind;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use RuntimeException;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * One person's hours on one card.
@@ -19,6 +21,8 @@ use RuntimeException;
  */
 final class TaskCardTime extends Model
 {
+    use LogsActivity;
+
     protected $attributes = ['participation' => 'executed'];
 
     protected $fillable = [
@@ -118,5 +122,18 @@ final class TaskCardTime extends Model
     public function describe(): string
     {
         return sprintf('%d:%02d h', intdiv($this->minutes, 60), $this->minutes % 60);
+    }
+
+    // Audit-Trail fuer die editierbare Phase vor der Freigabe -- Begruendung
+    // am WorkOrder. Stunden speisen das Part-66-Logbuch und entscheiden bei
+    // kritischen Karten, wer NICHT kontrollieren darf; eine still geaenderte
+    // Buchung muss eine Spur hinterlassen.
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['task_card_id', 'user_id', 'person_name', 'participation', 'minutes', 'worked_on'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges()
+            ->useLogName('workorders');
     }
 }

@@ -30,12 +30,16 @@ update_os
 
 msg_info "Installiere Abhaengigkeiten"
 $STD apt-get install -y \
-  curl ca-certificates gnupg unzip git \
+  curl ca-certificates gnupg unzip git rsync \
   nginx \
   mariadb-server \
   php8.4-fpm php8.4-mysql php8.4-intl php8.4-gd php8.4-zip php8.4-bcmath \
   php8.4-mbstring php8.4-xml php8.4-curl \
   poppler-utils
+
+# rsync ist fuer deploy/update.sh da: Eine Tarball-Installation wie diese wird
+# aktualisiert, indem das neue Release darueber gespielt wird -- mit --delete,
+# damit nichts Altes liegen bleibt, und Ausnahmen fuer .env und storage/.
 msg_ok "Abhaengigkeiten installiert"
 
 # ──────────────────────────────────────────────────────────────────────────────

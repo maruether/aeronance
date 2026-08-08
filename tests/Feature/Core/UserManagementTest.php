@@ -121,6 +121,45 @@ final class UserManagementTest extends TestCase
     }
 
     #[Test]
+    public function nobody_edits_an_account_mightier_than_their_own(): void
+    {
+        // The escalation this closes: the form carries a password field, so
+        // "may manage users" once meant "may set an administrator's password
+        // and sign in as them". Managing users must never hand out rights the
+        // manager's own role deliberately lacks.
+        $verwalter = User::factory()->create(['is_active' => true]);
+        $verwalter->givePermissionTo(CorePermissions::USERS_MANAGE);
+
+        $admin = User::factory()->create(['is_active' => true]);
+        $admin->assignRole(CoreRoles::ADMIN);
+
+        $this->actingAs($verwalter->fresh());
+
+        $this->assertFalse(
+            UserResource::canEdit($admin->fresh()),
+            'A user manager must not be able to edit an administrator.',
+        );
+
+        // An ordinary member holds nothing the manager lacks -- editable.
+        $mitglied = User::factory()->create(['is_active' => true]);
+
+        $this->assertTrue(UserResource::canEdit($mitglied->fresh()));
+    }
+
+    #[Test]
+    public function an_administrator_still_edits_another_administrator(): void
+    {
+        // Equal standing is allowed on purpose: otherwise no administrator
+        // could maintain the other one's account.
+        $einer = $this->administrator();
+        $anderer = $this->administrator();
+
+        $this->actingAs($einer);
+
+        $this->assertTrue(UserResource::canEdit($anderer->fresh()));
+    }
+
+    #[Test]
     public function a_qualification_can_be_recorded_and_takes_effect(): void
     {
         // The whole point of the screen: before this, nobody could certify.

@@ -444,11 +444,27 @@ final class BackupCommand extends Command
         $count = 0;
 
         foreach ($finder as $file) {
-            $zip->addFile($file->getRealPath(), $file->getRelativePathname());
+            if (! $zip->addFile($file->getRealPath(), $file->getRelativePathname())) {
+                throw new RuntimeException(sprintf(
+                    '%s liess sich nicht ins Archiv aufnehmen.',
+                    $file->getRelativePathname(),
+                ));
+            }
+
             $count++;
         }
 
-        $zip->close();
+        /*
+         * close() ist der Moment, in dem ZipArchive tatsaechlich SCHREIBT --
+         * alles davor war Buchfuehrung im Speicher. Eine volle Platte oder
+         * eine zwischenzeitlich verschwundene Datei melden sich genau hier,
+         * und ungeprueft wuerde ein kaputtes Archiv als Sicherung gemeldet.
+         * Die Wahrheit ueber ein Backup stellt sich sonst erst beim Restore
+         * heraus, also am schlechtesten aller Tage.
+         */
+        if ($zip->close() !== true) {
+            throw new RuntimeException(sprintf('%s liess sich nicht schreiben.', $target));
+        }
 
         if ($count === 0) {
             // Not an error: a fresh installation has no documents yet. Said
@@ -473,8 +489,21 @@ final class BackupCommand extends Command
             return;
         }
 
+        /*
+         * Mit eingeschalteter Verschluesselung heissen die Dateien .sql.gz.enc
+         * bzw. .zip.enc -- glob matcht den GANZEN Namen, und ohne das zweite
+         * Muster fiele jede verschluesselte Sicherung durch beide Raster. Die
+         * Folge war real: Sobald ein Offsite-Ziel konfiguriert war (das
+         * erzwingt Verschluesselung), loeschte --keep lokal nie wieder etwas,
+         * und das Verzeichnis wuchs taeglich, bis die Platte voll war -- woran
+         * dann ausgerechnet der naechste Sicherungslauf scheiterte. Die
+         * Offsite-Seite matcht per Regex auf den Zeitstempel und war nie
+         * betroffen. Zwei globs statt GLOB_BRACE, weil es die Klammer-Syntax
+         * auf musl-Systemen schlicht nicht gibt.
+         */
         foreach (['db-*.sql.gz', 'documents-*.zip'] as $pattern) {
-            $files = glob(rtrim($directory, '/').'/'.$pattern) ?: [];
+            $base = rtrim($directory, '/').'/'.$pattern;
+            $files = array_merge(glob($base) ?: [], glob($base.'.enc') ?: []);
 
             if (count($files) <= $keep) {
                 continue;

@@ -168,16 +168,20 @@ final class RemovalPage extends Page
         }
 
         try {
+            // Auf Namen, nicht auf Positionen: Neun Argumente, davon mehrere
+            // gleichtypig nebeneinander -- ein neuer Parameter in der Mitte
+            // verschiebt sonst still alles danach. Zweimal passiert, beide
+            // Male ohne dass ein Typfehler es verriet.
             $lot = app(RemovePartFromAircraft::class)->handle(
-                $part,
-                (float) $data['quantity'],
-                (string) $data['aircraft'],
-                auth()->user(),
-                (string) $data['reason'],
-                (bool) ($data['determined_serviceable'] ?? false),
-                $data['aircraft_type'] ?? null,
-                $data['removed_at'] ?? null,
-                $data,
+                partType: $part,
+                quantity: (float) $data['quantity'],
+                aircraft: (string) $data['aircraft'],
+                user: auth()->user(),
+                reason: (string) $data['reason'],
+                determinedServiceable: (bool) ($data['determined_serviceable'] ?? false),
+                aircraftType: $data['aircraft_type'] ?? null,
+                removedAt: $data['removed_at'] ?? null,
+                lotData: $data,
             );
         } catch (Throwable $e) {
             Notification::make()

@@ -98,8 +98,9 @@ final class BreakGlassCommand extends Command
         $this->notifyOtherAdmins($record);
 
         $this->line('');
-        $this->line('The grant does not lapse on its own -- withdraw the role once the');
-        $this->line('cause has been dealt with:');
+        $this->line('The grant lapses by itself once the hours are up (the scheduler');
+        $this->line('withdraws it). To end it earlier -- and whenever the scheduler');
+        $this->line('itself is among the broken things:');
         $this->line(sprintf('  php artisan aeronance:break-glass-revoke %d', $record->id));
 
         return self::SUCCESS;

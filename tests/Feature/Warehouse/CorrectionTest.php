@@ -17,6 +17,7 @@ use App\Modules\Warehouse\Models\PartType;
 use App\Modules\Warehouse\Models\StockLot;
 use App\Modules\Warehouse\Models\StockMovement;
 use App\Modules\Warehouse\Permissions;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
@@ -228,6 +229,35 @@ final class CorrectionTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         app(ReverseMovement::class)->handle($issue, $this->userWith(Permissions::STOCK_CORRECT), '   ');
+    }
+
+    #[Test]
+    public function the_database_itself_refuses_a_second_counter_booking(): void
+    {
+        // The backstop behind ReverseMovement's lock-and-recheck: even a path
+        // that skips the action entirely cannot write two corrections against
+        // one movement. Same construction as the release chain's unique on
+        // supersedes_release_id, and for the same reason -- two parallel
+        // "corrections" would move the stock twice for one mistake.
+        $nuts = $this->bulkPart();
+        $user = $this->userWith(Permissions::STOCK_CORRECT);
+
+        app(ReceiveStock::class)->handle($nuts, 500, '2025-07-01', lotData: $this->certified());
+        $issue = app(IssueStock::class)->handle($nuts->fresh(), 200, occurredAt: '2025-08-15');
+
+        app(ReverseMovement::class)->handle($issue, $user, 'Falsch gebucht');
+
+        $this->expectException(QueryException::class);
+
+        StockMovement::create([
+            'part_type_id' => $issue->part_type_id,
+            'type' => MovementType::Correction,
+            'quantity' => 200,
+            'occurred_at' => now(),
+            'user_id' => $user->id,
+            'reverses_movement_id' => $issue->id,
+            'note' => 'Zweiter Storno derselben Buchung',
+        ]);
     }
 
     private function bulkPart(): PartType

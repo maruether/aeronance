@@ -178,12 +178,14 @@ final class PurchaseOrdersTable
                 }
 
                 try {
+                    // Auf Namen -- die Fehlerklasse "Einschub verschiebt still
+                    // alles danach" hat dieses Projekt schon zweimal erwischt.
                     app(ReceivePurchaseOrderLine::class)->handle(
-                        $position,
-                        (float) $data['quantity'],
-                        (string) $data['received_at'],
-                        auth()->user(),
-                        [
+                        line: $position,
+                        quantity: (float) $data['quantity'],
+                        receivedAt: (string) $data['received_at'],
+                        user: auth()->user(),
+                        lotData: [
                             'document_type' => $data['document_type'] ?? null,
                             'document_reference' => $data['document_reference'] ?? null,
                         ],

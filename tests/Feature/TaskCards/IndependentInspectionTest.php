@@ -237,6 +237,33 @@ final class IndependentInspectionTest extends TestCase
         $this->assertNull($ergebnis->inspection_qualification_reference);
     }
 
+    #[Test]
+    public function the_critical_mark_cannot_be_removed_afterwards(): void
+    {
+        // Wer die Markierung nachträglich entfernen könnte, könnte die
+        // Kontrolle nach Bedarf abschalten. Bisher stand das nur am Formular
+        // (es gab keinen Edit-Pfad) — kein Pfad ist aber keine Sperre.
+        $karte = $this->criticalCard();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessageMatches('/switched off on demand/');
+
+        $karte->update(['critical' => false]);
+    }
+
+    #[Test]
+    public function the_critical_mark_cannot_be_added_afterwards_either(): void
+    {
+        // Auch andersherum: Nachträglich „kritisch" stempeln hieße, einer
+        // längst laufenden Arbeit rückwirkend eine Kontrollpflicht anzuhängen,
+        // die beim Anlegen niemand entschieden hat.
+        $karte = $this->card(critical: false);
+
+        $this->expectException(RuntimeException::class);
+
+        $karte->update(['critical' => true, 'critical_reason' => 'Nachtrag']);
+    }
+
     private function criticalCard(): TaskCard
     {
         return $this->card(critical: true);

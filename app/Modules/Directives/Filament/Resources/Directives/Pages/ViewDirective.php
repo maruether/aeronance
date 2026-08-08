@@ -13,6 +13,7 @@ use App\Modules\Directives\Models\Directive;
 use App\Modules\Directives\Permissions;
 use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\TaskCards\Models\WorkOrder;
+use App\Modules\TaskCards\Permissions as TaskCardPermissions;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
@@ -229,7 +230,12 @@ final class ViewDirective extends ViewRecord
             ->color('gray')
             ->visible(fn (Directive $record): bool => app(ScheduleDirectiveCard::class)->isAvailable()
                 && ! $record->isSuperseded()
-                && (auth()->user()?->can(Permissions::DIRECTIVES_VIEW) ?? false))
+                && (auth()->user()?->can(Permissions::DIRECTIVES_VIEW) ?? false)
+                // Schreibt in den Vorgang -- also gilt zusaetzlich die Huerde
+                // der Arbeitskarten. Die Action prueft das serverseitig noch
+                // einmal; hier verschwindet nur der Knopf, der ohnehin
+                // verweigert wuerde.
+                && (auth()->user()?->can(TaskCardPermissions::CARDS_WORK) ?? false))
             ->modalDescription(__('directives.card.help'))
             ->schema(fn (Directive $record): array => [
                 Select::make('aircraft_id')

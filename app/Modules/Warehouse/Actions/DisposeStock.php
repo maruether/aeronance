@@ -120,20 +120,8 @@ final readonly class DisposeStock
             }
         }
 
-        if ($lot !== null) {
-            if ($lot->part_type_id !== $partType->id) {
-                throw new InvalidArgumentException('That lot belongs to a different part type.');
-            }
-
-            if ($lot->remainingQuantity() + 0.0005 < $quantity) {
-                throw new RuntimeException(sprintf(
-                    'Lot %s holds only %s.',
-                    $lot->lot_number,
-                    rtrim(rtrim(number_format($lot->remainingQuantity(), 3, '.', ''), '0'), '.'),
-                ));
-            }
-        } elseif ($partType->currentStock() + 0.0005 < $quantity) {
-            throw new RuntimeException('There is not that much in stock.');
+        if ($lot !== null && $lot->part_type_id !== $partType->id) {
+            throw new InvalidArgumentException('That lot belongs to a different part type.');
         }
 
         $when = $occurredAt !== null ? Carbon::parse($occurredAt) : now();
@@ -141,6 +129,29 @@ final readonly class DisposeStock
         return DB::transaction(function () use (
             $partType, $quantity, $lot, $user, $reason, $qualification, $when
         ): StockMovement {
+            /*
+             * The quantity check binds only under lock -- same pattern and same
+             * reason as IssueStock: stock is a SUM over an append-only journal,
+             * and checked on unlocked data two parallel bookings both pass.
+             */
+            if ($lot !== null) {
+                $lot = StockLot::query()->lockForUpdate()->findOrFail($lot->id);
+
+                if ($lot->remainingQuantity() + 0.0005 < $quantity) {
+                    throw new RuntimeException(sprintf(
+                        'Lot %s holds only %s.',
+                        $lot->lot_number,
+                        rtrim(rtrim(number_format($lot->remainingQuantity(), 3, '.', ''), '0'), '.'),
+                    ));
+                }
+            } else {
+                PartType::query()->lockForUpdate()->findOrFail($partType->id);
+
+                if ($partType->currentStock() + 0.0005 < $quantity) {
+                    throw new RuntimeException('There is not that much in stock.');
+                }
+            }
+
             $movement = StockMovement::create([
                 'part_type_id' => $partType->id,
                 'stock_lot_id' => $lot?->id,

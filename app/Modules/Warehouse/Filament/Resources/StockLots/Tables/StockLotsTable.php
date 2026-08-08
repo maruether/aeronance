@@ -133,6 +133,15 @@ final class StockLotsTable
     public static function configure(Table $table): Table
     {
         return $table
+            /*
+             * Restmenge als EIN Aggregat pro Seite statt einer SUM-Query je
+             * Zeile (die Spalte und die Sichtbarkeit der Umlagern-Aktion
+             * fragen beide nach); die Medien mit dabei, damit die
+             * Dokument-Spalte nicht je Zeile die Ablage befragt.
+             */
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query
+                ->withRemainingQuantity()
+                ->with(['partType', 'media']))
             ->columns([
                 TextColumn::make('lot_number')
                     ->label(__('warehouse.lot.field.lot_number'))

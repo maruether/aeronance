@@ -52,7 +52,7 @@ final class QuarantineTagController
             ->filter(fn (int $value): bool => $value > 0)
             ->all();
 
-        $this->markPrinted($tags);
+        $this->markPrinted($request, $tags);
 
         // "labels" druckt auf gewoehnliche Laseretiketten zum Aufkleben auf
         // vorgefertigte farbige Anhaenger -- siehe die Erlaeuterung in der
@@ -74,7 +74,7 @@ final class QuarantineTagController
 
         abort_unless($change->needsTag(), 404);
 
-        $this->markPrinted(collect([$change]));
+        $this->markPrinted($request, collect([$change]));
 
         return view('warehouse.tags.single', [
             'tag' => $change,
@@ -138,8 +138,21 @@ final class QuarantineTagController
     /**
      * @param  Collection<int, LotStateChange>  $tags
      */
-    private function markPrinted(Collection $tags): void
+    private function markPrinted(Request $request, Collection $tags): void
     {
+        /*
+         * Die Seite rendert per GET, und Drucken ist ihr Zweck -- gestempelt
+         * wird trotzdem nicht auf fremden Zuruf: SameSite=lax laesst
+         * Top-Level-GETs MIT Cookie durch, und ein von einer fremden Seite
+         * ausgeloester Aufruf soll nicht still Zettel als gedruckt markieren,
+         * die nie ein Drucker gesehen hat. Sec-Fetch-Site senden alle
+         * aktuellen Browser; die Ansicht selbst bleibt auch quer erreichbar,
+         * nur die Markierung unterbleibt dann.
+         */
+        if ($request->headers->get('Sec-Fetch-Site') === 'cross-site') {
+            return;
+        }
+
         foreach ($tags as $tag) {
             if ($tag->tag_printed_at === null) {
                 // Written straight to the table: the model refuses ordinary

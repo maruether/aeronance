@@ -170,6 +170,64 @@ else
     say "Kein Tag -- veroeffentlicht wurde ein Zwischenstand"
 fi
 
+# ──────────────────────────────────────────────────────────────────────────────
+# DAS RELEASE-ARTEFAKT GEHOERT ZUR VEROEFFENTLICHUNG DAZU.
+#
+# Tarball-Installationen (Webserver-Pack, LXC) aktualisieren sich aus den
+# GitHub-Releases: deploy/update.sh laedt dort aeronance-<tag>.tar.gz nebst
+# .asc und prueft die Signatur gegen den veroeffentlichten Schluesselbund.
+# Ein Tag OHNE Artefakt heisst fuer diese Installationen: es gibt nichts zu
+# holen -- der Kanal bleibt auf Handarbeit angewiesen, ohne dass es jemand
+# merkt.
+#
+# Der Tarball kommt aus dem pack-Job der CI (dist/…tar.gz) und wird HIER
+# signiert, nicht dort: Der Signaturschluessel bleibt auf diesem Rechner, die
+# CI hat ihn nie gesehen. Dieselbe Arbeitsteilung wie bei Commits und Tags.
+# ──────────────────────────────────────────────────────────────────────────────
+if [ "$IST_TAG" = "1" ]; then
+    ARTEFAKT="${AERONANCE_ARTEFAKT:-dist/aeronance-${TAG}.tar.gz}"
+
+    if [ ! -f "$ARTEFAKT" ]; then
+        say "Kein Release-Artefakt gefunden ($ARTEFAKT)"
+        echo "    Der Tarball-Kanal (Webserver-Pack, LXC) kann dieses Release so nicht laden."
+        echo "    So kommt es nach: pack-Artefakt der CI zu diesem Tag nach dist/ legen"
+        echo "    und dieses Skript erneut ausfuehren -- oder AERONANCE_ARTEFAKT=<pfad> setzen."
+    else
+        say "Release-Artefakt signieren"
+        if [ ! -f "${ARTEFAKT}.sha256" ]; then
+            (cd "$(dirname "$ARTEFAKT")" && sha256sum "$(basename "$ARTEFAKT")" > "$(basename "$ARTEFAKT").sha256")
+        fi
+        # --yes: Ein erneuter Lauf desselben Releases ueberschreibt seine eigene
+        # Signatur, statt an einer Rueckfrage zu haengen.
+        gpg --batch --yes --armor --detach-sign -o "${ARTEFAKT}.asc" "$ARTEFAKT" \
+            || die "das Artefakt liess sich nicht signieren."
+        echo "    $(basename "$ARTEFAKT").asc"
+
+        say "Release-Artefakt nach $FERNZIEL laden"
+        REPO_SLUG="$(git remote get-url "$FERNZIEL" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')"
+
+        if command -v gh >/dev/null 2>&1; then
+            if gh release view "$TAG" --repo "$REPO_SLUG" >/dev/null 2>&1; then
+                gh release upload "$TAG" --repo "$REPO_SLUG" --clobber \
+                    "$ARTEFAKT" "${ARTEFAKT}.asc" "${ARTEFAKT}.sha256" \
+                    || die "der Upload der Release-Assets ist fehlgeschlagen."
+            else
+                gh release create "$TAG" --repo "$REPO_SLUG" \
+                    --title "$TAG" --notes-file "$NACHRICHT" \
+                    "$ARTEFAKT" "${ARTEFAKT}.asc" "${ARTEFAKT}.sha256" \
+                    || die "das GitHub-Release liess sich nicht anlegen."
+            fi
+            echo "    https://github.com/${REPO_SLUG}/releases/tag/${TAG}"
+        else
+            echo "    gh (GitHub CLI) ist nicht installiert -- der Upload bleibt Handarbeit:"
+            echo "    Release zum Tag ${TAG} anlegen und diese drei Dateien anhaengen:"
+            echo "        $ARTEFAKT"
+            echo "        ${ARTEFAKT}.asc"
+            echo "        ${ARTEFAKT}.sha256"
+        fi
+    fi
+fi
+
 say "Veroeffentlicht: $TAG"
 echo
 if [ "$IST_TAG" = "1" ]; then

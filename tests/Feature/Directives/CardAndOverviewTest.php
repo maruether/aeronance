@@ -136,6 +136,24 @@ final class CardAndOverviewTest extends TestCase
     }
 
     #[Test]
+    public function reading_the_list_is_not_enough_to_put_work_onto_a_visit(): void
+    {
+        // The second door with the lower sill: inside the task cards module,
+        // adding a card takes CARDS_WORK. Raising one from the directive list
+        // writes into the very same visit, so the read permission alone must
+        // be refused here too -- otherwise the rule over there is decorative.
+        $aircraft = $this->aircraft();
+        $reader = $this->userWith(Permissions::DIRECTIVES_VIEW);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessageMatches('/cards\.work/');
+
+        app(ScheduleDirectiveCard::class)->handle(
+            $this->directive(), $aircraft, $this->workOrder($aircraft), $reader,
+        );
+    }
+
+    #[Test]
     public function a_superseded_line_points_at_its_successor_instead(): void
     {
         $aircraft = $this->aircraft();
@@ -271,6 +289,26 @@ final class CardAndOverviewTest extends TestCase
         $this->actingAs($this->inspector())
             ->get(route('directives.overview', ['aircraft' => $aircraft]))
             ->assertNotFound();
+    }
+
+    #[Test]
+    public function a_disabled_module_contributes_no_open_items(): void
+    {
+        // Der Provider registriert die Airworthiness-Beitraege bedingungslos --
+        // mit der ausdruecklichen Zusage, dass jeder Beitrag selbst beim
+        // ModuleManager nachfragt. Diese Zusage war eine Zeit lang leer: Ein
+        // abgeschaltetes Modul meldete weiter offene Punkte und haette damit
+        // eine Freigabe blockieren koennen, mit einer Liste, die der Verein
+        // bewusst abgeschaltet hat.
+        $aircraft = $this->aircraft();
+        $this->directive();
+
+        $this->assertNotEmpty(app(OutstandingDirectives::class)->openItemsFor($aircraft));
+
+        app(ModuleManager::class)->disable('directives');
+        app(ModuleManager::class)->forgetCache();
+
+        $this->assertSame([], app(OutstandingDirectives::class)->openItemsFor($aircraft));
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────

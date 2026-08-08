@@ -30,17 +30,25 @@ Route::middleware(BlockSetupWhenInstalled::class)
     ->prefix('setup')
     ->name('setup.')
     ->group(function (): void {
-        // Reading, and migrations -- which are idempotent and create nothing
-        // an attacker could use.
-        Route::get('/', [SetupController::class, 'index'])->name('index');
-        Route::post('/migrate', [SetupController::class, 'migrate'])->name('migrate');
-
         // Creating the administrator guards itself: it refuses outright once
         // one exists, which is the case RequireSetupAuthority cannot help with
         // because nobody is logged in yet at that point.
         Route::post('/administrator', [SetupController::class, 'createAdministrator'])->name('administrator');
 
         Route::middleware(RequireSetupAuthority::class)->group(function (): void {
+            /*
+             * Index und Migrationen standen eine Zeit lang AUSSERHALB dieser
+             * Gruppe -- "lesend bzw. idempotent". Beides stimmt, nur ist auf
+             * einem Livesystem mit verlorenem Marker schon der Anblick des
+             * Assistenten Auskunft, und fremd ausgeloeste Migrationen sind
+             * kein Leserecht. Fuer die frische Installation aendert die
+             * Gruppe nichts: Solange kein Administrator existiert, laesst
+             * RequireSetupAuthority alles durch.
+             */
+            Route::get('/', [SetupController::class, 'index'])->name('index');
+            Route::post('/datenbank', [SetupController::class, 'configureDatabase'])->name('database');
+            Route::post('/migrate', [SetupController::class, 'migrate'])->name('migrate');
+
             Route::post('/organisation', [SetupController::class, 'configureOrganisation'])->name('organisation');
             Route::post('/module', [SetupController::class, 'selectModules'])->name('modules');
             Route::post('/fertig', [SetupController::class, 'finish'])->name('finish');

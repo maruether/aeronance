@@ -79,6 +79,22 @@ final readonly class ReceiveFromRepair
             $dispatch, $partType, $user, $lotData, $when, $note,
             $documentType, $documentReference, $certified
         ): StockLot {
+            /*
+             * The isOpen() check above ran on unlocked data. A double-click
+             * sends two requests, both pass it, and the same dispatch comes
+             * back TWICE -- two lots, double the stock, from one physical
+             * part. Under the row lock the second request waits here and then
+             * sees the first one's "Returned".
+             */
+            $dispatch = RepairDispatch::query()->lockForUpdate()->findOrFail($dispatch->id);
+
+            if (! $dispatch->state->isOpen()) {
+                throw new RuntimeException(sprintf(
+                    'This dispatch is already %s.',
+                    $dispatch->state->label(),
+                ));
+            }
+
             $lot = StockLot::create([
                 'part_type_id' => $partType->id,
                 'origin' => LotOrigin::Repair,

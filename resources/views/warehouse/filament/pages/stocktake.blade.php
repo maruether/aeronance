@@ -28,7 +28,9 @@
                 </div>
                 <div>
                     <label class="text-sm font-medium">{{ __('warehouse.stocktake.field.counted_at') }}</label>
-                    <input type="date" wire:model="countedAt"
+                    {{-- max: gezählt werden kann nur, was schon passiert ist. Die Action
+                         lehnt Zukunftsdaten ohnehin ab; das hier erspart den Umweg. --}}
+                    <input type="date" wire:model="countedAt" max="{{ now()->toDateString() }}"
                            class="mt-1 w-full rounded-lg border-gray-300 dark:bg-white/5 dark:border-white/10 text-sm">
                 </div>
                 <div class="flex items-end">

@@ -24,7 +24,7 @@
         .ok   { background: #def7ec; color: #03543f; padding: .7rem .9rem;
                 border-radius: .4rem; margin: 0 0 1rem; font-size: .9rem; }
         label { display: block; font-size: .85rem; font-weight: 600; margin: .85rem 0 .25rem; }
-        input[type=text], input[type=email], input[type=password] {
+        input[type=text], input[type=email], input[type=password], input[type=number] {
             width: 100%; padding: .5rem .65rem; border: 1px solid #cbd2d9;
             border-radius: .35rem; font-size: .95rem; font-family: inherit; }
         button { margin-top: 1.1rem; background: #0b7285; color: #fff; border: 0;
@@ -65,8 +65,29 @@
         <p>{{ $database['message'] }}</p>
         @if ($preconfigured)
             <p class="hint">{{ __('setup.db.preconfigured') }}</p>
+        @elseif ($database['ok'])
+            <p class="hint">{{ __('setup.db.stored_in_env') }}</p>
         @else
             <p class="hint">{{ __('setup.db.hint') }}</p>
+            <form method="post" action="{{ route('setup.database') }}">
+                @csrf
+                <label for="db_host">{{ __('setup.db.field.host') }}</label>
+                <input id="db_host" name="db_host" type="text" value="{{ old('db_host', '127.0.0.1') }}" required>
+
+                <label for="db_port">{{ __('setup.db.field.port') }}</label>
+                <input id="db_port" name="db_port" type="number" value="{{ old('db_port', 3306) }}" min="1" max="65535" required>
+
+                <label for="db_database">{{ __('setup.db.field.database') }}</label>
+                <input id="db_database" name="db_database" type="text" value="{{ old('db_database', 'aeronance') }}" required>
+
+                <label for="db_username">{{ __('setup.db.field.username') }}</label>
+                <input id="db_username" name="db_username" type="text" value="{{ old('db_username') }}" required>
+
+                <label for="db_password">{{ __('setup.db.field.password') }}</label>
+                <input id="db_password" name="db_password" type="password" autocomplete="new-password">
+
+                <button type="submit">{{ __('setup.db.action') }}</button>
+            </form>
         @endif
     </div>
 

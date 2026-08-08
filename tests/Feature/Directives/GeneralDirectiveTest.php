@@ -17,6 +17,7 @@ use App\Modules\Fleet\Airworthiness\AirworthinessCheck;
 use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\TaskCards\Actions\ManageWorkOrder;
 use App\Modules\TaskCards\Models\WorkOrder;
+use App\Modules\TaskCards\Permissions as CardPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
@@ -44,7 +45,11 @@ final class GeneralDirectiveTest extends TestCase
     {
         parent::setUp();
 
-        foreach ([Permissions::DIRECTIVES_VIEW, Permissions::DIRECTIVES_MANAGE] as $p) {
+        foreach ([
+            Permissions::DIRECTIVES_VIEW,
+            Permissions::DIRECTIVES_MANAGE,
+            CardPermissions::CARDS_WORK,
+        ] as $p) {
             Permission::findOrCreate($p, 'web');
         }
 
@@ -190,7 +195,14 @@ final class GeneralDirectiveTest extends TestCase
 
     private function user(): User
     {
+        // CARDS_WORK gehoert dazu, seit das Kartenanlegen aus den LTA auch die
+        // Huerde der Arbeitskarten verlangt -- die Uebernahme schreibt in den
+        // Vorgang, und Leserecht allein darf dafuer nicht reichen.
         return tap(User::factory()->create(['is_active' => true]))
-            ->givePermissionTo([Permissions::DIRECTIVES_VIEW, Permissions::DIRECTIVES_MANAGE]);
+            ->givePermissionTo([
+                Permissions::DIRECTIVES_VIEW,
+                Permissions::DIRECTIVES_MANAGE,
+                CardPermissions::CARDS_WORK,
+            ]);
     }
 }

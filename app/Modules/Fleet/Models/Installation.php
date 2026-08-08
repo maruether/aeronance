@@ -165,16 +165,39 @@ final class Installation extends Model
 
         $atInstall = $this->counters_at_installation[$kind->value] ?? null;
 
-        if ($atInstall === null) {
-            // The counter was not being kept when this went on, so the
-            // difference is unanswerable. Saying "zero used" would be a
-            // comforting guess; saying nothing is the truth.
-            return null;
-        }
-
         $now = $this->removed_at !== null
             ? ($this->counters_at_removal[$kind->value] ?? null)
             : $this->aircraft?->currentValue($kind);
+
+        if ($atInstall === null) {
+            /*
+             * No baseline in the snapshot. THREE situations hide behind that,
+             * and they get three different answers:
+             *
+             *  - The aircraft does not KEEP this counter at all: there is no
+             *    dimension to answer in. A launch limit on an aircraft that
+             *    counts no launches is a limit nobody can answer, and "0 used"
+             *    would present that as "plenty left". Null.
+             *
+             *  - Kept, but STILL never read: nothing counted has advanced, so
+             *    what the papers brought along is the whole answer. A
+             *    sixty-year-old aircraft onboarded with its engine at 1800 h
+             *    stays at 1800 h until somebody starts reading the counter.
+             *
+             *  - Kept and read SINCE: there is a figure now, but no baseline
+             *    to measure it against. The difference is unanswerable --
+             *    handing the part the whole reading would gift it the
+             *    aircraft's entire life, and "zero used" would be a
+             *    comforting guess. Null again.
+             */
+            if ($now !== null) {
+                return null;
+            }
+
+            $kept = $this->aircraft?->keeps($kind) ?? false;
+
+            return $kept ? $this->carried($kind, $basis) : null;
+        }
 
         if ($now === null) {
             return null;

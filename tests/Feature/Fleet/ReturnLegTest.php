@@ -174,6 +174,13 @@ final class ReturnLegTest extends TestCase
         // fleet and are found by serial number -- they never travelled to the
         // warehouse and never needed to, which is why the lot carries no hours.
         $instrument = $this->part();
+
+        // The counter is being KEPT from the start: without a counted baseline
+        // at fitting, the 400 later would be a figure with nothing to measure
+        // it against -- and usage() rightly answers "unknown" instead of
+        // gifting the part the whole reading.
+        $this->reading($this->aircraft(), 0.0);
+
         $installation = $this->fit($instrument);
 
         $this->reading($installation->aircraft, 400.0);

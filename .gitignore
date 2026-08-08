@@ -72,3 +72,9 @@ Thumbs.db
 
 # --- Lokale Werkzeuge ---
 /.claude/settings.local.json
+
+# --- Release-Artefakte ---
+# dist/ ist der Uebergabeplatz zwischen CI und deploy/publish.sh: Dorthin legt
+# man das pack-Artefakt, dort entstehen .asc und .sha256. Inhalt einer
+# Veroeffentlichung, nicht des Repos.
+/dist

@@ -26,6 +26,29 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn (): string => Filament::getLoginUrl());
 
         /*
+         * Behind a reverse proxy the truth about a request lives in the
+         * X-Forwarded-* headers, and Laravel ignores them unless the proxy is
+         * TRUSTED. Untrusted, three things quietly go wrong: request()->ip()
+         * logs the proxy's address into the sign-in audit (every attacker
+         * shares one IP), the login rate limiter throttles that one shared IP
+         * for the whole club, and isSecure() stays false so the HSTS header is
+         * never sent.
+         *
+         * TRUSTED_PROXIES stood in the Docker template for a while with
+         * NOTHING reading it -- a setting that looks like a promise. Now this
+         * reads it: "*" trusts whatever talks to us (only sane when the
+         * container port is not itself reachable from outside), anything else
+         * is a comma-separated list of addresses or CIDR ranges.
+         */
+        $proxies = env('TRUSTED_PROXIES');
+
+        if (is_string($proxies) && trim($proxies) !== '') {
+            $middleware->trustProxies(at: $proxies === '*'
+                ? '*'
+                : array_map(trim(...), explode(',', $proxies)));
+        }
+
+        /*
          * Die HTTP-Härtung, für JEDE Antwort -- siehe SecurityHeaders. Vorher
          * setzte sie ein einzelner Controller, galt also für einen von Dutzenden
          * Endpunkten.

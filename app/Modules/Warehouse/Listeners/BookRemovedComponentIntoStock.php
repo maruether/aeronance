@@ -57,16 +57,19 @@ final readonly class BookRemovedComponentIntoStock
         }
 
         try {
+            // Auf Namen, nicht auf Positionen -- neun Argumente, und genau an
+            // so einer Stelle hat ein Einschub in der Mitte schon zweimal
+            // still alles danach verschoben.
             $this->removal->handle(
-                $partType,
-                $event->quantity,
-                $event->aircraftReference,
-                $user,
-                $event->reason,
-                $event->determinedServiceable,
-                $event->aircraftType,
-                $event->removedAt,
-                ['serial_number' => $event->serialNumber],
+                partType: $partType,
+                quantity: $event->quantity,
+                aircraft: $event->aircraftReference,
+                user: $user,
+                reason: $event->reason,
+                determinedServiceable: $event->determinedServiceable,
+                aircraftType: $event->aircraftType,
+                removedAt: $event->removedAt,
+                lotData: ['serial_number' => $event->serialNumber],
             );
         } catch (Throwable $e) {
             /*

@@ -23,12 +23,18 @@ FROM php:${PHP_VERSION}-fpm-bookworm
 # richten ihre Spalten per Leerzeichen aus, und ohne -layout sind sie unlesbar.
 # Systempaket, kein Composer-Paket -- siehe PdfLayoutText.
 #
+# mariadb-client liefert mariadb-dump: ohne ihn bricht `aeronance:backup` ab --
+# und damit die nächtliche Sicherung des Scheduler-Containers UND der
+# Sicherungs-Schritt in deploy/docker/update.sh. Ein Image ohne dieses Paket
+# kann weder sichern noch aktualisiert werden. Läuft im install-Block und
+# NICHT in der purge-Zeile darunter: die räumt nur Build-Abhängigkeiten ab.
+#
 # Die Extensions sind dieselben, die die CI installiert. Weicht das ab, läuft
 # getestet etwas anderes als ausgeliefert.
 RUN apt-get update \
  && apt-get install -yqq --no-install-recommends \
       libzip-dev libicu-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
-      poppler-utils \
+      poppler-utils mariadb-client \
  && docker-php-ext-configure gd --with-freetype --with-jpeg \
  && docker-php-ext-install -j"$(nproc)" pdo_mysql zip intl bcmath exif gd opcache \
  && apt-get purge -yqq libzip-dev libicu-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \

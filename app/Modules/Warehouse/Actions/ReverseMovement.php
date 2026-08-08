@@ -7,6 +7,7 @@ namespace App\Modules\Warehouse\Actions;
 use App\Core\Access\Authority;
 use App\Models\User;
 use App\Modules\Warehouse\Enums\MovementType;
+use App\Modules\Warehouse\Models\StockLot;
 use App\Modules\Warehouse\Models\StockMovement;
 use App\Modules\Warehouse\Permissions;
 use Illuminate\Support\Carbon;
@@ -92,49 +93,65 @@ final readonly class ReverseMovement
             ));
         }
 
-        if ($this->reversalOf($movement) !== null) {
-            throw new RuntimeException(sprintf(
-                'This booking has already been corrected on %s.',
-                $this->reversalOf($movement)->occurred_at->format('d.m.Y'),
-            ));
-        }
-
         $quantity = -1 * (float) $movement->quantity;
 
-        // Reversing a receipt that has since been issued from would push the lot
-        // below nil. The stock did not vanish because the paperwork was wrong,
-        // so the honest answer is a stocktake, not a bigger counter-booking.
-        if ($movement->stock_lot_id !== null && $quantity < 0) {
-            $remaining = $movement->lot?->remainingQuantity() ?? 0.0;
+        return DB::transaction(function () use ($movement, $user, $reason, $occurredAt, $quantity): StockMovement {
+            /*
+             * "NOTHING IS REVERSED TWICE" binds only under lock. Checked on
+             * unlocked data, two parallel corrections of the same booking both
+             * pass and the stock moves twice for one mistake. The lock on the
+             * ORIGINAL movement serialises them; the unique index on
+             * reverses_movement_id (harden_reversal_chain) is the backstop for
+             * any path that skips this method.
+             */
+            StockMovement::query()->lockForUpdate()->findOrFail($movement->id);
 
-            if ($remaining + $quantity < -0.0005) {
+            $existing = $this->reversalOf($movement);
+
+            if ($existing !== null) {
                 throw new RuntimeException(sprintf(
-                    'Lot %s holds only %s, so this booking can no longer be taken back in '
-                    .'full -- part of it has been used since. Record a stocktake difference '
-                    .'instead.',
-                    $movement->lot?->lot_number ?? '?',
-                    rtrim(rtrim(number_format($remaining, 3, '.', ''), '0'), '.'),
+                    'This booking has already been corrected on %s.',
+                    $existing->occurred_at->format('d.m.Y'),
                 ));
             }
-        }
 
-        return DB::transaction(fn (): StockMovement => StockMovement::create([
-            'part_type_id' => $movement->part_type_id,
-            'stock_lot_id' => $movement->stock_lot_id,
-            'type' => MovementType::Correction,
-            'quantity' => $quantity,
-            'occurred_at' => $occurredAt !== null ? Carbon::parse($occurredAt) : now(),
-            'user_id' => $user->id,
+            // Reversing a receipt that has since been issued from would push the
+            // lot below nil. The stock did not vanish because the paperwork was
+            // wrong, so the honest answer is a stocktake, not a bigger
+            // counter-booking. Under the lot lock, like every quantity check.
+            if ($movement->stock_lot_id !== null && $quantity < 0) {
+                $lot = StockLot::query()->lockForUpdate()->find($movement->stock_lot_id);
+                $remaining = $lot?->remainingQuantity() ?? 0.0;
 
-            // Same work order and aircraft as the original: the correction
-            // belongs to the same event, and a counter-booking that drops them
-            // breaks the very chain the movement was recorded for.
-            'work_order_reference' => $movement->work_order_reference,
-            'aircraft_reference' => $movement->aircraft_reference,
+                if ($remaining + $quantity < -0.0005) {
+                    throw new RuntimeException(sprintf(
+                        'Lot %s holds only %s, so this booking can no longer be taken back in '
+                        .'full -- part of it has been used since. Record a stocktake difference '
+                        .'instead.',
+                        $lot?->lot_number ?? '?',
+                        rtrim(rtrim(number_format($remaining, 3, '.', ''), '0'), '.'),
+                    ));
+                }
+            }
 
-            'reverses_movement_id' => $movement->id,
-            'note' => trim($reason),
-        ]));
+            return StockMovement::create([
+                'part_type_id' => $movement->part_type_id,
+                'stock_lot_id' => $movement->stock_lot_id,
+                'type' => MovementType::Correction,
+                'quantity' => $quantity,
+                'occurred_at' => $occurredAt !== null ? Carbon::parse($occurredAt) : now(),
+                'user_id' => $user->id,
+
+                // Same work order and aircraft as the original: the correction
+                // belongs to the same event, and a counter-booking that drops them
+                // breaks the very chain the movement was recorded for.
+                'work_order_reference' => $movement->work_order_reference,
+                'aircraft_reference' => $movement->aircraft_reference,
+
+                'reverses_movement_id' => $movement->id,
+                'note' => trim($reason),
+            ]);
+        });
     }
 
     /**

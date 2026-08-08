@@ -36,6 +36,7 @@ return [
         'inspection' => 'Eingangsprüfung',
         'tooling' => 'Werkzeuge',
         'fleet' => 'Flotte',
+        'workorders' => 'Arbeitskarten',
         'directives' => 'LTA/TM',
         'directive_credentials' => 'LTA-Zugänge',
         'vereinsflieger' => 'Vereinsflieger',

@@ -30,10 +30,23 @@ return [
         'failed' => 'Keine Verbindung zur Datenbank: :error',
         'not_mariadb' => 'Die Verbindung steht, aber es ist keine MariaDB (:version). '
             .'Aeronance unterstützt ausschließlich MariaDB — auch MySQL nicht.',
-        'hint' => 'Die Zugangsdaten stehen in der Datei .env. Sie werden hier bewusst '
-            .'nicht bearbeitet: ein Webformular, das die Konfiguration der Anwendung '
-            .'selbst umschreibt, öffnet mehr, als es an Arbeit spart.',
+        'hint' => 'Die Zugangsdaten der MariaDB hier eintragen. Gespeichert wird erst '
+            .'nach erfolgreichem Verbindungstest — ein Tippfehler ist eine '
+            .'Fehlermeldung, keine kaputte Konfiguration. Geschrieben wird in die '
+            .'Datei .env; in Docker-Umgebungen haben dort gesetzte Variablen Vorrang.',
+        'stored_in_env' => 'Die Zugangsdaten stehen in der Datei .env und lassen sich dort ändern.',
         'preconfigured' => 'Die Zugangsdaten kommen aus der Umgebung — dieser Schritt entfällt.',
+        'field' => [
+            'host' => 'Server',
+            'port' => 'Port',
+            'database' => 'Datenbank',
+            'username' => 'Benutzer',
+            'password' => 'Passwort',
+        ],
+        'action' => 'Verbindung testen und speichern',
+        'saved' => 'Zugangsdaten gespeichert — die Verbindung steht (:version).',
+        'env_missing' => 'Die Datei .env fehlt. Sie entsteht bei der Installation aus '
+            .'.env.example — ohne sie kann hier nichts gespeichert werden.',
     ],
 
     'migrate' => [

@@ -189,15 +189,22 @@ final class Aircraft extends Model
     }
 
     /**
-     * The latest reading of a counter, or zero if none was ever taken.
+     * The latest reading of a counter, or null if none was ever taken.
      *
-     * Zero rather than null on purpose: a counter with no reading has not been
-     * read, and for every calculation here that is the same as nothing having
-     * happened yet. Callers that need the difference can ask readingFor().
+     * Null rather than zero, and the distinction carries paperwork: an earlier
+     * version answered 0.0 here, and that zero got FROZEN into the installation
+     * snapshots. Fit a component before the first reading is entered, then
+     * enter the real one (say 3000 h), and usage() computed carried + (3000-0)
+     * -- TSN/TSO high by the aircraft's whole life, for every component fitted
+     * in that window. "Never read" is not "zero", it is "unknown", and
+     * Installation::usage() has a null path that says exactly that. The
+     * comforting zero made it unreachable.
      */
-    public function currentValue(CounterKind $kind): float
+    public function currentValue(CounterKind $kind): ?float
     {
-        return (float) ($this->latestReading($kind)?->value ?? 0.0);
+        $reading = $this->latestReading($kind);
+
+        return $reading === null ? null : (float) $reading->value;
     }
 
     public function latestReading(CounterKind $kind): ?CounterReading
@@ -212,6 +219,12 @@ final class Aircraft extends Model
     /**
      * Every counter's present value, keyed by kind.
      *
+     * Counters that were never read are OMITTED rather than written as zero.
+     * These arrays become snapshots (counters_at_installation, counters_at_open,
+     * …), and a snapshot records what was known -- an absent key reads as
+     * "was not being kept", which is the truth the null paths downstream are
+     * built for. See currentValue().
+     *
      * @return array<string, float>
      */
     public function currentValues(): array
@@ -219,7 +232,11 @@ final class Aircraft extends Model
         $values = [];
 
         foreach ($this->counters() as $kind) {
-            $values[$kind->value] = $this->currentValue($kind);
+            $value = $this->currentValue($kind);
+
+            if ($value !== null) {
+                $values[$kind->value] = $value;
+            }
         }
 
         return $values;

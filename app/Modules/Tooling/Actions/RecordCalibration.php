@@ -11,6 +11,7 @@ use App\Modules\Tooling\Models\Tool;
 use App\Modules\Tooling\Models\ToolCalibration;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
 /**
@@ -47,6 +48,9 @@ final readonly class RecordCalibration
         ?string $certificateReference = null,
         ?User $user = null,
         ?string $note = null,
+        // ANS ENDE angebaut, nicht in die Mitte -- ein Einschub verschoebe
+        // jeden positionsgebundenen Aufrufer still um eins.
+        ?string $certificateFile = null,
     ): ToolCalibration {
         $gemessen = Carbon::parse($performedAt)->startOfDay();
 
@@ -72,11 +76,11 @@ final readonly class RecordCalibration
             throw new InvalidArgumentException(__('tooling.refused.validity_backwards'));
         }
 
-        return DB::transaction(function () use ($tool, $gemessen, $result, $gueltigBis, $provider, $certificateReference, $user, $note): ToolCalibration {
+        $kalibrierung = DB::transaction(function () use ($tool, $gemessen, $result, $gueltigBis, $provider, $certificateReference, $user, $note): ToolCalibration {
             // Vor dem Schreiben lesen -- danach ist der alte Stand weg.
             [$luecke, $grund] = $this->reviewPeriod($tool, $gemessen, $result);
 
-            $kalibrierung = ToolCalibration::create([
+            $neu = ToolCalibration::create([
                 'tool_id' => $tool->getKey(),
                 'performed_at' => $gemessen->toDateString(),
                 'valid_until' => $gueltigBis?->toDateString(),
@@ -91,8 +95,28 @@ final readonly class RecordCalibration
 
             $tool->update(['calibration_due_at' => $gueltigBis?->toDateString()]);
 
-            return $kalibrierung;
+            return $neu;
         });
+
+        /*
+         * Der Schein selbst, an den Datensatz. Das Formular hat die Datei
+         * laengst auf die private Disk geschrieben -- ohne diesen Schritt lag
+         * sie dort verwaist herum: vorhanden, aber an nichts gehaengt und
+         * damit im System unauffindbar. Ein Nachweis, den keiner findet, ist
+         * keiner. Nach der Transaktion, damit ein Ablagefehler die erfasste
+         * Kalibrierung nicht zurueckrollt -- gemessen wurde trotzdem.
+         */
+        if ($certificateFile !== null) {
+            $absolut = Storage::disk('documents')->path($certificateFile);
+
+            if (is_file($absolut)) {
+                $kalibrierung->addMedia($absolut)
+                    ->usingFileName(basename($certificateFile))
+                    ->toMediaCollection(ToolCalibration::CERTIFICATES, 'documents');
+            }
+        }
+
+        return $kalibrierung;
     }
 
     /**

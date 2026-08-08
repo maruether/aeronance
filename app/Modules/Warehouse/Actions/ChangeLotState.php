@@ -110,6 +110,24 @@ final readonly class ChangeLotState
         }
 
         return DB::transaction(function () use ($lot, $from, $target, $reason, $user, $qualification, $occurredAt): LotStateChange {
+            /*
+             * The checks above ran on unlocked data -- good enough to tell a
+             * person WHY, but two clicks in the same second both pass them.
+             * Under the row lock the state is read once more: if it moved in
+             * the meantime, this transition was decided on stale facts and is
+             * refused instead of recorded twice. The disposal quantity further
+             * down needs the same lock -- it is a SUM over the journal, and a
+             * parallel issue between SUM and insert would dispose too much.
+             */
+            $lot = StockLot::query()->lockForUpdate()->findOrFail($lot->id);
+
+            if ($lot->state !== $from) {
+                throw new RuntimeException(sprintf(
+                    'The lot has meanwhile changed to "%s" -- please look at it again.',
+                    $lot->state->label(),
+                ));
+            }
+
             $when = $occurredAt !== null ? Carbon::parse($occurredAt) : now();
 
             $change = LotStateChange::create([

@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use RuntimeException;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * A visit: "D-KABC zur Jahresnachprüfung".
@@ -24,7 +26,7 @@ use RuntimeException;
  */
 final class WorkOrder extends Model
 {
-    use SoftDeletes;
+    use LogsActivity, SoftDeletes;
 
     public const STATE_OPEN = 'open';
 
@@ -188,5 +190,24 @@ final class WorkOrder extends Model
     public function label(): string
     {
         return sprintf('%s — %s', $this->number, $this->title);
+    }
+
+    /*
+     * ─────────────────────────────────────────────────────────────────────────
+     * AUDIT-TRAIL, NACHGEZOGEN. Dieses Modul war das einzige fachliche ohne
+     * activitylog -- ausgerechnet das mit den Wartungsakten. Die Guards oben
+     * erzwingen die Unveraenderlichkeit NACH der Freigabe; was fehlte, war die
+     * Spur fuer die editierbare Phase DAVOR: Wer hat den Vorgang umbenannt,
+     * geschlossen, wieder geoeffnet? "Audit-Trail von Tag eins" gilt fuer
+     * jede fachlich relevante Aenderung, nicht erst ab der Unterschrift.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['aircraft_id', 'number', 'title', 'state', 'opened_at', 'closed_at', 'released_at', 'note'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges()
+            ->useLogName('workorders');
     }
 }
