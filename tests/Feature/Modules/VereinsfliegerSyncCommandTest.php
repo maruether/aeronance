@@ -6,8 +6,10 @@ namespace Tests\Feature\Modules;
 
 use App\Core\Identity\ExternalGroup;
 use App\Core\Modules\ModuleManager;
+use App\Modules\Vereinsflieger\Jobs\SyncConnectionJob;
 use App\Modules\Vereinsflieger\Models\Connection;
 use App\Modules\Vereinsflieger\Models\MemberStatus;
+use App\Modules\Vereinsflieger\Models\WorkHourCategory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -128,6 +130,87 @@ final class VereinsfliegerSyncCommandTest extends TestCase
         $this->artisan('aeronance:vereinsflieger-sync')
             ->expectsOutputToContain('Wrong User or wrong Password')
             ->assertFailed();
+    }
+
+    /**
+     * Die Kategorien laufen im Abgleich mit -- fuer die Auswahlliste.
+     *
+     * Nutzlast wie GEMESSEN am echten Dienst: 'category' als Nummer, 'name'
+     * mit HTML-Entities ("Wartung&#47;Werkstatt"), 'enabled' als '0'/'1' --
+     * und die abgeschaltete 7813 ("Aeronance") bleibt drin, denn ueber die
+     * Schnittstelle ist sie trotzdem beschreibbar.
+     */
+    #[Test]
+    public function the_run_remembers_work_hour_categories(): void
+    {
+        Http::fake([
+            '*auth/accesstoken' => Http::response(['accesstoken' => str_repeat('a', 64), 'httpstatuscode' => 200]),
+            '*auth/signin' => Http::response(['httpstatuscode' => 200]),
+            '*user/list' => Http::response([
+                ['uid' => '1', 'msid' => '1', 'memberstatus' => 'aktiv'],
+                'httpstatuscode' => 200,
+            ]),
+            '*workhourcategories/list' => Http::response([
+                ['category' => '7265', 'name' => 'Wartung&#47;Werkstatt', 'enabled' => '1'],
+                ['category' => '7813', 'name' => 'Aeronance', 'enabled' => '0'],
+                'httpstatuscode' => 200,
+            ]),
+            '*' => Http::response(['httpstatuscode' => 200]),
+        ]);
+
+        $this->artisan('aeronance:vereinsflieger-sync')->assertSuccessful();
+
+        $wartung = WorkHourCategory::query()->where('category', '7265')->sole();
+        $this->assertSame('Wartung/Werkstatt', $wartung->name, 'Entities muessen dekodiert sein.');
+        $this->assertTrue($wartung->enabled);
+
+        $this->assertFalse(WorkHourCategory::query()->where('category', '7813')->sole()->enabled);
+    }
+
+    /**
+     * Der Knopf-Weg: derselbe Abgleich als Job, Ergebnis an der Anbindung.
+     *
+     * Rueckmeldung aus dem Betrieb: "es dauert und es wird nicht darauf
+     * hingewiesen" -- deshalb laeuft der Klick als Job im Worker, und der
+     * Erfolg wie der Fehlschlag stehen dort, wo auch der Nachtlauf sie
+     * hinschreibt: an der Anbindung.
+     */
+    #[Test]
+    public function the_sync_job_records_its_run_at_the_connection(): void
+    {
+        $this->fakeService([
+            ['uid' => '1', 'msid' => '1', 'memberstatus' => 'aktiv'],
+        ]);
+
+        $anbindung = Connection::sole();
+        $this->assertNull($anbindung->last_run_at);
+
+        (new SyncConnectionJob($anbindung->getKey()))->handle();
+
+        $anbindung->refresh();
+        $this->assertNotNull($anbindung->last_run_at);
+        $this->assertNull($anbindung->last_error);
+    }
+
+    #[Test]
+    public function the_sync_job_records_the_failure_reason(): void
+    {
+        Http::fake([
+            '*auth/accesstoken' => Http::response(['accesstoken' => str_repeat('a', 64), 'httpstatuscode' => 200]),
+            '*auth/signin' => Http::response(
+                ['httpstatuscode' => 403, 'error' => 'Wrong User or wrong Password'],
+                403,
+            ),
+            '*' => Http::response(['httpstatuscode' => 200]),
+        ]);
+
+        (new SyncConnectionJob(Connection::sole()->getKey()))->handle();
+
+        $this->assertStringContainsString(
+            'Wrong User or wrong Password',
+            (string) Connection::sole()->last_error,
+            'Der Grund muss an der Anbindung stehen -- nicht nur im Log.',
+        );
     }
 
     /**

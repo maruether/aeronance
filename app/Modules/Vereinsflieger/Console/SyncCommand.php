@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Vereinsflieger\Console;
 
-use App\Core\Identity\RememberExternalGroups;
 use App\Core\Modules\ModuleManager;
-use App\Modules\Vereinsflieger\Actions\ReadAircraftTimes;
-use App\Modules\Vereinsflieger\Actions\SyncMembers;
-use App\Modules\Vereinsflieger\Actions\TransferWorkHours;
+use App\Modules\Vereinsflieger\Actions\RunConnectionSync;
 use App\Modules\Vereinsflieger\Models\Connection;
 use App\Modules\Vereinsflieger\Models\MemberStatus;
-use App\Modules\Vereinsflieger\VereinsfliegerProvider;
 use Illuminate\Console\Command;
 use Throwable;
 
@@ -105,32 +101,23 @@ final class SyncCommand extends Command
         return $gescheitert === $anbindungen->count() ? self::FAILURE : self::SUCCESS;
     }
 
+    /**
+     * Der Ablauf selbst wohnt in RunConnectionSync -- seit dem Knopf an der
+     * Anbindung teilen sich Nachtlauf und Oberflaeche denselben Code. Hier
+     * bleibt nur, das Ergebnis fuer die Konsole zu formatieren.
+     */
     private function runFor(Connection $anbindung): void
     {
-        $provider = new VereinsfliegerProvider($anbindung);
+        $bericht = app(RunConnectionSync::class)->handle($anbindung);
 
-        if ($anbindung->provides_identities) {
-            /*
-             * groups() zieht die Mitgliederliste und frischt dabei die
-             * Statusliste mit auf -- beides aus DERSELBEN Antwort, siehe
-             * rawMembers(). Ein eigener Aufruf fuer die Status waere ein
-             * zweiter Abruf fuer Daten, die schon da sind.
-             */
-            $gruppen = app(RememberExternalGroups::class)
-                ->handle($provider->name(), $provider->groups());
-
+        if ($bericht['groups'] !== null) {
             $this->components->twoColumnDetail(
                 '  Gruppen',
-                sprintf('%d gefunden, %d neu', $gruppen['seen'], $gruppen['new']),
+                sprintf('%d gefunden, %d neu', $bericht['groups']['seen'], $bericht['groups']['new']),
             );
+        }
 
-            /*
-             * Der Abgleich selbst -- und er kommt NACH den Gruppen, weil er
-             * dieselbe Mitgliederliste benutzt. Der Provider haelt sie fuer die
-             * Dauer des Laufs; ein zweiter Abruf faende dieselben Daten.
-             */
-            $konten = app(SyncMembers::class)->handle($anbindung, $provider);
-
+        if (($konten = $bericht['accounts']) !== null) {
             $this->components->twoColumnDetail(
                 '  Konten',
                 sprintf('%d angelegt, %d gepflegt, %d deaktiviert',
@@ -147,7 +134,14 @@ final class SyncCommand extends Command
             }
         }
 
-        $zeiten = app(ReadAircraftTimes::class)->handle($anbindung);
+        if ($bericht['categories'] !== null) {
+            $this->components->twoColumnDetail(
+                '  Kategorien',
+                sprintf('%d gefunden, %d neu', $bericht['categories']['seen'], $bericht['categories']['new']),
+            );
+        }
+
+        $zeiten = $bericht['times'];
 
         if ($zeiten !== ['read' => 0, 'failed' => 0, 'skipped' => 0]) {
             $this->components->twoColumnDetail(
@@ -157,13 +151,9 @@ final class SyncCommand extends Command
             );
         }
 
-        if (! $anbindung->provides_identities) {
-            return;
-        }
+        $stunden = $bericht['hours'];
 
-        $stunden = app(TransferWorkHours::class)->handle($anbindung);
-
-        if ($stunden !== ['sent' => 0, 'failed' => 0, 'skipped' => 0]) {
+        if ($stunden !== null && $stunden !== ['sent' => 0, 'failed' => 0, 'skipped' => 0]) {
             $this->components->twoColumnDetail(
                 '  Arbeitsstunden',
                 sprintf('%d gebucht, %d ohne VF-Kennung, %d fehlgeschlagen',

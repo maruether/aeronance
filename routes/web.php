@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Core\Http\AvatarController;
 use App\Core\Http\LogoController;
 use App\Core\Setup\SetupController;
 use App\Http\Middleware\BlockSetupWhenInstalled;
@@ -69,6 +70,15 @@ Route::middleware(RedirectToSetupWhenNotInstalled::class)->get('/', function () 
 Route::middleware(['web', 'auth'])
     ->get('/nachweise/{lot}/{media}', DocumentController::class)
     ->name('warehouse.document');
+
+/*
+ * Profilbilder -- private Disk, Auslieferung nur angemeldet.
+ * Siehe AvatarController; die Initialen-Avatare brauchen keine Route,
+ * die entstehen als data-URI direkt im HTML.
+ */
+Route::middleware(['web', 'auth'])
+    ->get('/profilbild/{user}', AvatarController::class)
+    ->name('core.avatar');
 
 /*
  * Sperrzettel zum Ausdrucken.

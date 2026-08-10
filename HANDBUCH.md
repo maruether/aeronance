@@ -131,6 +131,7 @@ Umgebungsvorlage:
 ```
 cd deploy/docker
 cp .env.docker.example .env      # ausfüllen: Passwörter, APP_URL, TRUSTED_PROXIES
+                                 # und AERONANCE_IMAGE (getaggtes Release, kein latest)
 docker compose up -d
 ```
 
@@ -190,6 +191,9 @@ Umgebung vorkonfiguriert und werden übersprungen.
   (z. B. Vereinsflieger) sind Name und E-Mail gesperrt — der nächtliche
   Abgleich würde sie ohnehin zurücksetzen; das Passwort gehört dagegen der
   Person und bleibt änderbar.
+- **Profilbild:** im Profil hochladbar (JPG/PNG/WebP, bis 2 MB), sichtbar
+  für angemeldete Mitglieder. Ohne Bild stehen die Initialen — erzeugt in
+  der Anwendung selbst, kein externer Avatar-Dienst wird angefragt.
 - **„Passwort vergessen"** erscheint nur, wenn Mailversand eingerichtet ist.
   Die Antwort ist immer dieselbe, egal ob die Adresse bekannt ist — sonst
   ließe sich per Formular abfragen, wer Mitglied ist.
@@ -311,7 +315,9 @@ Drei Regeln, die man kennen sollte:
   „unverändert".
 - **Ohne Verschlüsselung verlässt keine Sicherung das System:** Ist ein
   Auslagerungsziel eingerichtet und die Verschlüsselung aus, schlägt der
-  Sicherungslauf fehl — mit Ansage.
+  Sicherungslauf fehl — mit Ansage. Die Auslagerung ist deshalb gesperrt,
+  bis eine Verschlüsselung eingestellt ist, und zeigt danach nur die Felder
+  des gewählten Ziels (Verzeichnis, SFTP oder S3).
 
 Der Knopf **„Testmail senden"** prüft, was gerade im Formular steht — auch
 ungespeichert — und zeigt im Fehlerfall die Antwort des Mailservers.
@@ -974,6 +980,11 @@ nicht — jedes Konto hat ein eigenes Aeronance-Passwort.
   Mitglieder werden deaktiviert, nie gelöscht. Eine *leere* Mitgliederliste
   deaktiviert niemanden — eine Störung als Massenaustritt zu lesen wäre der
   teuerste denkbare Irrtum.
+- **„Jetzt abgleichen"** an jeder aktiven Anbindung startet denselben vollen
+  Abgleich sofort — gedacht für die Ersteinrichtung, er löst zusätzliche
+  Zugriffe auf Vereinsflieger aus. Der Lauf braucht bei einem vollen Verein
+  etwa eine Minute und läuft im Hintergrund; das Ergebnis (oder der Fehler)
+  erscheint in der Liste unter **„Letzter Lauf"** — Seite dafür neu laden.
 - **Rollen** entstehen ausschließlich über die Rollenzuordnungen im Kern
   (Funktion, VF-Rolle oder Status → Aeronance-Rolle). Wer nichts zuordnet,
   hat Konten ohne Rechte — das ist der sichere Ausgangszustand.
@@ -984,8 +995,12 @@ nicht — jedes Konto hat ein eigenes Aeronance-Passwort.
   Arbeitszeiten als Arbeitsstunden nach Vereinsflieger — **endgültig**,
   Vereinsflieger kann eine gebuchte Stunde weder ändern noch löschen.
   Kategorie und Status („nicht bewertet" oder „akzeptiert") sind
-  Einstellungen. Der auditierbare Nachweis bleibt immer Aeronance; die
-  Buchung drüben ist eine Zweitschrift für die Vereinsbuchhaltung.
+  Einstellungen; die **Kategorie** wird nach dem ersten Abgleich als
+  Auswahlliste angeboten, gelesen aus Vereinsflieger. „Akzeptiert" sperrt
+  den Eintrag drüben für das *Mitglied* — die Abzeichner des Vereins können
+  ihn weiterhin bearbeiten. Der auditierbare Nachweis bleibt immer
+  Aeronance; die Buchung drüben ist eine Zweitschrift für die
+  Vereinsbuchhaltung.
 
 ---
 

@@ -8,7 +8,9 @@ use App\Core\Identity\ExternalIdentity;
 use App\Core\Identity\IdentityProviderRegistry;
 use App\Models\User;
 use Filament\Auth\Pages\EditProfile as Base;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Schemas\Components\Component;
+use Filament\Schemas\Schema;
 
 /**
  * Das eigene Profil — mit derselben Regel wie in der Benutzerverwaltung.
@@ -38,6 +40,30 @@ use Filament\Schemas\Components\Component;
  */
 class EditProfile extends Base
 {
+    public function form(Schema $schema): Schema
+    {
+        /*
+         * Das Profilbild vorneweg, dann die Felder der Basisklasse. Es ist
+         * hier und nicht in der Benutzerverwaltung: Das eigene Gesicht pflegt
+         * man selbst, und es gehoert nicht dem Provider -- der Abgleich fasst
+         * es nie an.
+         */
+        $schema = parent::form($schema);
+
+        return $schema->components([
+            SpatieMediaLibraryFileUpload::make('avatar')
+                ->label(__('users.field.avatar'))
+                ->collection(User::AVATAR)
+                ->disk('documents')
+                ->avatar()
+                ->image()
+                ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                ->maxSize(2048)
+                ->helperText(__('users.help.avatar')),
+            ...$schema->getComponents(),
+        ]);
+    }
+
     protected function getNameFormComponent(): Component
     {
         return $this->lockIfFromProvider(parent::getNameFormComponent());

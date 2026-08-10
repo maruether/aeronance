@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Audit;
 
+use App\Core\Access\AccessSetup;
 use App\Core\Access\CorePermissions;
+use App\Core\Filament\Pages\AuditTrail;
 use App\Core\Models\Activity;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Tests\TestCase;
@@ -90,6 +93,50 @@ final class AuditTrailTest extends TestCase
         Activity::sole()->forceRetentionDelete();
 
         $this->assertSame(0, Activity::count());
+    }
+
+    /**
+     * Die Seite baut sich -- leer UND mit einem Array in den Eigenschaften.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Beides von test.aeronance.de: Die Protokollseite starb mit 500, Ausloeser
+     * war (string) auf einen Array-Wert in format() -- ein JSON-Cast am Modell
+     * oder ein withProperties() mit Array reicht, und EIN solcher Eintrag
+     * reisst die ganze Seite. Der Leer-Fall steht mit dabei, weil er der
+     * Zustand jeder frischen Installation ist: Der erste Blick eines Vereins
+     * ins Protokoll darf nicht der erste Fehler sein.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    #[Test]
+    public function the_page_builds_when_the_trail_is_empty(): void
+    {
+        $this->actingAs($this->auditViewer());
+
+        Livewire::test(AuditTrail::class)->assertSuccessful();
+    }
+
+    #[Test]
+    public function the_page_builds_with_array_properties(): void
+    {
+        $this->actingAs($this->auditViewer());
+
+        activity()
+            ->withProperties(['modules' => ['warehouse', 'fleet'], 'reason' => 'setup'])
+            ->log('updated');
+
+        Livewire::test(AuditTrail::class)
+            ->assertSuccessful()
+            ->assertSee('warehouse');
+    }
+
+    private function auditViewer(): User
+    {
+        app(AccessSetup::class)->run();
+
+        $user = User::factory()->create(['is_active' => true]);
+        $user->givePermissionTo(CorePermissions::AUDIT_VIEW);
+
+        return $user->fresh();
     }
 
     #[Test]

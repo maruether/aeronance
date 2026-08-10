@@ -69,7 +69,14 @@
                     </div>
                 @endif
 
-                <x-slot name="footerActions">
+                {{--
+                    Der Slot heisst "footer" -- einen unbekannten Slot wirft
+                    Blade stillschweigend weg. Als hier "footerActions" stand,
+                    zeigte die Seite Status ohne einen einzigen Schalter, mit
+                    HTTP 200 und ohne Fehlermeldung. Der Rendering-Test prueft
+                    seither auf den Knopf, nicht nur auf die Seite.
+                --}}
+                <x-slot name="footer">
                     @if ($row['enabled'])
                         <x-filament::button
                             color="gray"

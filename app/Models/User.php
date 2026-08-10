@@ -9,6 +9,7 @@ use Database\Factories\UserFactory;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -20,6 +21,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -39,10 +42,10 @@ use Spatie\Permission\Traits\HasRoles;
  */
 #[Fillable(['name', 'email', 'password', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery
+class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasAvatar, HasMedia
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, InteractsWithMedia, Notifiable, SoftDeletes;
 
     // Aliased so the override below can still reach the original. The permission
     // check arrives through a trait, so parent:: has nothing to call.
@@ -71,6 +74,38 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             'app_authentication_secret' => 'encrypted',
             'app_authentication_recovery_codes' => 'encrypted:array',
         ];
+    }
+
+    /** Das eigene Profilbild -- eine Datei, privat abgelegt. */
+    public const AVATAR = 'avatar';
+
+    public function registerMediaCollections(): void
+    {
+        /*
+         * singleFile: Ein neues Bild ersetzt das alte. Auf der privaten
+         * documents-Disk, nicht im Webroot -- ausgeliefert wird ueber die
+         * auth-gepruefte Route (core.avatar), wie jedes Dokument.
+         */
+        $this->addMediaCollection(self::AVATAR)
+            ->useDisk('documents')
+            ->singleFile();
+    }
+
+    /**
+     * Das Bild fuers Panel -- oder null, dann zeichnet der
+     * InitialsAvatarProvider die Initialen.
+     */
+    public function getFilamentAvatarUrl(): ?string
+    {
+        $bild = $this->getFirstMedia(self::AVATAR);
+
+        if ($bild === null) {
+            return null;
+        }
+
+        // Die uuid als Versionszusatz: Nach einem neuen Upload aendert sich
+        // die Adresse, und kein Browser-Cache zeigt das alte Gesicht.
+        return route('core.avatar', ['user' => $this, 'v' => $bild->uuid]);
     }
 
     /**

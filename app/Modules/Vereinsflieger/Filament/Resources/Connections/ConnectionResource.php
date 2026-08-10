@@ -6,13 +6,16 @@ namespace App\Modules\Vereinsflieger\Filament\Resources\Connections;
 
 use App\Core\Access\CorePermissions;
 use App\Modules\Vereinsflieger\Filament\Resources\Connections\Pages\ListConnections;
+use App\Modules\Vereinsflieger\Jobs\SyncConnectionJob;
 use App\Modules\Vereinsflieger\Models\Connection;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -221,7 +224,35 @@ final class ConnectionResource extends Resource
             ->emptyStateHeading(__('vereinsflieger.connection.empty'))
             ->emptyStateDescription(__('vereinsflieger.connection.empty_help'))
             ->headerActions([CreateAction::make()])
-            ->recordActions([EditAction::make(), DeleteAction::make()]);
+            ->recordActions([
+                /*
+                 * Der volle Abgleich am Knopf -- derselbe Ablauf wie nachts um
+                 * zwei (RunConnectionSync), als Job im Worker: Gemessen dauert
+                 * er eine gute halbe Minute, und die Rueckmeldung aus dem
+                 * Betrieb war woertlich "es dauert und es wird nicht darauf
+                 * hingewiesen". Deshalb sagt die Bestaetigung BEIDES: dass es
+                 * dauert, und wo das Ergebnis erscheint.
+                 */
+                Action::make('sync')
+                    ->label(__('vereinsflieger.connection.sync'))
+                    ->icon(Heroicon::OutlinedArrowPath)
+                    ->requiresConfirmation()
+                    ->modalHeading(__('vereinsflieger.connection.sync_heading'))
+                    ->modalDescription(__('vereinsflieger.connection.sync_confirm'))
+                    ->visible(fn (Connection $record): bool => $record->is_active)
+                    ->action(function (Connection $record): void {
+                        SyncConnectionJob::dispatch($record->getKey());
+
+                        Notification::make()
+                            ->success()
+                            ->title(__('vereinsflieger.connection.sync_started'))
+                            ->body(__('vereinsflieger.connection.sync_started_hint'))
+                            ->persistent()
+                            ->send();
+                    }),
+                EditAction::make(),
+                DeleteAction::make(),
+            ]);
     }
 
     public static function getPages(): array

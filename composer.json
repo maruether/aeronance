@@ -20,6 +20,7 @@
     "require": {
         "php": "^8.4",
         "filament/filament": "^5.7",
+        "filament/spatie-laravel-media-library-plugin": "^5.7",
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
         "league/flysystem-async-aws-s3": "^3.0",

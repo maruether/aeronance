@@ -34,6 +34,8 @@ return [
     'reset_done' => 'Auf Umgebung bzw. Vorgabe zurückgesetzt.',
 
     'secret_set' => 'Ein Wert ist hinterlegt. Feld leer lassen heisst: unverändert.',
+    'offsite_locked' => 'Gesperrt: erst eine Backup-Verschlüsselung einstellen — '
+        .'unverschlüsselt verlässt keine Sicherung das System.',
     'from_environment' => 'Kommt derzeit aus der Umgebung (z. B. docker-compose). '
         .'Sobald hier gespeichert wird, gilt der gespeicherte Wert dauerhaft.',
 
@@ -55,6 +57,9 @@ return [
         'retention' => 'Alle Regeln sind ab Werk AUS. Was sie löschen, ist danach fort — '
             .'Freigabeinhalte bleiben davon unberührt.',
         'operation' => 'Grenzwerte und Prüfungen des laufenden Betriebs.',
+        'mail' => 'Der Postausgang. Ohne Zugang wird nichts verschickt, sondern nur '
+            .'ins Protokoll geschrieben — Einladungen und „Passwort vergessen" '
+            .'kommen dann nie an. Der Testversand unten prüft die Angaben sofort.',
         'vereinsflieger' => 'Zugang und Rückwege. Welche Rolle jemand bekommt, entscheidet '
             .'die Zuordnung im Kern — die Freigabeberechtigung wird grundsätzlich nicht '
             .'übernommen.',
@@ -171,6 +176,7 @@ return [
                         'offsite_sftp' => 'SFTP (z. B. Storage Box)',
                         'offsite_s3' => 'S3-kompatibel',
                     ],
+                    'help' => 'Je nach Ziel erscheinen die passenden Felder darunter.',
                 ],
                 'prefix' => [
                     'label' => 'Unterverzeichnis am Ziel',
@@ -270,34 +276,34 @@ return [
                         .'ändern noch löschen. Ab Werk aus.',
                 ],
                 'category' => [
-                    'label' => 'Kategorie (Nummer)',
-                    'help' => 'Die Nummer aus Vereinsflieger, z. B. „7265" für Wartung/Werkstatt. '
-                        .'Eine Kategorie darf dort auch abgeschaltet sein — über die '
-                        .'Schnittstelle ist sie trotzdem beschreibbar, und genau so lässt '
-                        .'sich trennen, was aus Aeronance kommt.',
+                    'label' => 'Kategorie',
+                    'help' => 'Die Arbeitsstunden-Kategorie, in die Aeronance drüben bucht. '
+                        .'Die Liste kommt aus Vereinsflieger und wird bei jedem Abgleich '
+                        .'aufgefrischt. Eine dort abgeschaltete Kategorie ist über die '
+                        .'Schnittstelle trotzdem beschreibbar — genau so lässt sich trennen, '
+                        .'was aus Aeronance kommt.',
+                    'help_empty' => 'Die Nummer aus Vereinsflieger, z. B. „7265" für '
+                        .'Wartung/Werkstatt. Nach dem ersten Abgleich steht hier eine '
+                        .'Auswahlliste — die Kategorien werden dabei mitgelesen.',
+                    'disabled_suffix' => '(in Vereinsflieger abgeschaltet)',
+                    'unknown_suffix' => '(nicht mehr in der Liste)',
                 ],
                 'status' => [
                     'label' => 'Status der gebuchten Stunde',
                     'options' => [
                         '1' => 'Nicht bewertet — der Verein bewertet wie gewohnt',
-                        '2' => 'Akzeptiert — sofort gültig und unveränderlich',
+                        '2' => 'Akzeptiert — sofort gültig; das Mitglied kann nichts mehr ändern',
                     ],
                     'help' => 'GEMESSEN: Vereinsflieger übernimmt den Status beim Anlegen. '
-                        .'„Akzeptiert" spart dem Werkstattleiter die Freigabe UND macht '
-                        .'den Eintrag drüben unveränderlich — solange er „nicht bewertet" '
-                        .'ist, kann das Mitglied ihn dort noch ändern. Ein Bewerter wird '
-                        .'nicht mitgeschrieben; wer akzeptiert hat, steht nur in Aeronance.',
+                        .'„Akzeptiert" spart dem Werkstattleiter die Freigabe und sperrt den '
+                        .'Eintrag drüben für das MITGLIED — die Abzeichner des Vereins kommen '
+                        .'weiterhin dran. Solange er „nicht bewertet" ist, kann auch das '
+                        .'Mitglied ihn dort noch ändern. Ein Bewerter wird nicht '
+                        .'mitgeschrieben; wer akzeptiert hat, steht nur in Aeronance.',
                 ],
             ],
-            'writeback' => [
-                'maintenance' => [
-                    'label' => 'Instandhaltungspunkte zurückschreiben',
-                    'help' => 'Ohne Wirkung, und das bleibt vermutlich so: Vereinsflieger hat '
-                        .'für Wartung genau einen Endpunkt, und der ist LESEND. Nachgesehen '
-                        .'in allen 48 Methoden des offiziellen Clients — einen Schreibweg '
-                        .'gibt es nicht.',
-                ],
-            ],
+            // "writeback" stand hier — ein Schalter ohne Funktion (Vereinsfliegers
+            // Wartungs-Endpunkt ist lesend). Entfernt: funktionslose Schalter taugen nix.
         ],
 
         'documents' => [

@@ -16,6 +16,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\Fixtures\Modules\AlphaModule;
 use Tests\Fixtures\Modules\BetaModule;
 use Tests\TestCase;
@@ -68,6 +69,25 @@ final class ManageModulesPageTest extends TestCase
         $this->get(ManageModules::getUrl())->assertSuccessful();
     }
 
+    /**
+     * Der Knopf muss im HTML STEHEN, nicht nur die Methode existieren.
+     *
+     * Auf test.aeronance.de stand diese Seite mit Status-Abzeichen und ohne
+     * einen einzigen Schalter da: Der Blade-Slot hiess "footerActions", die
+     * Komponente kennt nur "footer", und einen unbekannten Slot verwirft Blade
+     * stillschweigend. Alle Livewire-Tests hier riefen enableModule() direkt
+     * auf und blieben gruen -- niemand hatte je auf den Knopf geprueft.
+     */
+    #[Test]
+    public function the_toggle_buttons_are_actually_on_the_page(): void
+    {
+        $this->actingAs($this->administrator());
+
+        $this->get(ManageModules::getUrl())
+            ->assertSuccessful()
+            ->assertSee(__('modules.action.enable'));
+    }
+
     #[Test]
     public function it_lists_the_shipped_modules(): void
     {
@@ -118,6 +138,22 @@ final class ManageModulesPageTest extends TestCase
             Permission::query()->where('name', 'alpha.view')->exists(),
             'A module that has just been enabled must bring its permissions with it, '
             .'or the role editor shows an empty list.',
+        );
+
+        /*
+         * Und der Admin HAELT sie sofort -- nicht nur "sie existieren".
+         *
+         * Auf test.aeronance.de existierten nach dem Aktivieren aller Module
+         * 47 Rechte, die admin-Rolle hielt 8: Die Module deklarierten keine
+         * Default-Rollen, die Rechte gehoerten niemandem, und der Administrator
+         * stand vor einer leeren Oberflaeche. Seither haengt
+         * PermissionDefinition den Admin zentral an jede Deklaration.
+         */
+        $admin = Role::findByName('admin');
+        $this->assertTrue(
+            $admin->hasPermissionTo('alpha.view'),
+            'A freshly created module permission must land on the admin role, '
+            .'or an administrator faces an empty interface after enabling modules.',
         );
     }
 

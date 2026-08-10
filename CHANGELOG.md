@@ -6,6 +6,132 @@ die Versionierung [SemVer](https://semver.org/lang/de/).
 Jede Fassung nennt unter **Beim Update beachten** ausdrücklich, was ein Verein
 tun muss, bevor er sie einspielt. Steht dort nichts, reicht `deploy/update.sh`.
 
+## [Unveröffentlicht]
+
+### Geplant für 0.2.0
+
+Vorgemerkt, noch nicht gebaut — ein Eintrag wandert nach „Neu", sobald er es
+ist. Ein Changelog beschreibt, was passiert ist; dieser Abschnitt sagt nur,
+woran als Nächstes gearbeitet wird.
+
+- **Ultraleichtflugzeuge.** Die Flotte soll ULs führen können. Sie leben
+  regulatorisch in einer anderen Welt als EASA-Luftfahrzeuge — Nachprüfung,
+  Kennblätter und die Mitteilungswege der Verbände funktionieren anders —,
+  und diese Unterschiede brauchen eigene Antworten statt aufgebogener
+  EASA-Felder. Der genaue Zuschnitt wird vor dem Bau entschieden und hier
+  begründet.
+
+- **Demomodus.** Eine öffentlich erreichbare Spielwiese mit Beispieldaten
+  (`demo.aeronance.de`): ausprobieren ohne Installation, schreibend, aber
+  folgenlos — der Bestand setzt sich regelmäßig selbst zurück. Was genau ein
+  Demomodus abschalten muss (Mails, Updates, echte Herstellerabrufe), ist
+  Teil des Zuschnitts.
+
+## [0.1.1] — 2026-08-09
+
+Die Lehren des ersten echten Feldtests: 0.1.0 wurde am Tag nach dem Release
+auf test.aeronance.de installiert und von vorn bis hinten durchgeklickt.
+Alles hier stammt aus dieser einen Sitzung. **Beim Update beachten:** nichts —
+`deploy/update.sh` genügt; die enthaltene Migration repariert die
+Rechtezuweisung bestehender Installationen von selbst.
+
+### Behoben
+
+- **Der erste Start scheiterte am eigenen Setup-Assistenten.** Mit
+  `SESSION_DRIVER=database` (der Vorgabe) las jede Web-Anfrage die
+  sessions-Tabelle — die erst durch die Migrationen entsteht, die der
+  Assistent ausführen soll, der ohne Session-Tabelle mit einem Fehler 500
+  stirbt. Gemessen am ersten Docker-Start; der Webserver- und der LXC-Weg
+  hätten denselben Fehler gezeigt. Solange die Installation weder
+  abgeschlossen ist noch benutzt aussieht, weichen database-Treiber für
+  Session und Cache jetzt auf Dateien aus; danach gilt wieder die
+  Konfiguration. Die eine Folge ist gewollt: Nach dem letzten Setup-Schritt
+  meldet man sich einmal regulär an.
+
+- **Alle Module aktiv, Oberfläche leer.** Sieben von acht Modulen legten
+  ihre Rechte beim Aktivieren ohne Rollenzuweisung an — sie gehörten
+  niemandem, auch der admin-Rolle nicht, und der Administrator stand vor
+  einer Anwendung, in der es scheinbar nichts gab. Jetzt hängt der Admin
+  zentral an jeder Rechte-Deklaration (ein Modul kann es nicht mehr
+  vergessen), und eine Migration reicht bestehenden Installationen die
+  fehlenden Rechte nach.
+
+- **Der Rollen-Editor konnte keine Rechte vergeben.** Alle Checkbox-Gruppen
+  hießen intern gleich; validiert wurde gegen die Optionen der letzten
+  Gruppe, ein Haken in jeder anderen scheiterte mit „validation.in".
+  Jede Gruppe ist jetzt ein eigenes Feld, gespeichert wird die Vereinigung —
+  und ein Test speichert wirklich, statt nur Beschriftungen zu prüfen.
+
+- **Validierungsfehler zeigten rohe Schlüssel** („validation.in" statt eines
+  Satzes): Die deutschen Validierungstexte fehlten komplett und
+  `APP_FALLBACK_LOCALE=de` schneidet auch den Rückfall auf Englisch ab.
+  `lang/de/validation.php` ist jetzt an Bord (übernommen aus
+  Laravel-Lang, MIT).
+
+- **Die Modulverwaltung zeigte Status ohne Schalter.** Der Blade-Slot hieß
+  „footerActions", die Komponente kennt nur „footer" — einen unbekannten
+  Slot verwirft Blade stillschweigend, die Knöpfe wurden nie gerendert.
+  Der Rendering-Test prüft seither auf den Knopf, nicht nur auf die Seite.
+
+- **Das Protokoll starb mit Fehler 500,** sobald ein Eintrag ein Array in
+  seinen Eigenschaften trug (ein JSON-Cast oder ein Modul-Schaltvorgang
+  reicht). Arrays werden jetzt als JSON dargestellt; die Seite baut sich
+  auch leer — der Zustand jeder frischen Installation.
+
+- **„Qualifikation eintragen" brach mit einem Klassenfehler ab:** Das
+  Filament-Plugin zur Medienbibliothek stand nie in composer.json, und kein
+  Test hatte das Formular je geöffnet. Paket nachgezogen, Test öffnet jetzt
+  das Formular.
+
+- **Ein Einstellungs-Abschnitt zeigte seinen rohen Schlüssel**
+  (`settings.group_help.mail`): Die Beschreibung der Mail-Gruppe fehlte in
+  der Sprachdatei. Ergänzt; ein Test geht seither alle Gruppen durch.
+
+- **Das Profilbild war ein „nicht gefunden"-Bild.** Filaments Vorgabe lädt
+  Platzhalter von ui-avatars.com — einem Fremddienst, den die eigene CSP zu
+  Recht blockt (und der sonst bei jedem Seitenaufbau Mitgliedernamen
+  erführe). Initialen entstehen jetzt in der Anwendung selbst; ein eigenes
+  Bild lässt sich im Profil hochladen (privat abgelegt, Auslieferung nur
+  angemeldet).
+
+- **Text zur Arbeitsstunden-Rückschreibung korrigiert:** „Akzeptiert" sperrt
+  den Eintrag drüben für das *Mitglied* — die Abzeichner des Vereins kommen
+  weiterhin dran. Der alte Text behauptete vollständige Unveränderlichkeit.
+
+### Neu
+
+- **„Jetzt abgleichen" an jeder VF-Anbindung:** der volle nächtliche
+  Abgleich auf Knopfdruck, für die Ersteinrichtung. Er läuft als
+  Hintergrund-Job (gemessen: gut eine halbe Minute bei knapp 400
+  Mitgliedern) — der Knopf sagt das dazu, und das Ergebnis steht wie immer
+  an der Anbindung unter „Letzter Lauf".
+
+- **Die Arbeitsstunden-Kategorie ist eine Auswahlliste.** Der Abgleich liest
+  die Kategorien aus Vereinsflieger mit; die Einstellung bietet sie mit
+  Namen an, statt nach einer nackten Nummer zu fragen. Drüben abgeschaltete
+  Kategorien sind gekennzeichnet, ein konfigurierter Wert außerhalb der
+  Liste bleibt sichtbar. Module melden solche Listen über eine neue
+  Kern-Schnittstelle an (`SettingOptions`) — der Kern liest weiterhin keine
+  Modultabellen.
+
+- **Die Auslagerung fragt nur noch nach dem, was ihr Ziel braucht**
+  (Verzeichnis, SFTP oder S3) — und ist gesperrt, solange keine
+  Backup-Verschlüsselung eingestellt ist: Der Lauf würde ohnehin
+  verweigern; jetzt sagt es die Seite vorher.
+
+### Entfernt
+
+- **Schalter „Instandhaltungspunkte zurückschreiben".** Er hatte keine
+  Funktion — Vereinsfliegers einziger Wartungs-Endpunkt ist lesend.
+  Funktionslose Schalter taugen nix; kommt der Schreibweg je, kommt der
+  Schalter mit der Funktion wieder.
+
+### Für bestehende 0.1.0-Installationen
+
+Wer am Setup-Assistenten hängt: einmalig `php artisan migrate --force`
+(im Docker-Kanal per `docker compose exec app …`), dann läuft er. Alles
+Übrige erledigt das reguläre Update.
+
 ## [0.1.0] — 2026-08-08
 
 Die erste Fassung, für die das Projekt Bruchfreiheit bei Updates verspricht —

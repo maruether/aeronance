@@ -21,14 +21,37 @@ namespace App\Core\Access;
  */
 final readonly class PermissionDefinition
 {
+    /** @var list<string> */
+    public array $defaultRoles;
+
     /**
      * @param  list<string>  $defaultRoles  roles that should hold this from the start
      */
     public function __construct(
         public string $name,
         public string $group,
-        public array $defaultRoles = [],
-    ) {}
+        array $defaultRoles = [],
+    ) {
+        /*
+         * ─────────────────────────────────────────────────────────────────────
+         * ADMIN STEHT IMMER MIT DRIN, und zwar hier und nicht in jedem Modul.
+         *
+         * Gemessen auf test.aeronance.de: Alle Module aktiv, Oberflaeche leer.
+         * Sieben von acht Modulen deklarierten ihre Rechte ohne Rollen -- die
+         * Rechte ENTSTANDEN beim Aktivieren, gehoerten aber niemandem, auch
+         * dem Administrator nicht. Der stand vor einer Anwendung, in der es
+         * scheinbar nichts gab.
+         *
+         * Ein Admin ohne ein Modulrecht ist dabei keine Sicherheit, sondern
+         * Reibung: Er kann es sich ueber den Rollen-Editor jederzeit selbst
+         * geben -- die Tuer ist nicht zu, nur zugestellt. Deshalb gilt die
+         * Grundlinie zentral, und ein Modul kann sie nicht vergessen. Was ein
+         * Verein dem Admin danach bewusst wegnimmt, bleibt weggenommen --
+         * AccessSetup fasst bestehende Zuweisungen nie wieder an.
+         * ─────────────────────────────────────────────────────────────────────
+         */
+        $this->defaultRoles = array_values(array_unique([...$defaultRoles, CoreRoles::ADMIN]));
+    }
 
     /**
      * @param  array<string, list<string>>  $groups  group => permission names

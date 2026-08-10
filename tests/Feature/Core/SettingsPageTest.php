@@ -7,7 +7,9 @@ namespace Tests\Feature\Core;
 use App\Core\Access\AccessSetup;
 use App\Core\Access\CorePermissions;
 use App\Core\Filament\Pages\SettingsPage;
+use App\Core\Settings\SettingOptions;
 use App\Core\Settings\Settings;
+use App\Core\Settings\SettingsCatalogue;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -54,6 +56,101 @@ final class SettingsPageTest extends TestCase
         $this->actingAs($this->userWith());
 
         $this->assertTrue(SettingsPage::canAccess());
+    }
+
+    /**
+     * Eine vom Modul gemeldete Auswahlliste macht aus dem Feld einen Select.
+     *
+     * Der Anlass: "kann nicht ohne auswahlliste nach der nummer der kategorie
+     * gefragt werden" -- die Einstellung "Kategorie" verlangte eine nackte
+     * Nummer, obwohl das Vereinsflieger-Modul die Liste laengst kennt. Der
+     * Kern darf die Modultabelle nicht lesen; das Modul meldet die Liste an
+     * (SettingOptions), und genau diese Naht prueft der Test.
+     */
+    #[Test]
+    public function a_module_supplied_option_list_turns_the_field_into_a_select(): void
+    {
+        app(SettingOptions::class)->provide(
+            'vereinsflieger.workhours.category',
+            static fn (): array => ['7265' => 'Wartung/Werkstatt (7265)'],
+        );
+
+        Livewire::actingAs($this->userWith())
+            ->test(SettingsPage::class)
+            ->assertSee('Wartung/Werkstatt (7265)');
+    }
+
+    /**
+     * Und ein gespeicherter Wert, den die Liste nicht (mehr) kennt, bleibt
+     * sichtbar -- gekennzeichnet statt stumm verschluckt.
+     */
+    #[Test]
+    public function a_stored_value_missing_from_the_list_stays_visible(): void
+    {
+        app(Settings::class)->set('vereinsflieger.workhours.category', '9999');
+
+        app(SettingOptions::class)->provide(
+            'vereinsflieger.workhours.category',
+            static fn (): array => ['7265' => 'Wartung/Werkstatt (7265)'],
+        );
+
+        Livewire::actingAs($this->userWith())
+            ->test(SettingsPage::class)
+            ->assertSee('9999');
+    }
+
+    /**
+     * Jede Gruppe hat Titel UND Beschreibung -- als Text, nicht als Schluessel.
+     *
+     * Auf test.aeronance.de stand "settings.group_help.mail" mitten auf der
+     * Seite: Die Beschreibung der Mail-Gruppe fehlte in der Sprachdatei, und
+     * __() liefert dann den rohen Schluessel. Ein Mensch sieht das sofort,
+     * ein Test nur, wenn er ALLE Gruppen durchgeht -- deshalb hier die
+     * Schleife statt einer Stichprobe.
+     */
+    #[Test]
+    public function every_settings_group_has_its_texts(): void
+    {
+        foreach (array_keys(SettingsCatalogue::byGroup()) as $gruppe) {
+            $this->assertTrue(
+                trans()->has('settings.group.'.$gruppe),
+                sprintf('Der Gruppe "%s" fehlt der Titel in lang/de/settings.php.', $gruppe),
+            );
+            $this->assertTrue(
+                trans()->has('settings.group_help.'.$gruppe),
+                sprintf('Der Gruppe "%s" fehlt die Beschreibung in lang/de/settings.php.', $gruppe),
+            );
+        }
+    }
+
+    /**
+     * Die Auslagerung zeigt nur die Felder ihres Ziels -- und ist ohne
+     * Backup-Verschluesselung gesperrt.
+     *
+     * Beides Rueckmeldung aus dem Betrieb: Dreizehn Felder nebeneinander,
+     * obwohl immer nur ein Ziel gilt; und ein Ziel-Feld, das sich ausfuellen
+     * laesst, obwohl der Lauf ohne Verschluesselung ohnehin scheitert.
+     */
+    #[Test]
+    public function the_offsite_target_is_locked_without_backup_encryption(): void
+    {
+        Livewire::actingAs($this->userWith())
+            ->test(SettingsPage::class)
+            ->assertSee(__('settings.offsite_locked'));
+    }
+
+    #[Test]
+    public function offsite_fields_follow_the_chosen_target(): void
+    {
+        app(Settings::class)->set('backup.encryption.mode', 'passphrase');
+        app(Settings::class)->set('backup.offsite.disk', 'offsite_sftp');
+
+        Livewire::actingAs($this->userWith())
+            ->test(SettingsPage::class)
+            ->assertDontSee(__('settings.offsite_locked'))
+            ->assertSee(__('settings.catalogue.backup.sftp.host.label'))
+            ->assertDontSee(__('settings.catalogue.backup.s3.bucket.label'))
+            ->assertDontSee(__('settings.catalogue.backup.offsite.path.label'));
     }
 
     #[Test]

@@ -9,9 +9,11 @@ use App\Core\Access\CorePermissions;
 use App\Core\Access\CoreRoles;
 use App\Core\Access\PermissionRegistry;
 use App\Core\Filament\Auth\EditProfile;
+use App\Core\Filament\Resources\Roles\Pages\EditRole;
 use App\Core\Filament\Resources\Roles\RoleResource;
 use App\Core\Filament\Resources\Users\Pages\CreateUser;
 use App\Core\Filament\Resources\Users\Pages\EditUser;
+use App\Core\Filament\Resources\Users\RelationManagers\QualificationsRelationManager;
 use App\Core\Filament\Resources\Users\UserResource;
 use App\Core\Identity\ExternalIdentity;
 use App\Core\Models\Qualification;
@@ -21,6 +23,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -179,6 +182,31 @@ final class UserManagementTest extends TestCase
         $this->assertCount(1, $mechanic->fresh()->validQualifications()->get());
     }
 
+    /**
+     * Das Formular OEFFNET sich auch -- nicht nur das Modell funktioniert.
+     *
+     * Auf test.aeronance.de starb genau dieser Dialog mit "Class
+     * SpatieMediaLibraryFileUpload not found": Das Filament-Plugin zur
+     * Medienbibliothek stand nie in composer.json, und kein Test hat das
+     * Formular je gemountet -- der Test oben legt die Qualifikation direkt
+     * am Modell an und blieb gruen.
+     */
+    #[Test]
+    public function the_qualification_form_actually_opens(): void
+    {
+        $this->actingAs($this->administrator());
+
+        $mechanic = User::factory()->create(['is_active' => true]);
+
+        Livewire::test(QualificationsRelationManager::class, [
+            'ownerRecord' => $mechanic,
+            'pageClass' => EditUser::class,
+        ])
+            ->assertSuccessful()
+            ->mountAction('create')
+            ->assertSee(__('qualifications.field.reference'));
+    }
+
     #[Test]
     public function a_pilot_owner_authorisation_needs_an_aircraft(): void
     {
@@ -217,6 +245,46 @@ final class UserManagementTest extends TestCase
         $withModules = array_keys(app(PermissionRegistry::class)->grouped());
 
         $this->assertContains('warehouse.stock', $withModules);
+    }
+
+    /**
+     * Haken in ZWEI Gruppen, ein Speichern, beide sitzen.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Der Fall von test.aeronance.de: Alle Checkbox-Listen des Rollen-Editors
+     * hiessen "permissions". Ihre Zustaende ueberschrieben einander, validiert
+     * wurde gegen die Optionen der LETZTEN Gruppe -- ein Administrator, der in
+     * einer anderen Gruppe einen Haken setzte, bekam "validation.in" und konnte
+     * keine einzige Berechtigung vergeben. Kein Test hier hat je WIRKLICH
+     * gespeichert; alle prueften nur Optionen und Labels.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    #[Test]
+    public function the_role_editor_saves_checks_across_groups(): void
+    {
+        $this->actingAs($this->administrator());
+
+        $role = Role::where('name', CoreRoles::MEMBER)->sole();
+
+        $people = Permission::where('name', CorePermissions::USERS_VIEW)->sole();
+        $system = Permission::where('name', CorePermissions::AUDIT_VIEW)->sole();
+
+        Livewire::test(EditRole::class, ['record' => $role->getKey()])
+            ->fillForm([
+                'permissions__core__people' => [$people->id],
+                'permissions__core__system' => [$system->id],
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $role->refresh();
+
+        $this->assertTrue($role->hasPermissionTo(CorePermissions::USERS_VIEW));
+        $this->assertTrue(
+            $role->hasPermissionTo(CorePermissions::AUDIT_VIEW),
+            'Der Haken aus der zweiten Gruppe muss das Speichern ueberleben -- '
+            .'frueher gewann die letzte Liste und trug alle anderen aus.',
+        );
     }
 
     #[Test]

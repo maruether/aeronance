@@ -251,11 +251,19 @@ final class AuditTrail extends Page implements HasTable
         return implode("\n", $lines);
     }
 
+    /*
+     * Der Array-Zweig ist eine Feldmessung, kein Vorrat: Ein JSON-Cast am
+     * Modell legt Arrays in die Aenderungen, und (string) darauf war auf
+     * test.aeronance.de ein 500er der GANZEN Protokollseite -- ein einziger
+     * solcher Eintrag reicht. JSON statt Verschachtelung, weil die Zeile in
+     * einer Tabellenzelle steht.
+     */
     private function format(mixed $value): string
     {
         return match (true) {
             $value === null => '—',
             is_bool($value) => $value ? __('audit.yes') : __('audit.no'),
+            is_array($value) => json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '—',
             default => (string) $value,
         };
     }

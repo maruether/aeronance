@@ -7,6 +7,8 @@ namespace App\Core\Filament\Pages;
 use App\Core\Access\CorePermissions;
 use App\Core\Mail\Postman;
 use App\Core\Mail\TestMail;
+use App\Core\Settings\SettingDefinition;
+use App\Core\Settings\SettingOptions;
 use App\Core\Settings\Settings;
 use App\Core\Settings\SettingsCatalogue;
 use BackedEnum;
@@ -263,27 +265,32 @@ class SettingsPage extends Page implements HasForms
                     $herkunft === 'umgebung' ? __('settings.from_environment') : null,
                 ])));
 
-                $feld = match ($definition->type) {
-                    'bool' => Toggle::make($name),
-                    'int' => TextInput::make($name)->numeric(),
-                    'select' => Select::make($name)->options($definition->options()),
-                    'secret' => TextInput::make($name)->password()->revealable(),
-                    'file' => Textarea::make($name)->rows(4),
-                    'image' => FileUpload::make($name)
-                        ->image()
-                        // Whitelist statt "alles was nach Bild aussieht": ein
-                        // SVG darf Skript enthalten, und das Logo wird ohne
-                        // Anmeldung ausgeliefert.
-                        ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp'])
-                        ->maxSize(1024)
-                        ->disk('local')
-                        ->directory('branding')
-                        // Erzeugter Name: ein hochgeladener Dateiname ist
-                        // Fremdeingabe und hat im Dateisystem nichts verloren.
-                        ->visibility('private'),
-                    'text' => Textarea::make($name)->rows(3),
-                    default => TextInput::make($name),
-                };
+                /*
+                 * Eine vom Modul gemeldete Auswahlliste schlaegt den Feldtyp:
+                 * Wo eine Liste existiert (z. B. die Arbeitsstunden-Kategorien
+                 * aus Vereinsflieger), fragt niemand nach einer nackten
+                 * Nummer. Ist die Liste leer oder das Modul aus, gilt wieder
+                 * der Katalog -- siehe SettingOptions.
+                 */
+                $dynamisch = app(SettingOptions::class)->for($definition->key);
+
+                if ($dynamisch !== null && $dynamisch !== []) {
+                    $gespeichert = $settings->get($definition->key);
+
+                    if (is_string($gespeichert) && $gespeichert !== '' && ! array_key_exists($gespeichert, $dynamisch)) {
+                        // Der konfigurierte Wert steht nicht (mehr) in der
+                        // Liste. Ihn stumm zu verschlucken hiesse, dass das
+                        // Formular etwas anderes zeigt, als gilt.
+                        $dynamisch[$gespeichert] = $gespeichert.' '.__('settings.catalogue.'.$definition->key.'.unknown_suffix');
+                    }
+
+                    // Nativ, nicht searchable: Die Listen sind kurz (gemessen
+                    // sechs Kategorien), und ein natives Select traegt seine
+                    // Optionen im HTML -- sichtbar auch fuer den Test.
+                    $feld = Select::make($name)->options($dynamisch);
+                } else {
+                    $feld = $this->fieldByType($definition, $name);
+                }
 
                 /*
                  * ─────────────────────────────────────────────────────────────
@@ -300,6 +307,8 @@ class SettingsPage extends Page implements HasForms
                  * beantworten kann.
                  * ─────────────────────────────────────────────────────────────
                  */
+                $feld = $this->applyOffsiteDynamics($definition, $feld);
+
                 if ($herkunft === 'datenbank') {
                     $feld = $feld->hintAction(
                         Action::make('reset__'.$name)
@@ -334,6 +343,109 @@ class SettingsPage extends Page implements HasForms
         }
 
         return $schema->components($abschnitte)->statePath('data');
+    }
+
+    /**
+     * Welches Auslagerungs-Feld zu welchem Ziel gehoert.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Vorgabe aus dem Betrieb: Die Auslagerung "sollte dynamisch sein und nur
+     * die felder abfragen die für den entsprechenden typen gewünscht sind".
+     * Vorher standen dreizehn Felder nebeneinander -- SFTP-Zugang, S3-Schluessel
+     * und Verzeichnispfad gleichzeitig, obwohl immer nur eines davon gilt.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    private const OFFSITE_FIELD_DISK = [
+        'backup.offsite.path' => 'offsite_local',
+        'backup.sftp.host' => 'offsite_sftp',
+        'backup.sftp.port' => 'offsite_sftp',
+        'backup.sftp.username' => 'offsite_sftp',
+        'backup.sftp.password' => 'offsite_sftp',
+        'backup.sftp.private_key' => 'offsite_sftp',
+        'backup.sftp.root' => 'offsite_sftp',
+        'backup.s3.key' => 'offsite_s3',
+        'backup.s3.secret' => 'offsite_s3',
+        'backup.s3.region' => 'offsite_s3',
+        'backup.s3.bucket' => 'offsite_s3',
+        'backup.s3.endpoint' => 'offsite_s3',
+    ];
+
+    /**
+     * Die Auslagerungs-Sektion reagiert auf ihre eigenen Antworten.
+     *
+     * Und sie ist GESPERRT, solange keine Backup-Verschluesselung eingestellt
+     * ist: Der Lauf scheitert in dem Fall ohnehin (siehe Katalogtext der
+     * Verschluesselung) -- ein Ziel-Feld, das sich trotzdem ausfuellen laesst,
+     * verspraeche etwas, das nicht passieren wird. Die Sperre hier ist also
+     * Anzeige der bestehenden Regel, nicht die Regel selbst; durchgesetzt
+     * wird sie vom Backup-Lauf, den kein Formular umgehen kann.
+     */
+    private function applyOffsiteDynamics(
+        SettingDefinition $definition,
+        Toggle|TextInput|Select|Textarea|FileUpload $feld,
+    ): Toggle|TextInput|Select|Textarea|FileUpload {
+        $zielFeld = $this->fieldName('backup.offsite.disk');
+        $verschluesselungsFeld = $this->fieldName('backup.encryption.mode');
+
+        if ($definition->key === 'backup.encryption.mode') {
+            // live(), damit die Sperre der Auslagerung sofort aufgeht, wenn
+            // jemand die Verschluesselung einstellt -- nicht erst nach Speichern.
+            return $feld->live();
+        }
+
+        if ($definition->key === 'backup.offsite.disk') {
+            return $feld
+                ->live()
+                ->disabled(fn (callable $get): bool => ($get($verschluesselungsFeld) ?? 'none') === 'none'
+                    && blank($get($zielFeld)))
+                // Auch ausgegraut mitschicken, sonst laese das Speichern einer
+                // beliebigen anderen Einstellung dieses Feld als "leeren".
+                ->dehydrated()
+                ->hint(fn (callable $get): ?string => ($get($verschluesselungsFeld) ?? 'none') === 'none'
+                    ? __('settings.offsite_locked')
+                    : null);
+        }
+
+        $ziel = self::OFFSITE_FIELD_DISK[$definition->key] ?? null;
+
+        if ($ziel !== null) {
+            return $feld->visible(fn (callable $get): bool => $get($zielFeld) === $ziel);
+        }
+
+        if (in_array($definition->key, ['backup.offsite.prefix', 'backup.offsite.keep'], true)) {
+            // Die beiden gemeinsamen Felder brauchen ein Ziel, egal welches.
+            return $feld->visible(fn (callable $get): bool => filled($get($zielFeld)));
+        }
+
+        return $feld;
+    }
+
+    /**
+     * Das gewoehnliche Feld einer Einstellung -- der Typ kommt aus dem Katalog.
+     */
+    private function fieldByType(SettingDefinition $definition, string $name): Toggle|TextInput|Select|Textarea|FileUpload
+    {
+        return match ($definition->type) {
+            'bool' => Toggle::make($name),
+            'int' => TextInput::make($name)->numeric(),
+            'select' => Select::make($name)->options($definition->options()),
+            'secret' => TextInput::make($name)->password()->revealable(),
+            'file' => Textarea::make($name)->rows(4),
+            'image' => FileUpload::make($name)
+                ->image()
+                // Whitelist statt "alles was nach Bild aussieht": ein
+                // SVG darf Skript enthalten, und das Logo wird ohne
+                // Anmeldung ausgeliefert.
+                ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp'])
+                ->maxSize(1024)
+                ->disk('local')
+                ->directory('branding')
+                // Erzeugter Name: ein hochgeladener Dateiname ist
+                // Fremdeingabe und hat im Dateisystem nichts verloren.
+                ->visibility('private'),
+            'text' => Textarea::make($name)->rows(3),
+            default => TextInput::make($name),
+        };
     }
 
     /**

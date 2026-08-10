@@ -361,14 +361,10 @@ final class SettingsCatalogue
                 type: 'select',
                 default: '1',
             ),
-            new SettingDefinition(
-                key: 'vereinsflieger.writeback.maintenance',
-                configPath: 'aeronance.vereinsflieger.writeback.maintenance',
-                envVar: 'VF_WRITEBACK_MAINTENANCE',
-                group: self::GROUP_VEREINSFLIEGER,
-                type: 'bool',
-                default: false,
-            ),
+            // "vereinsflieger.writeback.maintenance" stand hier und ist bewusst
+            // weg: Der Schalter hatte keine Wirkung (Vereinsfliegers einziger
+            // Wartungs-Endpunkt ist lesend), und ein wirkungsloser Schalter
+            // ist eine falsche Aussage an den, der ihn umlegt.
 
             // ── Betrieb ─────────────────────────────────────────────────────
             new SettingDefinition(

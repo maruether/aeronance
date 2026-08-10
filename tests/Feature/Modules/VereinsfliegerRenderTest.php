@@ -11,7 +11,9 @@ use App\Modules\Vereinsflieger\Filament\Resources\AircraftLinks\AircraftLinkReso
 use App\Modules\Vereinsflieger\Filament\Resources\AircraftLinks\Pages\ListAircraftLinks;
 use App\Modules\Vereinsflieger\Filament\Resources\Connections\ConnectionResource;
 use App\Modules\Vereinsflieger\Filament\Resources\Connections\Pages\ListConnections;
+use App\Modules\Vereinsflieger\Jobs\SyncConnectionJob;
 use App\Modules\Vereinsflieger\Models\Connection;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
@@ -99,6 +101,32 @@ final class VereinsfliegerRenderTest extends TestCase
             ->assertSuccessful()
             ->mountAction('create')
             ->assertSee(__('vereinsflieger.connection.field.provides_identities'));
+
+        /*
+         * Der Abgleich-Knopf: STEHT er auf der Seite, und TUT er etwas --
+         * die Lehre aus der Modulverwaltung, wo ein falsch benannter Slot die
+         * Schalter verschluckte und jeder Test trotzdem gruen blieb.
+         *
+         * Gerufen statt gemountet: callTableAction loest die Aktion aus, und
+         * der Queue-Fake belegt, dass der Job unterwegs ist. Die erste
+         * Fassung wollte das Bestaetigungs-Modal per mount sehen und ist im
+         * CI gescheitert (nur dort -- die rendering-Gruppe laeuft im
+         * Standardlauf nicht mit); das Modal-Markup haengt an der
+         * Client-Seite, der Knopf und seine Wirkung sind die Aussage.
+         */
+        Livewire::test(ListConnections::class)
+            ->assertSee(__('vereinsflieger.connection.sync'));
+
+        Queue::fake();
+
+        Livewire::test(ListConnections::class)
+            ->callTableAction('sync', Connection::sole())
+            ->assertHasNoActionErrors();
+
+        Queue::assertPushed(
+            SyncConnectionJob::class,
+            fn (SyncConnectionJob $job): bool => $job->connectionId === Connection::sole()->getKey(),
+        );
 
         Livewire::test(ListAircraftLinks::class)
             ->assertSuccessful()

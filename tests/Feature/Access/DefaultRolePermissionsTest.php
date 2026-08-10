@@ -104,16 +104,36 @@ final class DefaultRolePermissionsTest extends TestCase
         );
     }
 
+    /**
+     * Ohne deklarierte Defaults bekommt niemand etwas -- AUSSER dem Admin.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Die alte Fassung dieses Tests verlangte das auch vom Admin, und der
+     * Feldtest hat gezeigt, was das bedeutet: Alle Module aktiv, 47 Rechte
+     * angelegt, die admin-Rolle hielt 8 -- der Administrator stand vor einer
+     * leeren Oberflaeche. Vorgabe daraufhin woertlich: "Ein administrator
+     * sollte alle rechte haben."
+     *
+     * Das ist keine aufgeweichte Sicherheit: Ein Admin kann sich jedes Recht
+     * ueber den Rollen-Editor selbst geben -- die Tuer war nie zu, nur
+     * zugestellt. Und certify bleibt zweistufig (E8): Das RECHT allein laesst
+     * niemanden freigeben, die QUALIFIKATION prueft die Anwendung getrennt.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
     #[Test]
-    public function modules_without_declared_defaults_hand_out_nothing(): void
+    public function modules_without_declared_defaults_hand_out_nothing_except_to_the_admin(): void
     {
-        // Most permissions have no default, and that is the safe direction: they
-        // exist, and somebody decides who gets them.
         app(ModuleManager::class)->enable('taskcards');
         app(ModuleManager::class)->forgetCache();
         app(AccessSetup::class)->run();
 
-        foreach (CoreRoles::all() as $roleName) {
+        $admin = Role::where('name', CoreRoles::ADMIN)->sole();
+        $this->assertTrue(
+            $admin->hasPermissionTo(CardPermissions::CARDS_CERTIFY),
+            'Der Admin haelt jedes Modulrecht von Anfang an -- sonst ist die Oberflaeche leer.',
+        );
+
+        foreach ([CoreRoles::WORKSHOP_MANAGER, CoreRoles::CERTIFYING_STAFF, CoreRoles::MECHANIC, CoreRoles::MEMBER] as $roleName) {
             $role = Role::where('name', $roleName)->sole();
 
             $this->assertFalse(

@@ -8,6 +8,8 @@ use App\Core\Access\PermissionDefinition;
 use App\Core\Identity\IdentityProviderRegistry;
 use App\Core\Modules\Contracts\AeronanceModule;
 use App\Core\Modules\Manifest;
+use App\Core\Settings\SettingOptions;
+use App\Modules\Vereinsflieger\Models\WorkHourCategory;
 use Filament\Panel;
 
 /**
@@ -61,6 +63,17 @@ final class VereinsfliegerModule implements AeronanceModule
     public function register(Panel $panel): void
     {
         app(IdentityProviderRegistry::class)->register(new VereinsfliegerProvider);
+
+        /*
+         * Die Einstellung "Kategorie" bekommt ihre Auswahlliste von hier: Der
+         * Kern kennt keine Modultabellen, also meldet das Modul sie an
+         * (SettingOptions). Ist das Modul aus, meldet sich nichts, und das
+         * Feld faellt auf die nackte Nummer zurueck.
+         */
+        app(SettingOptions::class)->provide(
+            'vereinsflieger.workhours.category',
+            static fn (): array => WorkHourCategory::selectOptions(),
+        );
 
         /*
          * EIN Bildschirm, und er hat einen Grund: Die Frage „bekommt dieser

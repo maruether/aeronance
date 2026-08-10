@@ -118,6 +118,16 @@ return [
             .'Betriebszeiten noch Arbeitsstunden.',
         'identity_warning' => 'Ohne diesen Haken werden von diesem Verein NUR '
             .'Betriebszeiten geholt. Niemand bekommt ein Konto.',
+        'sync' => 'Jetzt abgleichen',
+        'sync_heading' => 'Vollen Abgleich starten?',
+        'sync_confirm' => 'IM NORMALFALL NICHT NÖTIG: Der Abgleich läuft automatisch '
+            .'jede Nacht um 02:00 und löst zusätzliche Zugriffe auf Vereinsflieger '
+            .'aus. Er holt Mitglieder, Gruppen, Status und Kategorien, liest '
+            .'Betriebszeiten und überträgt Arbeitsstunden — alles in einem Lauf.',
+        'sync_started' => 'Abgleich gestartet',
+        'sync_started_hint' => 'Er läuft im Hintergrund und braucht bei einem '
+            .'vollen Verein etwa eine Minute. Das Ergebnis erscheint in dieser '
+            .'Liste unter „Letzter Lauf" — die Seite dafür neu laden.',
     ],
 
     'link' => [
@@ -143,10 +153,8 @@ return [
         'empty' => 'Kein Luftfahrzeug gekoppelt',
     ],
 
-    'workhours' => [
-        'categories' => 'Arbeitsstunden-Kategorien',
-        'categories_help' => 'Zuletzt aus Vereinsflieger gelesen. Die Nummer gehört in '
-            .'die Einstellung „Kategorie" — auch eine dort abgeschaltete Kategorie ist '
-            .'über die Schnittstelle beschreibbar.',
-    ],
+    // Ein 'workhours'-Block mit Kategorien-Texten stand hier und wurde nie
+    // aufgerufen -- der Plan dahinter (Kategorien anzeigen) ist inzwischen
+    // gebaut: Die Einstellung "Kategorie" ist eine Auswahlliste, ihre Texte
+    // wohnen im Einstellungs-Katalog (lang/de/settings.php).
 ];

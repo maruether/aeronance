@@ -576,26 +576,26 @@ return [
              * GEMESSEN: Vereinsflieger uebernimmt den Status beim Anlegen.
              * Vorgabe: "wenn es sauber über aeronance dokumentiert ist dann bin
              * ich happy wenn es akzeptiert heisst" -- und der wichtigere Grund:
-             * Solange ein Eintrag "nicht bewertet" ist, kann das Mitglied ihn
-             * drueben noch aendern. Erst "akzeptiert" macht ihn dicht.
+             * "akzeptiert" sperrt den Eintrag drueben fuer das MITGLIED --
+             * solange er "nicht bewertet" ist, kann es ihn noch aendern. Die
+             * Abzeichner des Vereins kommen weiterhin dran; unveraenderlich ist
+             * er nur aus Sicht dessen, fuer den er gebucht wurde. (Korrektur
+             * aus dem Betrieb -- hier stand erst "macht ihn dicht", und das
+             * war zu viel behauptet.)
              */
             'status' => env('VF_WORKHOURS_STATUS', '1'),
         ],
 
-        'writeback' => [
-            /*
-             * Instandhaltungspunkte zurueckschreiben.
-             *
-             * OHNE WIRKUNG, und das bleibt vermutlich so: Vereinsflieger hat
-             * fuer Wartung genau einen Endpunkt, maintenance/airplane/{Kennzeichen},
-             * und der ist LESEND. Nachgesehen in allen 48 Methoden des
-             * offiziellen Clients -- einen Schreibweg gibt es nicht.
-             *
-             * Der Schalter bleibt, damit er nicht nachtraeglich erfunden werden
-             * muss, falls der Endpunkt doch auftaucht.
-             */
-            'maintenance' => (bool) env('VF_WRITEBACK_MAINTENANCE', false),
-        ],
+        /*
+         * Hier stand ein 'writeback'-Block: "Instandhaltungspunkte
+         * zurueckschreiben", wirkungslos, weil Vereinsfliegers einziger
+         * Wartungs-Endpunkt LESEND ist. Der Schalter blieb "damit er nicht
+         * nachtraeglich erfunden werden muss" -- und genau das war der Fehler:
+         * Ein Schalter ohne Wirkung ist ein Versprechen, das die Anwendung
+         * nicht haelt. Vorgabe: "funktionslose schalter taugen nix." Sollte
+         * der Endpunkt je schreibbar werden, kommt der Schalter MIT der
+         * Funktion wieder, nicht vor ihr.
+         */
     ],
 
     'retention' => [

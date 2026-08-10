@@ -6,6 +6,7 @@ namespace App\Providers\Filament;
 
 use App\Core\Filament\Auth\EditProfile;
 use App\Core\Filament\Auth\RequestPasswordReset;
+use App\Core\Filament\InitialsAvatarProvider;
 use App\Core\Mail\Postman;
 use App\Core\Modules\Contracts\AeronanceModule;
 use App\Core\Modules\ModuleManager;
@@ -111,6 +112,14 @@ final class AdminPanelProvider extends PanelProvider
                 ? route('organisation.logo')
                 : null)
             ->brandLogoHeight('2rem')
+
+            /*
+             * Initialen statt ui-avatars.com: Filaments Vorgabe laedt die
+             * Platzhalter von einem Fremddienst -- die CSP blockt das (zu
+             * Recht), und neben jedem Konto stand ein kaputtes Bild. Siehe
+             * InitialsAvatarProvider.
+             */
+            ->defaultAvatarProvider(InitialsAvatarProvider::class)
             ->colors([
                 'primary' => Color::Sky,
             ])

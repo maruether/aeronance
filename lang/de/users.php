@@ -14,6 +14,7 @@ return [
 
     'field' => [
         'name' => 'Name',
+        'avatar' => 'Profilbild',
         'email' => 'E-Mail-Adresse',
         'password' => 'Passwort',
         'is_active' => 'Aktiv',
@@ -72,6 +73,8 @@ return [
     ],
 
     'help' => [
+        'avatar' => 'JPG, PNG oder WebP, höchstens 2 MB. Ohne Bild stehen die '
+            .'Initialen da. Sichtbar für alle angemeldeten Mitglieder.',
         'password' => 'Mindestens zwölf Zeichen mit Buchstaben und Ziffern. '
             .'Beim Bearbeiten leer lassen, um das bisherige Passwort zu behalten.',
         'is_active' => 'Ein deaktiviertes Konto kann sich weder anmelden noch sonst '
