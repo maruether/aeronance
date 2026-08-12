@@ -45,23 +45,32 @@ final class EasaSource implements TypeCertificateSource
     /** @return list<TypeCertificateCandidate> */
     public function search(string $designation, CertificateSubject $subject = CertificateSubject::Aircraft): array
     {
-        /*
-         * EASA certifies engines and propellers too, but this adapter reads the
-         * aircraft library and its slugs. Answering a component search from it
-         * would return aircraft whose names happen to match -- worse than an
-         * honest nothing, because the Blaues Buch beside it does have the answer.
-         */
-        if ($subject === CertificateSubject::Component) {
-            return [];
-        }
-
         $term = trim($designation);
 
         if ($term === '') {
             return [];
         }
 
-        $html = $this->fetcher->get(self::SEARCH_URL.rawurlencode($term));
+        /*
+         * ─────────────────────────────────────────────────────────────────────
+         * SUCHVARIANTEN, GEMESSEN AN DER ECHTEN BIBLIOTHEK: ?search=DR300
+         * liefert null Treffer, ?search=DR%20300 liefert EASA.A.367 (CEAPR
+         * DR 200/300/400). Die EASA-Volltextsuche normalisiert Leerzeichen
+         * nicht -- also tut es diese Seite: einmal wie getippt, einmal mit
+         * Leerzeichen an der Buchstaben/Ziffern-Grenze ("ASK21" -> "ASK 21").
+         * Dedup laeuft unten ohnehin ueber die Zertifikatsnummer.
+         * ─────────────────────────────────────────────────────────────────────
+         */
+        $varianten = array_unique([
+            $term,
+            trim((string) preg_replace('/(?<=[a-zA-Z])(?=\d)/', ' ', $term)),
+        ]);
+
+        $html = '';
+
+        foreach ($varianten as $variante) {
+            $html .= $this->fetcher->get(self::SEARCH_URL.rawurlencode($variante));
+        }
 
         $found = [];
 
@@ -73,17 +82,38 @@ final class EasaSource implements TypeCertificateSource
          * by the ?tcds-popular-links marker they carry.
          */
         preg_match_all(
-            '#href="(/(?:en/)?document-library/type-certificates/[^"?]*?/(easa[a-z]*\d+[^"?/]*))"#i',
+            '#href="(/(?:en/)?document-library/type-certificates/([a-z0-9-]+)/(easa[a-z]*\d+[^"?/]*))"#i',
             $html,
             $matches,
             PREG_SET_ORDER,
         );
 
+        /*
+         * ─────────────────────────────────────────────────────────────────────
+         * DIE KATEGORIE IM PFAD ENTSCHEIDET, WAS EINE ANTWORT IST -- gemessen:
+         * Motoren liegen unter engine-cs-e, Propeller unter propeller-cs-p,
+         * alles andere sind Luftfahrzeuge. Vorher gab dieser Adapter fuer
+         * Komponenten pauschal nichts zurueck, und die Suche nach einem
+         * Rotax 912F3 fand nur das Blaue Buch des LBA -- dessen Kandidat als
+         * data_sheet_url die Blaues-Buch-PDF traegt statt des TCDS. Jetzt
+         * steht der EASA.E.121-Kandidat daneben, und wer ihn waehlt, bekommt
+         * das echte Kennblatt.
+         * ─────────────────────────────────────────────────────────────────────
+         */
+        $komponentenKategorien = ['engine-cs-e', 'propeller-cs-p'];
+
         $seen = [];
 
         foreach ($matches as $m) {
             $path = $m[1];
-            $slug = $m[2];
+            $kategorie = mb_strtolower($m[2]);
+            $slug = $m[3];
+
+            $istKomponente = in_array($kategorie, $komponentenKategorien, true);
+
+            if (($subject === CertificateSubject::Component) !== $istKomponente) {
+                continue;
+            }
 
             $certificate = $this->certificateFromSlug($slug);
 

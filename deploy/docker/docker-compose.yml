@@ -19,7 +19,7 @@
 
 services:
   app:
-    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.1.2}
+    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.1.3}
     restart: unless-stopped
     env_file: .env
     volumes:
@@ -73,7 +73,7 @@ services:
       retries: 20
 
   worker:
-    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.1.2}
+    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.1.3}
     restart: unless-stopped
     env_file: .env
     volumes:
@@ -86,7 +86,7 @@ services:
         condition: service_healthy
 
   scheduler:
-    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.1.2}
+    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.1.3}
     restart: unless-stopped
     env_file: .env
     volumes:

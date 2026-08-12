@@ -75,9 +75,17 @@ final class LbaBlueBookSource implements TypeCertificateSource
             : BlueBookCategory::forClubs();
 
         foreach ($volumes as $category) {
-            foreach ($this->candidates($category) as $candidate) {
-                if (str_contains($this->normalise($candidate->designation), $needle)) {
-                    $found[] = $candidate;
+            foreach ($this->rows($category) as $row) {
+                /*
+                 * Bezeichnung ODER Blocktext: Das Blaue Buch fuehrt Baureihen
+                 * in Spalte 4 -- die Zeile 1001/SA heisst "DR 315", die
+                 * DR 300/108 usw. stehen nur im Block. Wer "DR300" sucht,
+                 * fand deshalb nichts, obwohl der Band die Antwort hat.
+                 * Der Haystack liegt normalisiert im Cache (siehe rows()).
+                 */
+                if (str_contains($this->normalise((string) $row['designation']), $needle)
+                    || str_contains((string) ($row['haystack'] ?? ''), $needle)) {
+                    $found[] = $this->rowToCandidate($row);
                 }
             }
         }
@@ -92,49 +100,69 @@ final class LbaBlueBookSource implements TypeCertificateSource
      */
     public function candidates(BlueBookCategory $category): array
     {
-        /** @var list<array<string, mixed>> $rows */
-        $rows = Cache::remember(
+        return array_map(
+            fn (array $row): TypeCertificateCandidate => $this->rowToCandidate($row),
+            $this->rows($category),
+        );
+    }
+
+    /**
+     * Die gecachten Zeilen eines Bandes -- inklusive normalisiertem Blocktext.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function rows(BlueBookCategory $category): array
+    {
+        /** @var list<array<string, mixed>> */
+        return Cache::remember(
             $this->cacheKey($category),
             now()->addDays(self::CACHE_DAYS),
             fn (): array => array_map(
-                fn (TypeCertificateCandidate $c): array => [
-                    'designation' => $c->designation,
-                    'certificate' => $c->certificate,
-                    'manufacturer' => $c->manufacturer,
-                    'easa' => $c->dataSheetUrl,
+                fn (array $eintrag): array => [
+                    'designation' => $eintrag['candidate']->designation,
+                    'certificate' => $eintrag['candidate']->certificate,
+                    'manufacturer' => $eintrag['candidate']->manufacturer,
+                    'easa' => $eintrag['candidate']->dataSheetUrl,
+                    'category' => $category->value,
+
+                    // Normalisiert BEIM CACHEN, nicht bei jeder Suche: Der
+                    // Blocktext ist gross, die Suche laeuft je Tastendruck.
+                    'haystack' => $this->normalise($eintrag['haystack']),
                 ],
                 $this->fetchAndParse($category),
             ),
         );
+    }
 
-        return array_map(
-            fn (array $row): TypeCertificateCandidate => new TypeCertificateCandidate(
-                designation: (string) $row['designation'],
-                certificate: (string) $row['certificate'],
-                authority: $this->authority(),
-                manufacturer: $row['manufacturer'] !== null ? (string) $row['manufacturer'] : null,
+    private function rowToCandidate(array $row): TypeCertificateCandidate
+    {
+        $category = BlueBookCategory::from((string) $row['category']);
 
-                /*
-                 * NO SHEET TO LINK. The Blaues Buch is a list, and its own page
-                 * is the best address it has. The EASA reference beside the
-                 * Kennblatt is a CERTIFICATE NUMBER and is carried as one now --
-                 * it used to be squeezed in here, which worked only while a type
-                 * could hold a single number.
-                 */
-                dataSheetUrl: null,
-                pageUrl: $category->url(),
+        return new TypeCertificateCandidate(
+            designation: (string) $row['designation'],
+            certificate: (string) $row['certificate'],
+            authority: $this->authority(),
+            manufacturer: $row['manufacturer'] !== null ? (string) $row['manufacturer'] : null,
 
-                /*
-                 * Both numbers of the same aircraft, which is what makes this
-                 * source the better of the two: adopting it puts the type on
-                 * file under the German number AND the European one, so the
-                 * gazette matches whichever it happens to quote.
-                 */
-                alsoFiledAs: $row['easa'] !== null && (string) $row['easa'] !== ''
-                    ? [['number' => (string) $row['easa'], 'authority' => AircraftType::AUTHORITY_EASA]]
-                    : [],
-            ),
-            $rows,
+            /*
+             * NO SHEET TO LINK. The Blaues Buch is a list, and its own page
+             * is the best address it has. The EASA reference beside the
+             * Kennblatt is a CERTIFICATE NUMBER and is carried as one now --
+             * it used to be squeezed in here, which worked only while a type
+             * could hold a single number.
+             */
+            dataSheetUrl: null,
+            pageUrl: $category->url(),
+
+            /*
+             * Both numbers of the same aircraft, which is what makes this
+             * source the better of the two: adopting it puts the type on
+             * file under the German number AND the European one, so the
+             * gazette matches whichever it happens to quote.
+             */
+            alsoFiledAs: $row['easa'] !== null && (string) $row['easa'] !== ''
+                ? [['number' => (string) $row['easa'], 'authority' => AircraftType::AUTHORITY_EASA]]
+                : [],
         );
     }
 
@@ -153,7 +181,7 @@ final class LbaBlueBookSource implements TypeCertificateSource
     }
 
     /**
-     * @return list<TypeCertificateCandidate>
+     * @return list<array{candidate: TypeCertificateCandidate, haystack: string}>
      */
     private function fetchAndParse(BlueBookCategory $category): array
     {
@@ -183,6 +211,7 @@ final class LbaBlueBookSource implements TypeCertificateSource
         }
 
         $candidates = $this->withEasaReferences($text);
+        $blocks = $this->blocks($text);
 
         /*
          * A volume that parses to nothing is a failure, not an empty volume.
@@ -211,7 +240,13 @@ final class LbaBlueBookSource implements TypeCertificateSource
             ));
         }
 
-        return $candidates;
+        return array_map(
+            fn (TypeCertificateCandidate $c): array => [
+                'candidate' => $c,
+                'haystack' => $blocks[$c->certificate] ?? '',
+            ],
+            $candidates,
+        );
     }
 
     /**
@@ -275,7 +310,9 @@ final class LbaBlueBookSource implements TypeCertificateSource
 
     private function cacheKey(BlueBookCategory $category): string
     {
-        return 'fleet.blue_book.'.$category->value;
+        // v2: seit die Zeilen den Blocktext (haystack) tragen. Ohne den Bump
+        // laege der Monatscache ohne die Spalte da, und rows() faende nichts.
+        return 'fleet.blue_book.v2.'.$category->value;
     }
 
     /** Comparison that survives spelling: "ASK-21", "ask 21", "ASK21". */

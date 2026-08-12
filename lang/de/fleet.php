@@ -107,6 +107,7 @@ return [
         'action' => [
             'add_certificate' => 'Kennblattnummer hinzufügen',
             'lookup' => 'Kennblatt suchen',
+            'create_from_lookup' => 'Kennblatt suchen & anlegen',
         ],
         'filter' => [
             'documented' => 'Kennblatt vorhanden',
@@ -668,8 +669,10 @@ return [
             'insurance' => 'Versicherungsnachweis',
             'registration' => 'Eintragungsschein',
             'flight_manual' => 'Flughandbuch',
+            'crs' => 'Freigabebescheinigung (CRS)',
             'other' => 'Sonstiges',
         ],
+        'crs_title' => 'Freigabebescheinigung :number',
         'field' => [
             'title' => 'Bezeichnung',
             'reference' => 'Nummer',

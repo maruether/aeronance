@@ -5,12 +5,27 @@ declare(strict_types=1);
 namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\Http;
 
 abstract class TestCase extends BaseTestCase
 {
     protected function setUp(): void
     {
         parent::setUp();
+
+        /*
+         * ─────────────────────────────────────────────────────────────────────
+         * KEIN TEST SPRICHT MIT DEM INTERNET. Ohne Fake wirft jeder
+         * Http-Aufruf jetzt eine Ausnahme, statt still einen fremden Server
+         * zu behelligen. Der Anlass: Seit ein neues Muster seine
+         * Herstellerlisten selbst anzieht (AircraftTypeCreated ->
+         * ImportForNewTypeJob), laeuft dieser Weg in Tests ueber die
+         * sync-Queue INLINE -- ein Test, der als Admin ein Muster mit
+         * passendem Hersteller anlegt, haette sonst wirklich beim
+         * Hersteller geklingelt, langsam und flatterhaft.
+         * ─────────────────────────────────────────────────────────────────────
+         */
+        Http::preventStrayRequests();
 
         /*
          * ─────────────────────────────────────────────────────────────────────

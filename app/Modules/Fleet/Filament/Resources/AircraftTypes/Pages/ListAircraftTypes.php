@@ -142,7 +142,83 @@ final class ListAircraftTypes extends ListRecords
     {
         return [
             CreateAction::make()->schema(self::formSchema()),
+            $this->createFromLookupAction(),
         ];
+    }
+
+    /**
+     * Suchen UND anlegen -- fuer das Muster, das es noch nicht gibt.
+     *
+     * Feldtest: "Kennblaetter sollten in der Anlegemaske suchbar sein."
+     * Vorher gab es die Suche nur als Zeilenaktion an BESTEHENDEN Mustern --
+     * wer ein neues anlegte, tippte erst blind und suchte danach. Dieselben
+     * Helfer, derselbe Adopt-Weg; neu ist nur, dass der Datensatz aus dem
+     * gewaehlten Kandidaten entsteht statt vorher von Hand.
+     */
+    private function createFromLookupAction(): Action
+    {
+        return Action::make('createFromLookup')
+            ->label(__('fleet.type.action.create_from_lookup'))
+            ->icon('heroicon-o-magnifying-glass')
+            ->color('gray')
+            ->visible(fn (): bool => auth()->user()?->can(Permissions::FLEET_MANAGE) ?? false)
+            ->modalDescription(__('fleet.type.help.lookup'))
+            ->schema([
+                TextInput::make('term')
+                    ->label(__('fleet.type.field.search_term'))
+                    ->required()
+                    ->live(debounce: 600),
+
+                Select::make('candidate')
+                    ->label(__('fleet.type.field.candidate'))
+                    ->options(fn (Get $get): array => self::candidateOptions((string) $get('term')))
+                    ->required()
+                    ->helperText(__('fleet.type.help.candidates'))
+                    ->visible(fn (Get $get): bool => filled($get('term'))),
+
+                Checkbox::make('store')
+                    ->label(__('fleet.type.field.store_document'))
+                    ->default(true)
+                    ->helperText(__('fleet.type.help.store_document')),
+            ])
+            ->action(function (array $data): void {
+                $candidate = self::candidateFromKey((string) $data['term'], (string) $data['candidate']);
+
+                if ($candidate === null) {
+                    Notification::make()->danger()->title(__('fleet.type.notification.gone'))->send();
+
+                    return;
+                }
+
+                $type = AircraftType::create([
+                    'designation' => $candidate->designation,
+                    'manufacturer' => $candidate->manufacturer,
+                ]);
+
+                try {
+                    $result = app(AdoptTypeCertificate::class)->adopt(
+                        $type, $candidate, auth()->user(), (bool) ($data['store'] ?? true),
+                    );
+                } catch (Throwable $e) {
+                    Notification::make()->danger()->title($e->getMessage())->persistent()->send();
+
+                    return;
+                }
+
+                $note = Notification::make()
+                    ->success()
+                    ->title(__('fleet.type.notification.adopted', [
+                        'certificate' => $result['type']->type_certificate ?? '',
+                    ]));
+
+                if ($result['problem'] !== null) {
+                    $note->warning()->body(__('fleet.type.notification.no_document', [
+                        'reason' => $result['problem'],
+                    ]));
+                }
+
+                $note->send();
+            });
     }
 
     /** @return list<Component> */

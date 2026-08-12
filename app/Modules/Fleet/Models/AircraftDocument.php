@@ -51,6 +51,9 @@ final class AircraftDocument extends Model implements HasMedia
         'issued_at',
         'valid_until',
         'issued_by',
+        // Verweis statt Datei -- die CRS zeigt auf ihre Druckansicht in der
+        // Werkstatt, siehe FileReleaseAsAircraftDocument.
+        'link',
         'note',
         'user_id',
     ];

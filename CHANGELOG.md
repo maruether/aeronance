@@ -27,6 +27,69 @@ woran als Nächstes gearbeitet wird.
   Demomodus abschalten muss (Mails, Updates, echte Herstellerabrufe), ist
   Teil des Zuschnitts.
 
+## [0.1.3] — 2026-08-12
+
+Runden drei und vier des Feldtests — Werkstatt-Komfort, die Bescheinigung
+in der Lebenslaufakte, das Wägeformular mit bebilderter Erklärung und die
+Kennblatt-/LTA-Automatik. **Beim Update beachten:** nichts —
+`deploy/update.sh` bzw. `deploy/docker/update.sh` genügt (eine Migration
+läuft mit: Dokumentverweise am Luftfahrzeug).
+
+### Neu
+
+- **Schnellreparatur:** Ein Dialog legt Arbeitskarte UND Vorgang in einem
+  Zug an (Titel geteilt, Vorgang implizit — abgekürzt, nicht übersprungen:
+  Nummernkreis, Zählerstände und Freigabeweg laufen unverändert). Dabei
+  serverseitig nachgezogen: Eine kritische Karte ohne „woran genau" lehnt
+  jetzt auch die Aktion ab, nicht nur das Formular.
+- **Freigaben:** „Bescheinigung drucken" als Knopf am Vorgangskopf; jede
+  erteilte (und jede korrigierende) Freigabe legt sich selbst als
+  Dokumentverweis in die Lebenslaufakte des Luftfahrzeugs — die Akte zeigt
+  auf die Bescheinigung, statt eine Zweitdatei zu führen. Die Druckansicht
+  öffnet jetzt auch mit Flotten-Leserecht.
+- **Arbeitszeit als hh:mm:** Das Dauer-Feld nimmt „90" wie „1:30" und
+  schreibt beim Verlassen die eine Anzeige hin; gespeichert wird weiter in
+  Minuten. „1,5" wird benannt abgelehnt statt still fehlgedeutet.
+- **Neue Muster ziehen ihre Herstellerlisten selbst an.** Beim Anlegen
+  eines Musters sucht das LTA/TM-Modul die passenden Quellen — gebunden an
+  den Hersteller, bewusst weich verglichen, damit „Robin" die
+  C.E.A.P.R.-Quelle trifft. Der Import läuft im Hintergrund; fehlen einer
+  Quelle die Zugangsdaten, sagt es die Oberfläche sofort. Ohne Hersteller,
+  ohne angemeldete Person oder ohne Import-Recht übernimmt wie bisher der
+  Sonntagslauf. Dazu als Test-Härtung: Kein Test spricht mehr mit dem
+  Internet (Http::preventStrayRequests).
+- **Kennblatt suchen & anlegen:** Muster und Komponentenmuster lassen sich
+  jetzt direkt aus einem Suchtreffer anlegen — vorher gab es die Suche nur
+  an bestehenden Einträgen, und wer neu anlegte, tippte erst blind.
+- **Rotax & Co. bekommen ihr EASA-Kennblatt:** Die EASA-Suche beantwortet
+  jetzt auch Komponenten (Kategorie im Pfad: engine-cs-e, propeller-cs-p —
+  nachgemessen); für einen 912er steht der EASA-Kandidat mit echtem TCDS
+  neben dem LBA-Treffer. Und das Blaue Buch findet Baureihen, die nur im
+  Zeilenblock stehen („DR 300" in der Zeile „DR 315") — die Suche läuft
+  jetzt über den Blocktext mit.
+- **LTA-Arbeitskarte ohne vorhandenen Vorgang:** Der Dialog bietet „Neuen
+  Vorgang dafür eröffnen" an (Titel = Anweisung, implizit wie bei der
+  Schnellreparatur) — vorbelegt, wenn das Luftfahrzeug keinen offenen
+  Vorgang hat.
+- **Wägeformular mit bebilderter Erklärung:** Die Massenübersicht trägt
+  jetzt Skizze und vorgerechneten Formelkasten (X = G2·b/G + a, mit den
+  Zahlen der Wägung und benannter Vorzeichenkonvention) — Struktur nach dem
+  klassischen Wägeformular, Zeichnung eigenständig.
+- **„Was liegt an" führt hin:** Jede Meldung verlinkt auf die Seite, die
+  das Problem behebt — Abgelaufenes direkt ins Vernichten-Formular mit
+  vorgewähltem Los; Links erscheinen nur, wenn die Zielseite für diese
+  Person aufgeht.
+
+### Behoben
+
+- **LTA/TM-Import:** Die Quellenauswahl ist alphabetisch und durchsuchbar
+  (Hand und CSV zuerst); „Wie durchgeführt" erklärt jetzt, was hinein
+  gehört; die Hersteller-Zugangsseite sagt, warum dort nur Quellen mit
+  Login stehen (CEAPR & Co. liest Aeronance ohne Anmeldung).
+- **Kennblattsuche:** „DR300" findet jetzt auch, was die EASA als „DR 300"
+  führt — die Suche probiert zusätzlich die Schreibweise mit Leerzeichen
+  an der Buchstaben/Ziffern-Grenze (an der echten Bibliothek gemessen).
+
 ## [0.1.2] — 2026-08-12
 
 Die zweite Feldtest-Runde, plus die Antwort auf „das Update-Skript hat

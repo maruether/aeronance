@@ -75,6 +75,28 @@ final class BlueBookTest extends TestCase
         $this->assertNull($ask21->dataSheetUrl, 'Das Blaue Buch verlinkt kein Datenblatt.');
     }
 
+    /**
+     * Eine Baureihe, die NUR im Block steht, wird gefunden.
+     *
+     * Feldtest: "ASK21 wird gefunden, DR300 nicht" -- die DR 300 steht im
+     * Blauen Buch als Baureihe in Spalte 4 der Zeile "DR 315", und der
+     * Parser liest Spalte 4 bewusst nicht als Bezeichnung. Seit die Suche
+     * den Blocktext mit durchsucht, findet sie auch das. Im Segel-Fixture
+     * ist der Fall die SZD-42-1 "Jantar 2": Sie steht nur im Block der
+     * Zeile 341/SP ("SZD-42-2 Jantar 2B").
+     */
+    #[Test]
+    public function a_series_listed_only_in_the_block_is_found(): void
+    {
+        $treffer = $this->source()->search('SZD-42-1');
+
+        $this->assertContains(
+            '341/SP',
+            array_map(fn ($k) => $k->certificate, $treffer),
+            'Die Baureihe aus Spalte 4 muss ueber den Blocktext gefunden werden.',
+        );
+    }
+
     #[Test]
     public function a_split_hyphenated_designation_is_put_back_together(): void
     {

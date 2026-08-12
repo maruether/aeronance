@@ -25,6 +25,12 @@ enum DocumentType: string
     case Insurance = 'insurance';
     case Registration = 'registration';
     case FlightManual = 'flight_manual';
+
+    /** Freigabebescheinigung (CRS) -- entsteht nie von Hand, sondern aus der
+     *  Werkstatt (ReleaseIssued-Ereignis): Die Lebenslaufakte verweist auf die
+     *  Bescheinigung, statt eine zweite Abschrift zu fuehren. */
+    case Crs = 'crs';
+
     case Other = 'other';
 
     public function label(): string

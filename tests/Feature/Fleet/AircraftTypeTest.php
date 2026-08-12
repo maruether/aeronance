@@ -15,6 +15,7 @@ use App\Modules\Fleet\Filament\Resources\AircraftTypes\Pages\ListAircraftTypes;
 use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\Fleet\Models\AircraftType;
 use App\Modules\Fleet\Permissions;
+use App\Modules\Fleet\TypeCertificates\CertificateSubject;
 use App\Modules\Fleet\TypeCertificates\EasaSource;
 use App\Modules\Fleet\TypeCertificates\TypeCertificateCandidate;
 use App\Modules\Fleet\TypeCertificates\TypeCertificateRegistry;
@@ -248,6 +249,49 @@ final class AircraftTypeTest extends TestCase
         ], $attributes));
     }
 
+    /**
+     * Motoren und Propeller antworten aus der EASA-Bibliothek -- Flugzeuge
+     * nicht als Komponenten und umgekehrt. Gemessen: engine-cs-e und
+     * propeller-cs-p sind die Kategorien im Pfad. Der Fall dahinter: Fuer
+     * einen Rotax 912F3 kam bisher NUR der LBA-Treffer (mit der
+     * Blaues-Buch-PDF als Kennblatt) -- der EASA.E.121-Kandidat fehlte.
+     */
+    #[Test]
+    public function components_answer_from_the_engine_and_propeller_shelves(): void
+    {
+        $quelle = new EasaSource(new MixedCategoryFetcher);
+
+        $komponenten = $quelle->search('egal', CertificateSubject::Component);
+        $this->assertSame(
+            ['EASA.E.121', 'EASA.P.001'],
+            array_map(fn ($k) => $k->certificate, $komponenten),
+        );
+
+        $flugzeuge = $quelle->search('egal', CertificateSubject::Aircraft);
+        $this->assertSame(
+            ['EASA.A.221'],
+            array_map(fn ($k) => $k->certificate, $flugzeuge),
+        );
+    }
+
+    /**
+     * "DR300" fragt auch nach "DR 300" -- gemessen an der echten Bibliothek:
+     * Die EASA-Volltextsuche normalisiert Leerzeichen nicht, ?search=DR300
+     * liefert null Treffer, ?search=DR%20300 das CEAPR-Kennblatt EASA.A.367.
+     * Feldtest: "ASK21 wird gefunden, DR300 nicht."
+     */
+    #[Test]
+    public function the_search_also_tries_the_spaced_spelling(): void
+    {
+        $fetcher = new RecordingFetcher;
+
+        (new EasaSource($fetcher))->search('DR300', CertificateSubject::Aircraft);
+
+        $this->assertCount(2, $fetcher->urls);
+        $this->assertStringContainsString('DR300', $fetcher->urls[0]);
+        $this->assertStringContainsString('DR%20300', $fetcher->urls[1]);
+    }
+
     private function candidateFor(string $certificate): TypeCertificateCandidate
     {
         foreach (app(AdoptTypeCertificate::class)->search('ASK 21') as $candidate) {
@@ -265,6 +309,29 @@ final class AircraftTypeTest extends TestCase
         $user->givePermissionTo(Permissions::FLEET_MANAGE);
 
         return $user->fresh();
+    }
+}
+
+final class MixedCategoryFetcher implements HttpFetcher
+{
+    public function get(string $url, array $headers = []): string
+    {
+        return '<a href="/en/document-library/type-certificates/engine-cs-e/easae121-rotax-912-engine-series">x</a>'
+            .'<a href="/en/document-library/type-certificates/propeller-cs-p/easap001-mt-propeller-mtv-16">x</a>'
+            .'<a href="/en/document-library/type-certificates/cs-22-sailplanes/easaa221-schleicher-ask">x</a>';
+    }
+}
+
+final class RecordingFetcher implements HttpFetcher
+{
+    /** @var list<string> */
+    public array $urls = [];
+
+    public function get(string $url, array $headers = []): string
+    {
+        $this->urls[] = $url;
+
+        return '<html></html>';
     }
 }
 

@@ -80,6 +80,7 @@ return [
     ],
 
     'card' => [
+        'open_new_order' => 'Neuen Vorgang dafür eröffnen (Titel = Anweisung)',
         'action' => 'Arbeitskarte anlegen',
         'created' => 'Arbeitskarte :number angelegt.',
         'help' => 'Die Karte organisiert die Arbeit. Erledigt ist die Anweisung erst, wenn '
@@ -116,10 +117,22 @@ return [
         'recurrence_due' => 'wieder fällig seit :due',
     ],
 
+    'auto_fetch' => [
+        'needs_credentials' => ':source führt Listen für dieses Muster — es fehlen '
+            .'aber die Zugangsdaten.',
+        'needs_credentials_hint' => 'Unter „Hersteller-Zugänge" hinterlegen; danach '
+            .'holt der nächtliche Lauf die Liste, oder sofort über „Importieren".',
+        'deferred' => ':source passt zu diesem Muster — der Import läuft beim '
+            .'nächsten Sonntagslauf (zum sofortigen Import fehlt das Recht '
+            .'„Quellen und Listen verwalten").',
+    ],
+
     'credentials' => [
         'title' => 'Hersteller-Zugänge',
         'subheading' => 'Manche Hersteller geben ihre LTA/TM-Liste nur an Kunden heraus. '
-            .'Die Zugangsdaten liegen verschlüsselt in der Datenbank und werden nie wieder angezeigt.',
+            .'Hier stehen nur Quellen, die einen Zugang verlangen — alle übrigen '
+            .'(z. B. CEAPR) liest Aeronance ohne Anmeldung. Die Zugangsdaten liegen '
+            .'verschlüsselt in der Datenbank und werden nie wieder angezeigt.',
         'used_by' => 'Verwendet von: :sources',
         'username' => 'Benutzername',
         'password' => 'Passwort',
@@ -239,6 +252,9 @@ return [
     ],
 
     'help' => [
+        'method' => 'Der Nachweis der Durchführung: nach welcher Vorgabe und was '
+            .'getan wurde — z. B. „TM 34-5 Abschnitt 3, Bolzen getauscht, '
+            .'Sichtprüfung o. B.". So, dass es ein Prüfer in drei Jahren versteht.',
         'list_grows' => 'Diese Liste wird länger, nie kürzer. Verschwindet eine Zeile beim '
             .'Hersteller, wird sie hier nicht gelöscht — eine gekürzte Exportdatei oder ein '
             .'kaputter Parser sieht genauso aus, und die Beurteilungen gingen mit.',

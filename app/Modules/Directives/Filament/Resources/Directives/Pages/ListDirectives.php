@@ -320,7 +320,19 @@ final class ListDirectives extends ListRecords
                             .(method_exists($s, 'isUsable') && ! $s->isUsable()
                                 ? ' — '.__('directives.source_problems.no_credentials')
                                 : ''))
+                        /*
+                         * Alphabetisch und durchsuchbar -- Feldtest: Bei knapp
+                         * fuenfzig Quellen in Registrierungsreihenfolge war die
+                         * Liste "unuebersichtlich". Hand und CSV zuerst, denn
+                         * sie sind keine Hersteller, sondern Werkzeuge.
+                         */
+                        ->sortBy(fn (string $label, string $key): string => match ($key) {
+                            'manual' => "\x000",
+                            'csv' => "\x001",
+                            default => mb_strtolower($label),
+                        }, SORT_NATURAL)
                         ->all())
+                    ->searchable()
                     ->default('csv')
                     ->required()
                     ->live(),

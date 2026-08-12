@@ -30,7 +30,9 @@ return [
             'open' => 'Vorgang eröffnen',
             'close' => 'Vorgang abschließen',
             'add_card' => 'Arbeitskarte anlegen',
+            'quick_repair' => 'Schnellreparatur',
         ],
+        'quick_repair_placeholder' => 'Reifen Hauptfahrwerk getauscht',
         'help' => [
             'close' => 'Geht erst, wenn jede Karte abgezeichnet oder storniert ist. Eine '
                 .'nur „fertig gemeldete" Karte hat niemand geprüft — genau dafür gibt es '
@@ -153,14 +155,15 @@ return [
         'plural' => 'Arbeitszeiten',
         'field' => [
             'person' => 'Person',
-            'minutes' => 'Dauer (Minuten)',
+            'minutes' => 'Dauer',
             'participation' => 'Art der Mitwirkung',
             'worked_on' => 'Am',
         ],
         'none' => 'Keine Arbeitszeit erfasst.',
+        'invalid' => 'Als Dauer verstehe ich „90" (Minuten) oder „1:30" (Stunden:Minuten).',
         'help' => [
-            'minutes' => 'In Minuten. Auf dem Zettel steht „1:45", nicht „1,75" — wer '
-                .'nach dem zweiten fragt, bekommt das erste eingetippt.',
+            'minutes' => 'Wie auf dem Zettel: „1:45" — oder in Minuten, „90" wird '
+                .'beim Verlassen des Feldes zu „1:30".',
             'per_person' => 'Je Person und Karte. Das Erfahrungslogbuch zählt, wer was '
                 .'wie lange gemacht hat — und ausgeführt ist nicht dasselbe wie '
                 .'unterstützt.',

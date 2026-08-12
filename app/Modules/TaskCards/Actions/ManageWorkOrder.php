@@ -54,6 +54,48 @@ final class ManageWorkOrder
     }
 
     /**
+     * Schnellreparatur: Vorgang UND Karte in einem Zug.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Feldtest: "Eine einzelne Reparatur ist nur eine Arbeitskarte. Das ist
+     * unnoetige Arbeit." Der Vorgang bleibt trotzdem -- er ist das Bindeglied
+     * zu Freigabe und Nummernkreis und wird hier nur IMPLIZIT angelegt
+     * (Titel = Kartentitel), nicht uebersprungen. Nichts ist dupliziert:
+     * Nummer, Zaehlerstand-Schnappschuss und alle Wachen laufen unveraendert
+     * durch open() und addCard(); die aeussere Transaktion macht beide zu
+     * einem Alles-oder-nichts.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    public function openQuick(
+        Aircraft $aircraft,
+        User $user,
+        string $title,
+        ?string $instruction = null,
+        ActivityKind $kind = ActivityKind::Maintenance,
+        ?string $ataChapter = null,
+        bool $critical = false,
+        ?string $criticalReason = null,
+    ): TaskCard {
+        return DB::transaction(function () use ($aircraft, $user, $title, $instruction, $kind, $ataChapter, $critical, $criticalReason): TaskCard {
+            $order = $this->open(
+                aircraft: $aircraft,
+                title: $title,
+                user: $user,
+            );
+
+            return $this->addCard(
+                order: $order,
+                title: $title,
+                instruction: $instruction,
+                kind: $kind,
+                ataChapter: $ataChapter,
+                critical: $critical,
+                criticalReason: $criticalReason,
+            );
+        });
+    }
+
+    /**
      * @param  ComponentLimit|null  $forLimit  the fleet limit this card discharges
      */
     public function addCard(
@@ -73,6 +115,18 @@ final class ManageWorkOrder
 
         if (trim($title) === '') {
             throw new InvalidArgumentException('A card needs a title.');
+        }
+
+        /*
+         * Im Server erzwungen, nicht nur im Formular: Eine kritische Karte
+         * ohne "woran genau" schickt den Kontrolleur suchen -- und eine
+         * Regel, die nur die Oberflaeche kennt, gilt als nicht vorhanden
+         * (Security-Leitplanke). Aufgefallen durch den Schnellreparatur-Test.
+         */
+        if ($critical && trim((string) $criticalReason) === '') {
+            throw new InvalidArgumentException(
+                'A critical card has to say what to look at -- "kritisch" alone sends the inspector searching.'
+            );
         }
 
         $aircraft = $order->aircraft;

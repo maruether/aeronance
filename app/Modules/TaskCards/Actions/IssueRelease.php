@@ -9,6 +9,7 @@ use App\Core\Models\Qualification;
 use App\Models\User;
 use App\Modules\Fleet\Airworthiness\AirworthinessCheck;
 use App\Modules\Fleet\Airworthiness\OpenItem;
+use App\Modules\TaskCards\Events\ReleaseIssued;
 use App\Modules\TaskCards\Models\Finding;
 use App\Modules\TaskCards\Models\ReleaseToService;
 use App\Modules\TaskCards\Models\TaskCard;
@@ -156,7 +157,7 @@ final readonly class IssueRelease
 
         $when = $releasedAt !== null ? Carbon::parse($releasedAt) : now();
 
-        return DB::transaction(function () use ($order, $user, $qualification, $when, $maintenanceData, $statement): ReleaseToService {
+        $fertig = DB::transaction(function () use ($order, $user, $qualification, $when, $maintenanceData, $statement): ReleaseToService {
             /*
              * The checks above ran on unlocked data, which is fine for telling a
              * person WHY -- but two inspectors clicking within the same second
@@ -224,6 +225,31 @@ final readonly class IssueRelease
 
             return $release->fresh();
         });
+
+        $this->announce($fertig);
+
+        return $fertig;
+    }
+
+    /**
+     * Die Bescheinigung der Lebenslaufakte melden -- NACH der Transaktion.
+     *
+     * Skalare Nutzlast, Druck-URL hier gebaut (dieses Modul kennt seine
+     * Route). Wer zuhoert, entscheidet die Flotte; ist sie stumm, ist das
+     * kein Fehler dieses Moduls. Siehe ReleaseIssued.
+     */
+    private function announce(ReleaseToService $release): void
+    {
+        if ($release->aircraft_id === null) {
+            return;
+        }
+
+        event(new ReleaseIssued(
+            aircraftId: $release->aircraft_id,
+            releaseNumber: (string) $release->number,
+            releasedAt: $release->released_at->toDateString(),
+            printUrl: route('taskcards.release', $release),
+        ));
     }
 
     /**
@@ -295,7 +321,7 @@ final readonly class IssueRelease
             }
         }
 
-        return DB::transaction(function () use ($original, $order, $user, $qualification, $reason, $statement): ReleaseToService {
+        $fertig = DB::transaction(function () use ($original, $order, $user, $qualification, $reason, $statement): ReleaseToService {
             /*
              * Same shape as handle(): the check above was on unlocked data. The
              * lock makes the second of two concurrent corrections wait, then see
@@ -330,6 +356,10 @@ final readonly class IssueRelease
                 'correction_reason' => trim($reason),
             ]);
         });
+
+        $this->announce($fertig);
+
+        return $fertig;
     }
 
     /**

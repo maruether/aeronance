@@ -27,8 +27,15 @@ final class ReleaseController
     {
         abort_unless(app(ModuleManager::class)->isEnabled('taskcards'), 404);
 
+        /*
+         * Werkstatt-Sicht ODER Flotten-Sicht: Seit die Bescheinigung als
+         * Dokumentverweis in der Lebenslaufakte haengt, fuehrt auch die
+         * Flotten-Seite hierher -- und wer die Akte lesen darf, darf die
+         * Bescheinigung darin lesen. Der String statt der Fleet-Konstante
+         * ist Absicht: kein Klassenname ueber die Modulgrenze.
+         */
         abort_unless(
-            $request->user()?->can(Permissions::WORK_ORDERS_VIEW) ?? false,
+            ($request->user()?->canAny([Permissions::WORK_ORDERS_VIEW, 'fleet.view'])) ?? false,
             403,
         );
 

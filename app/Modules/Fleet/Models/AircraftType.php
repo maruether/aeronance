@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Fleet\Models;
 
+use App\Modules\Fleet\Events\AircraftTypeCreated;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -155,6 +156,21 @@ final class AircraftType extends Model implements HasMedia
      */
     protected static function booted(): void
     {
+        /*
+         * Die Naht nach draussen: Ein neues Muster wird gemeldet, damit das
+         * Directives-Modul passende Herstellerlisten anziehen kann -- ohne
+         * dass die Flotte es kennt. Feldtest: "Liste sollte automatisch zu
+         * einem angelegten Muster gezogen werden, ohne user interaktion."
+         */
+        self::created(function (self $type): void {
+            event(new AircraftTypeCreated(
+                typeId: $type->id,
+                designation: (string) $type->designation,
+                manufacturer: $type->manufacturer,
+                userId: auth()->id(),
+            ));
+        });
+
         self::saved(function (self $type): void {
             if (blank($type->type_certificate)) {
                 return;

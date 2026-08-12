@@ -59,6 +59,9 @@ final class ModuleBoundaryTest extends TestCase
         'fleet' => [
             'warehouse' => 'Hört auf PartIssuedToAircraft. Der Ereignisweg ist der vorgesehene, '
                 .'und die Klasse wird nur geladen, wenn das Lager das Ereignis überhaupt wirft.',
+            'taskcards' => 'Hört auf ReleaseIssued -- die Freigabebescheinigung wird als '
+                .'Dokumentverweis in der Lebenslaufakte abgelegt. Derselbe Ereignisweg, '
+                .'dritte Anwendung.',
         ],
         'warehouse' => [
             'fleet' => 'Hört auf ComponentRemovedFromAircraft -- dieselbe Richtung, gespiegelt.',

@@ -76,6 +76,22 @@
     </tbody>
 </table>
 
+@php($stuetzen = $weighing->entriesOf('support')->values())
+@if ($stuetzen->count() === 2)
+    {{-- Zwei Auflagen, ein Hebel: die bebilderte Erklaerung dazu --
+         Feldtest: "Optik ... an einem klassischen Waegeformular mit
+         bebilderter Erklaerung abstuetzen." --}}
+    @include('fleet.print._weighing_sketch', [
+        'a' => $weighing->front_support_arm_mm !== null ? (float) $weighing->front_support_arm_mm : 0.0,
+        'b' => $weighing->support_distance_mm !== null ? (float) $weighing->support_distance_mm : null,
+        'g1' => (float) $stuetzen[0]->netto(),
+        'g2' => (float) $stuetzen[1]->netto(),
+        'g' => (float) $stuetzen[0]->netto() + (float) $stuetzen[1]->netto(),
+        'x' => $result->emptyCgMm !== null ? (float) $result->emptyCgMm : null,
+        'fmt' => $fmt,
+    ])
+@endif
+
 @if ($weighing->kind->usesDeductions() && $weighing->entriesOf('deduction')->isNotEmpty())
     <table style="margin-bottom:4mm">
         <thead>

@@ -1,5 +1,16 @@
 <x-filament-panels::page>
     @php
+        /*
+         * Feldtest: "Meldungen sollten direkt auf die seite fuehren auf der
+         * sich das problem beheben laesst." Jede Zeile ist deshalb ein Link
+         * auf die behebende Seite -- und nur, wenn die Zielseite fuer diese
+         * Person ueberhaupt aufgeht (sonst verspricht der Link einen 403).
+         */
+        $kannVernichten = auth()->user()?->can(\App\Modules\Warehouse\Permissions::STOCK_SCRAP) ?? false;
+        $kannBestellen = auth()->user()?->can(\App\Modules\Warehouse\Permissions::ORDERS_MANAGE) ?? false;
+        $zeile = 'flex justify-between gap-4 py-2 -mx-2 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5';
+    @endphp
+    @php
         $expired  = \App\Modules\Warehouse\Filament\Pages\StockAttention::expiredLots();
         $expiring = \App\Modules\Warehouse\Filament\Pages\StockAttention::expiringLots();
         $short    = \App\Modules\Warehouse\Filament\Pages\StockAttention::belowMinimum();
@@ -28,7 +39,7 @@
 
             <div class="divide-y divide-gray-100 dark:divide-white/5 text-sm">
                 @foreach ($expired as $lot)
-                    <div class="flex justify-between gap-4 py-2">
+                    <a @if ($kannVernichten) href="{{ \App\Modules\Warehouse\Filament\Pages\DisposalPage::getUrl(['lot' => $lot->id]) }}" @endif class="{{ $zeile }}">
                         <div>
                             <div class="font-medium">{{ $lot->partType?->name }}</div>
                             <div class="text-gray-500">{{ $lot->label() }}</div>
@@ -41,7 +52,7 @@
                                 {{ $number($lot->remainingQuantity()) }} {{ $lot->partType?->unit_of_measure }}
                             </div>
                         </div>
-                    </div>
+                    </a>
                 @endforeach
             </div>
         </x-filament::section>
@@ -54,7 +65,7 @@
 
             <div class="divide-y divide-gray-100 dark:divide-white/5 text-sm">
                 @foreach ($short as $part)
-                    <div class="flex justify-between gap-4 py-2">
+                    <a @if ($kannBestellen) href="{{ \App\Modules\Warehouse\Filament\Resources\PurchaseOrders\PurchaseOrderResource::getUrl('create') }}" @endif class="{{ $zeile }}">
                         <div>
                             <div class="font-medium">{{ $part->name }}</div>
                             <div class="text-gray-500">
@@ -73,7 +84,7 @@
                                 ]) }}
                             </div>
                         </div>
-                    </div>
+                    </a>
                 @endforeach
             </div>
         </x-filament::section>
@@ -85,7 +96,7 @@
 
             <div class="divide-y divide-gray-100 dark:divide-white/5 text-sm">
                 @foreach ($expiring as $lot)
-                    <div class="flex justify-between gap-4 py-2">
+                    <a href="{{ \App\Modules\Warehouse\Filament\Resources\StockLots\StockLotResource::getUrl('view', ['record' => $lot]) }}" class="{{ $zeile }}">
                         <div>
                             <div class="font-medium">{{ $lot->partType?->name }}</div>
                             <div class="text-gray-500">{{ $lot->label() }}</div>
@@ -98,7 +109,7 @@
                                 ]) }}
                             </div>
                         </div>
-                    </div>
+                    </a>
                 @endforeach
             </div>
         </x-filament::section>
@@ -112,7 +123,7 @@
             <div class="divide-y divide-gray-100 dark:divide-white/5 text-sm">
                 @foreach ($blocked as $lot)
                     @php $since = $lot->stateChanges->first(); @endphp
-                    <div class="flex justify-between gap-4 py-2">
+                    <a href="{{ \App\Modules\Warehouse\Filament\Resources\StockLots\StockLotResource::getUrl('view', ['record' => $lot]) }}" class="{{ $zeile }}">
                         <div>
                             <div class="font-medium">{{ $lot->partType?->name }}</div>
                             <div class="text-gray-500">
@@ -133,7 +144,7 @@
                                 </div>
                             @endif
                         </div>
-                    </div>
+                    </a>
                 @endforeach
             </div>
         </x-filament::section>
@@ -146,7 +157,7 @@
 
             <div class="divide-y divide-gray-100 dark:divide-white/5 text-sm">
                 @foreach ($noDocs as $lot)
-                    <div class="flex justify-between gap-4 py-2">
+                    <a href="{{ \App\Modules\Warehouse\Filament\Resources\StockLots\StockLotResource::getUrl('view', ['record' => $lot]) }}" class="{{ $zeile }}">
                         <div>
                             <div class="font-medium">{{ $lot->partType?->name }}</div>
                             <div class="text-gray-500">{{ $lot->label() }}</div>
@@ -154,7 +165,7 @@
                         <div class="text-right whitespace-nowrap text-gray-500">
                             {{ $lot->document_reference ?: __('warehouse.attention.no_reference') }}
                         </div>
-                    </div>
+                    </a>
                 @endforeach
             </div>
         </x-filament::section>

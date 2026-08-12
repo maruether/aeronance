@@ -81,6 +81,18 @@ final class DisposalPage extends Page
     public function mount(): void
     {
         $this->form->fill(['occurred_at' => now()->toDateString()]);
+
+        /*
+         * Von "Was liegt an" hierher: Der Klick auf ein abgelaufenes Los
+         * bringt seine Nummer mit, und das Formular steht schon darauf --
+         * das versprochene "direkt beheben" statt einer Seite, auf der man
+         * dasselbe Los noch einmal suchen muss.
+         */
+        $lotId = request()->integer('lot');
+
+        if ($lotId > 0) {
+            $this->pick($lotId);
+        }
     }
 
     /**

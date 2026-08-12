@@ -22,6 +22,7 @@ use App\Modules\TaskCards\Models\Finding;
 use App\Modules\TaskCards\Models\TaskCard;
 use App\Modules\TaskCards\Models\WorkOrder;
 use App\Modules\TaskCards\Permissions;
+use App\Modules\TaskCards\Support\WorkDuration;
 use App\Modules\Warehouse\Actions\ResolveScanCode;
 use App\Modules\Warehouse\Models\PartType;
 use App\Modules\Warehouse\Models\StockLot;
@@ -39,6 +40,7 @@ use Filament\Forms\Components\ViewField;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Throwable;
 
 /**
@@ -70,9 +72,29 @@ final class ViewWorkOrder extends ViewRecord
 
             $this->linkExternalOrderAction(),
             $this->releaseAction(),
+            $this->printReleaseAction(),
             $this->correctReleaseAction(),
             $this->closeAction(),
         ];
+    }
+
+    /**
+     * Die Bescheinigung drucken -- abheften und einkleben.
+     *
+     * Feldtest: "Abgeschlossene Freigaben sollten ausdruckbar sein." Die
+     * Druckansicht gab es laengst (taskcards.release-Route, Browser druckt);
+     * erreichbar war sie nur ueber ein unscheinbares Badge in der
+     * Freigabe-Sektion. Ein Knopf am Kopf der Seite ist der Unterschied
+     * zwischen "gibt es" und "findet man".
+     */
+    private function printReleaseAction(): Action
+    {
+        return Action::make('printRelease')
+            ->label(__('taskcards.release.print'))
+            ->icon('heroicon-o-printer')
+            ->color('gray')
+            ->visible(fn (): bool => $this->record->currentRelease() !== null)
+            ->url(fn (): string => route('taskcards.release', $this->record->currentRelease()), shouldOpenInNewTab: true);
     }
 
     /**
@@ -419,11 +441,23 @@ final class ViewWorkOrder extends ViewRecord
                     ->selectablePlaceholder(false)
                     ->required(),
 
+                /*
+                 * Nimmt beides: "90" und "1:30" -- und schreibt beim Verlassen
+                 * des Feldes die eine Anzeige hin ("1:30"). Feldtest: Auf dem
+                 * Werkstattzettel steht hh:mm, nicht Minuten. Gespeichert wird
+                 * weiter in Minuten (WorkDuration uebersetzt an der Kante).
+                 */
                 TextInput::make('minutes')
                     ->label(__('taskcards.time.field.minutes'))
-                    ->numeric()
-                    ->minValue(1)
+                    ->placeholder('1:30')
                     ->required()
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn (Set $set, ?string $state) => $set('minutes', WorkDuration::normalise($state)))
+                    ->rule(static fn (): \Closure => static function (string $attribute, mixed $value, \Closure $fail): void {
+                        if (WorkDuration::parse(is_string($value) ? $value : null) === null) {
+                            $fail(__('taskcards.time.invalid'));
+                        }
+                    })
                     ->helperText(__('taskcards.time.help.minutes')),
 
                 DatePicker::make('worked_on')
@@ -443,7 +477,7 @@ final class ViewWorkOrder extends ViewRecord
                     app(ManageWorkOrder::class)->recordTime(
                         $card,
                         $person,
-                        (int) $data['minutes'],
+                        (int) WorkDuration::parse((string) $data['minutes']),
                         ParticipationKind::from($data['participation']),
                         $data['worked_on'] ?? null,
                     );

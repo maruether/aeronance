@@ -12,10 +12,12 @@ use App\Modules\Directives\Filament\Resources\Directives\DirectiveResource;
 use App\Modules\Directives\Models\Directive;
 use App\Modules\Directives\Permissions;
 use App\Modules\Fleet\Models\Aircraft;
+use App\Modules\TaskCards\Actions\ManageWorkOrder;
 use App\Modules\TaskCards\Models\WorkOrder;
 use App\Modules\TaskCards\Permissions as TaskCardPermissions;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -159,6 +161,9 @@ final class ViewDirective extends ViewRecord
                         ->label(__('directives.field.method'))
                         ->required()
                         ->rows(2)
+                        // Feldtest: "Was wird hier verlangt?" -- ohne den Satz
+                        // war das Feld ein Raetsel.
+                        ->helperText(__('directives.help.method'))
                     : Textarea::make('reason')
                         ->label(__('directives.field.reason'))
                         ->required()
@@ -247,6 +252,24 @@ final class ViewDirective extends ViewRecord
                     ->required()
                     ->live(),
 
+                /*
+                 * Feldtest: "Arbeitskarte anlegen verlangt vorgang, sollte
+                 * automatisch erstellt werden wenn nicht vorhanden." Der Haken
+                 * eroeffnet den Vorgang implizit (Titel = Anweisung), wie bei
+                 * der Schnellreparatur -- abgekuerzt, nicht uebersprungen.
+                 * Vorbelegt, wenn das Flugzeug KEINEN offenen Vorgang hat.
+                 */
+                Checkbox::make('open_new_order')
+                    ->label(__('directives.card.open_new_order'))
+                    ->live()
+                    ->default(fn (Get $get): bool => filled($get('aircraft_id'))
+                        && WorkOrder::query()
+                            ->where('aircraft_id', $get('aircraft_id'))
+                            ->where('state', WorkOrder::STATE_OPEN)
+                            ->doesntExist())
+                    ->visible(fn (Get $get): bool => filled($get('aircraft_id'))
+                        && (auth()->user()?->can(TaskCardPermissions::WORK_ORDERS_MANAGE) ?? false)),
+
                 // Only OPEN visits of the chosen aircraft: a card cannot be added
                 // to a closed or released one, and offering those would be a
                 // refusal after the click.
@@ -261,18 +284,35 @@ final class ViewDirective extends ViewRecord
                             ->mapWithKeys(fn ($o): array => [$o->id => $o->label()])
                             ->all()
                         : [])
-                    ->required()
-                    ->visible(fn (Get $get): bool => filled($get('aircraft_id'))),
+                    ->required(fn (Get $get): bool => ! (bool) $get('open_new_order'))
+                    ->visible(fn (Get $get): bool => filled($get('aircraft_id'))
+                        && ! (bool) $get('open_new_order')),
             ])
             ->action(function (array $data): void {
                 $aircraft = Aircraft::find($data['aircraft_id'] ?? null);
-                $order = WorkOrder::find($data['work_order_id'] ?? null);
 
-                if ($aircraft === null || $order === null) {
+                if ($aircraft === null) {
                     return;
                 }
 
                 try {
+                    if ((bool) ($data['open_new_order'] ?? false)) {
+                        // Implizit wie bei der Schnellreparatur: Titel der
+                        // Anweisung wird Vorgangstitel; alle Wachen laufen
+                        // in open() unveraendert.
+                        $order = app(ManageWorkOrder::class)->open(
+                            aircraft: $aircraft,
+                            title: (string) $this->record->title,
+                            user: auth()->user(),
+                        );
+                    } else {
+                        $order = WorkOrder::find($data['work_order_id'] ?? null);
+                    }
+
+                    if ($order === null) {
+                        return;
+                    }
+
                     $card = app(ScheduleDirectiveCard::class)->handle(
                         $this->record, $aircraft, $order, auth()->user(),
                     );

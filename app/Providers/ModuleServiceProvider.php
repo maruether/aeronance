@@ -33,6 +33,7 @@ use App\Core\Modules\ModuleRegistry;
 use App\Core\Settings\Settings;
 use App\Modules\Directives\Airworthiness\OutstandingDirectives;
 use App\Modules\Directives\Console\RefreshDirectivesCommand;
+use App\Modules\Directives\Listeners\FetchDirectivesForNewType;
 use App\Modules\Directives\Sources\Configured\ConfiguredSource;
 use App\Modules\Directives\Sources\Configured\SpecRepository;
 use App\Modules\Directives\Sources\CsvSource;
@@ -42,13 +43,16 @@ use App\Modules\Directives\Sources\SessionFetcher;
 use App\Modules\Directives\Sources\SourceCredentials;
 use App\Modules\Directives\Sources\SourceRegistry;
 use App\Modules\Fleet\Airworthiness\AirworthinessCheck;
+use App\Modules\Fleet\Events\AircraftTypeCreated;
 use App\Modules\Fleet\Events\ComponentRemovedFromAircraft;
+use App\Modules\Fleet\Listeners\FileReleaseAsAircraftDocument;
 use App\Modules\Fleet\Listeners\RecordIssuedPartAsInstallation;
 use App\Modules\Fleet\TypeCertificates\EasaSource;
 use App\Modules\Fleet\TypeCertificates\Lba\LbaBlueBookSource;
 use App\Modules\Fleet\TypeCertificates\TypeCertificateRegistry;
 use App\Modules\Inspection\Listeners\OpenIncomingInspection;
 use App\Modules\TaskCards\Airworthiness\OutstandingFindings;
+use App\Modules\TaskCards\Events\ReleaseIssued;
 use App\Modules\Vereinsflieger\Console\SyncCommand as VereinsfliegerSyncCommand;
 use App\Modules\Warehouse\Console\ExpireStockCommand;
 use App\Modules\Warehouse\Console\RemindOverdueOrdersCommand;
@@ -364,6 +368,18 @@ final class ModuleServiceProvider extends ServiceProvider
          * command would be exactly the silent gap the module is against.
          */
         Event::listen(StockReceived::class, OpenIncomingInspection::class);
+
+        // Und die Bescheinigung in die Lebenslaufakte: Eine erteilte Freigabe
+        // (CRS) wird als Dokumentverweis am Luftfahrzeug abgelegt -- gleiche
+        // Bauart, gleicher Grund, dritter Anwendungsfall.
+        Event::listen(ReleaseIssued::class, FileReleaseAsAircraftDocument::class);
+
+        // Ein neues Muster zieht seine Herstellerlisten an -- gebunden an den
+        // Hersteller, nicht als Rundruf ueber alle Quellen.
+        Event::listen(
+            AircraftTypeCreated::class,
+            FetchDirectivesForNewType::class,
+        );
 
         /*
          * ─────────────────────────────────────────────────────────────────────

@@ -222,6 +222,14 @@ final class WeighingTest extends TestCase
             ->assertSuccessful()
             ->assertSee('Massenübersicht', false)
             ->assertSee('142,0 mm hinter B.P.', false)
+            /*
+             * Die bebilderte Erklaerung (Feldtest: klassisches Waegeformular):
+             * Skizze und VORGERECHNETE Formel stehen auf dem Blatt -- mit den
+             * Zahlen dieser Waegung und dem richtigen Vorzeichen (a = -250:
+             * Auflage VOR dem Bezugspunkt, also "−").
+             */
+            ->assertSee('<svg', false)
+            ->assertSee('−&nbsp;250', false)
             ->assertSee(__('fleet.weighing.in_range'), false);
     }
 

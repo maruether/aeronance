@@ -124,6 +124,15 @@ say "Container neu erstellen"
 # App, Worker und Scheduler benutzen DASSELBE Image -- alle drei muessen mit.
 docker compose up -d --remove-orphans
 
+# nginx MUSS danach einmal durchstarten, und das ist gemessen, nicht Theorie:
+# Er loest den Upstream "app" beim Start auf und haelt die IP. Der neue
+# app-Container bekommt eine andere -- und jede Anfrage lief beim
+# v0.1.2-Update in ein 502, waehrend darunter alles gesund war. Ein restart
+# kostet eine Sekunde; die Alternative (resolver-Direktive mit variablem
+# Upstream in der nginx-Konfiguration) kaeme bei einem Update NICHT bei
+# Bestandsinstallationen an, deren nginx.conf schon liegt.
+docker compose restart web >/dev/null 2>&1 || true
+
 say "Auf die Anwendung warten"
 for _ in $(seq 1 30); do
     if docker compose exec -T app php artisan --version >/dev/null 2>&1; then

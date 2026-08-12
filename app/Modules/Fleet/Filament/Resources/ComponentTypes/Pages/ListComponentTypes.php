@@ -121,7 +121,72 @@ final class ListComponentTypes extends ListRecords
     {
         return [
             CreateAction::make()->schema(self::formSchema()),
+            $this->createFromLookupAction(),
         ];
+    }
+
+    /**
+     * Suchen UND anlegen -- Feldtest: "Kennblaetter sollten in der
+     * Anlegemaske suchbar sein." Gleiche Helfer wie die Zeilenaktion; der
+     * Datensatz entsteht aus dem Kandidaten. Seit die EASA-Suche auch
+     * Motoren und Propeller beantwortet, kommen hier beide Behoerden an --
+     * die Ablage des EASA-Kennblatt-PDFs fuer Komponenten ist notiert und
+     * folgt getrennt (AdoptTypeCertificate kennt bisher nur Flugzeugmuster).
+     */
+    private function createFromLookupAction(): Action
+    {
+        return Action::make('createFromLookup')
+            ->label(__('fleet.type.action.create_from_lookup'))
+            ->icon('heroicon-o-magnifying-glass')
+            ->color('gray')
+            ->visible(fn (): bool => auth()->user()?->can(Permissions::FLEET_MANAGE) ?? false)
+            ->modalDescription(__('fleet.component_type.help.lookup'))
+            ->schema([
+                TextInput::make('term')
+                    ->label(__('fleet.type.field.search_term'))
+                    ->required()
+                    ->live(debounce: 600),
+
+                Select::make('candidate')
+                    ->label(__('fleet.type.field.candidate'))
+                    ->options(fn (Get $get): array => ListAircraftTypes::componentOptions((string) $get('term')))
+                    ->required()
+                    ->helperText(__('fleet.component_type.help.candidates'))
+                    ->visible(fn (Get $get): bool => filled($get('term'))),
+
+                Select::make('kind')
+                    ->label(__('fleet.component_type.field.kind'))
+                    ->options(collect(ComponentKind::cases())
+                        ->mapWithKeys(fn (ComponentKind $k): array => [$k->value => $k->label()])->all())
+                    ->default(ComponentKind::Engine->value)
+                    ->required(),
+            ])
+            ->action(function (array $data): void {
+                $candidate = ListAircraftTypes::componentFromKey(
+                    (string) $data['term'],
+                    (string) $data['candidate'],
+                );
+
+                if ($candidate === null) {
+                    Notification::make()->danger()->title(__('fleet.type.notification.gone'))->send();
+
+                    return;
+                }
+
+                ComponentType::create([
+                    'designation' => $candidate->designation,
+                    'manufacturer' => $candidate->manufacturer,
+                    'kind' => $data['kind'],
+                    'type_certificate' => $candidate->certificate,
+                    'certificate_authority' => $candidate->authority,
+                    'data_sheet_url' => $candidate->dataSheetUrl,
+                ]);
+
+                Notification::make()
+                    ->success()
+                    ->title(__('fleet.type.notification.adopted', ['certificate' => $candidate->certificate]))
+                    ->send();
+            });
     }
 
     /**
