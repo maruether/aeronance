@@ -13,12 +13,17 @@ return [
     'component_type' => [
         'singular' => 'Komponentenmuster',
         'plural' => 'Komponentenmuster',
+        'action' => [
+            'add_limit' => 'Muster-Laufzeit hinzufügen',
+        ],
         'no_certificate' => 'kein Kennblatt',
         'field' => [
             'designation' => 'Bezeichnung',
             'kind' => 'Art',
             'manufacturer' => 'Hersteller',
             'part_number' => 'Teilenummer',
+            'part_type' => 'Bauteiltyp im Lager',
+            'limits' => 'Muster-Laufzeiten',
             'type_certificate' => 'Kennblatt-Nr.',
             'data_sheet' => 'Datenblatt',
             'overview_url' => 'Hersteller-Übersicht TM',
@@ -31,6 +36,13 @@ return [
             'other' => 'sonstiges',
         ],
         'help' => [
+            'part_type' => 'Optional: der Lager-Bauteiltyp, der dieses Muster ist. '
+                .'Beim Einbau aus dem Lager erbt der Einbau dann die '
+                .'Muster-Laufzeiten unten — als Kopie, spätere Änderungen hier '
+                .'fassen bestehende Einbauten nicht an.',
+            'limits' => 'Was dieses Muster üblicherweise mitbringt, z. B. „24 Monate" '
+                .'und „500 Starts" an einer Schleppkupplung. Leer ist normal: Ein '
+                .'Ölfilter hat keine Laufzeit.',
             'designation' => 'So, wie Hersteller und Kennblatt es schreiben — z. B. '
                 .'„Sicherheitskupplung Europa G 88".',
             'part_number' => 'Getrennt von der Bezeichnung: Eine TM nennt das eine oder '
@@ -374,6 +386,10 @@ return [
         'singular' => 'Laufzeitgrenze',
         'plural' => 'Laufzeitgrenzen',
         'add' => 'Laufzeitgrenze anlegen',
+        'kind' => 'Art',
+        'value' => 'Wert',
+        'tolerance_percent' => 'Toleranz (%)',
+        'tolerance_absolute' => 'Toleranz (absolut)',
         'added' => 'Laufzeitgrenze angelegt.',
         'source' => 'Quelle',
         'record_done' => 'Wartung abhaken',
@@ -660,9 +676,13 @@ return [
             'issued_at' => 'Ausgestellt am',
             'valid_until' => 'Gültig bis',
             'issued_by' => 'Ausgestellt von',
+            'file' => 'Datei',
         ],
         'no_expiry' => 'ohne Ablauf',
         'help' => [
+            'file' => 'PDF, JPG oder PNG. Ohne Datei wird nur die Frist geführt — '
+                .'für Papier, das im Ordner bleibt. Mit Datei wird die Bezeichnung '
+                .'in der Übersicht zum Link.',
             'valid_until' => 'Leer lassen, wenn das Dokument nicht abläuft. Manche '
                 .'Luftfahrzeuge brauchen z. B. alle vier Jahre eine Wägung, andere nur '
                 .'bei Bedarf — leer heißt „läuft nicht ab", nicht „vergessen".',

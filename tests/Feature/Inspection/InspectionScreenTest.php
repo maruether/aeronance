@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Inspection;
 
 use App\Core\Access\AccessSetup;
-use App\Core\Models\Qualification;
 use App\Models\User;
 use App\Modules\Inspection\Enums\CheckResult;
 use App\Modules\Inspection\Enums\InspectionState;
@@ -155,21 +154,19 @@ final class InspectionScreenTest extends TestCase
         return $antworten;
     }
 
+    /**
+     * Seit dem Feldtest braucht die Annahme das RELEASE-Recht und keine
+     * Lizenz mehr -- die Eingangspruefung ist Papier- und Zustandspruefung,
+     * keine Freigabe. Dass hier keine Qualification mehr steht, ist die
+     * Aussage (wie im qualifiedInspector von IncomingInspectionTest).
+     */
     private function inspector(): User
     {
         $user = User::factory()->create(['is_active' => true]);
         $user->givePermissionTo(Permissions::INSPECTION_VIEW);
         $user->givePermissionTo(Permissions::INSPECTION_PERFORM);
         $user->givePermissionTo(WarehousePermissions::STOCK_QUARANTINE);
-        $user->givePermissionTo(WarehousePermissions::STOCK_QUARANTINE_CERTIFY);
-
-        Qualification::create([
-            'user_id' => $user->id,
-            'type' => Qualification::TYPE_PART66,
-            'reference' => 'DE.66.00000',
-            'category' => 'B1',
-            'valid_from' => now()->subYear()->toDateString(),
-        ]);
+        $user->givePermissionTo(WarehousePermissions::STOCK_QUARANTINE_RELEASE);
 
         return $user->fresh();
     }

@@ -35,6 +35,10 @@ final class ComponentType extends Model implements HasMedia
         'data_sheet_url',
         'directive_overview_url',
         'part_number',
+        // Lose Referenz auf den Bauteiltyp des Lagers -- die Kopplung aus dem
+        // Feldtest ("eine schleppkupplung kann beides sein"). Nullable und
+        // ohne Fremdschluessel: Modulgrenze, siehe Migration.
+        'part_type_id',
         'source',
         'note',
     ];
@@ -49,7 +53,7 @@ final class ComponentType extends Model implements HasMedia
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['designation', 'manufacturer', 'kind', 'type_certificate', 'part_number'])
+            ->logOnly(['designation', 'manufacturer', 'kind', 'type_certificate', 'part_number', 'part_type_id'])
             ->logOnlyDirty()
             ->useLogName('fleet');
     }
@@ -64,6 +68,16 @@ final class ComponentType extends Model implements HasMedia
     public function installations(): HasMany
     {
         return $this->hasMany(Installation::class, 'component_type_id');
+    }
+
+    /**
+     * Die Muster-Laufzeiten -- Vorlagen, die der Einbau aus dem Lager KOPIERT.
+     *
+     * @return HasMany<ComponentTypeLimit, $this>
+     */
+    public function limits(): HasMany
+    {
+        return $this->hasMany(ComponentTypeLimit::class);
     }
 
     /**

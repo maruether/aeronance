@@ -174,9 +174,18 @@ return [
             'title' => 'Befund',
             'description' => 'Beschreibung',
             'is_blocking' => 'Verhindert den Betrieb',
+            'found_on' => 'Gefunden am',
             'deferred_until' => 'Zurückgestellt bis',
             'deferral_reason' => 'Begründung der Zurückstellung',
             'resolution' => 'Behebung',
+        ],
+        'empty' => [
+            'heading' => 'Keine offenen Befunde',
+            'description' => 'Befunde werden aus einem Vorgang heraus erfasst — Aktion '
+                .'„Befund erfassen" auf der Vorgangsseite. Diese Liste ist die '
+                .'flottenweite Übersicht: Hier wird zurückgestellt, behoben oder '
+                .'verworfen, nicht angelegt. Erledigte Befunde blendet der Filter '
+                .'oben aus.',
         ],
         'action' => [
             'record' => 'Befund erfassen',

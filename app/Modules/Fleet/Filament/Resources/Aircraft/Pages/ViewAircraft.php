@@ -30,13 +30,17 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Throwable;
 
 /**
@@ -605,12 +609,37 @@ final class ViewAircraft extends ViewRecord
                 TextInput::make('issued_by')
                     ->label(__('fleet.document.field.issued_by'))
                     ->maxLength(160),
+
+                /*
+                 * Die Datei selbst. Feldtest: "Dokumente können nicht
+                 * hochgeladen werden" -- der Dialog nahm nur Metadaten an.
+                 * storeFiles(false), weil der Datensatz erst in action()
+                 * entsteht: Die Datei kommt als Upload-Objekt mit und wird
+                 * dort ueber die Medienablage angehaengt (private Disk).
+                 */
+                FileUpload::make('file')
+                    ->label(__('fleet.document.field.file'))
+                    ->storeFiles(false)
+                    ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
+                    ->maxSize((int) config('aeronance.documents.max_size_mb', 20) * 1024)
+                    ->helperText(__('fleet.document.help.file')),
             ])
             ->action(function (array $data): void {
-                AircraftDocument::create($data + [
+                $dokument = AircraftDocument::create(Arr::except($data, ['file']) + [
                     'aircraft_id' => $this->record->id,
                     'user_id' => auth()->id(),
                 ]);
+
+                $datei = $data['file'] ?? null;
+
+                if ($datei instanceof TemporaryUploadedFile) {
+                    // Erzeugter Name: ein hochgeladener Dateiname ist
+                    // Fremdeingabe (Haertungs-Leitplanke). Die Endung kommt
+                    // aus dem geprueften MIME-Typ, nicht vom Client.
+                    $dokument->addMedia($datei->getRealPath())
+                        ->usingFileName(Str::uuid().'.'.($datei->guessExtension() ?: 'pdf'))
+                        ->toMediaCollection(AircraftDocument::FILE);
+                }
 
                 Notification::make()->success()->title(__('fleet.document.singular'))->send();
             });

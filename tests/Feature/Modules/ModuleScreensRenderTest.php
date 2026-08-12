@@ -120,6 +120,15 @@ final class ModuleScreensRenderTest extends TestCase
             RepairPage::class,
             RemovalPage::class,
         ]);
+
+        /*
+         * Und die Lose-Liste hat KEINEN Anlegen-Knopf: Lose entstehen nur
+         * ueber Buchungen. Der Knopf stand da (Copy-Paste) und fuehrte in
+         * ein leeres Modal -- Feldtest: "erstellen Formular ist leer".
+         */
+        $this->get(StockLotResource::getUrl('index'))
+            ->assertSuccessful()
+            ->assertDontSee(__('filament-actions::create.single.label'));
     }
 
     #[Test]
@@ -148,6 +157,12 @@ final class ModuleScreensRenderTest extends TestCase
             WorkOrderResource::class,
             FindingResource::class,
         ], []);
+
+        // Die leere Befundliste erklaert sich selbst -- Feldtest: "nix kann
+        // angelegt werden. was soll der reiter?" Absicht braucht Worte.
+        $this->get(FindingResource::getUrl('index'))
+            ->assertSuccessful()
+            ->assertSee(__('taskcards.finding.empty.heading'));
     }
 
     #[Test]
@@ -181,6 +196,15 @@ final class ModuleScreensRenderTest extends TestCase
             IncomingInspectionResource::class,
             ToolResource::class,
         ], []);
+
+        /*
+         * Der Anlegen-Knopf der Werkzeugliste STEHT auf der Seite. Formular,
+         * Seite und Route existierten von Anfang an -- nur fuehrte nichts
+         * hin. Feldtest: "nix kann angelegt werden."
+         */
+        $this->get(ToolResource::getUrl('index'))
+            ->assertSuccessful()
+            ->assertSee(__('filament-actions::create.single.label'));
     }
 
     /**

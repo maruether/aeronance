@@ -101,6 +101,34 @@ final class VereinsfliegerCouplingTest extends TestCase
     }
 
     /**
+     * "Jetzt lesen" liest genau EINE Kopplung -- die anderen bleiben unberuehrt.
+     *
+     * Der Knopf an der Zeile (Feldtest: "Es fehlt ein 'jetzt lesen' Button")
+     * reicht die Kopplung als only: durch; der Nachtlauf ohne only liest
+     * weiterhin alle.
+     */
+    #[Test]
+    public function reading_a_single_link_leaves_the_others_alone(): void
+    {
+        $anbindung = $this->connection('Verein A');
+        $eins = $this->aircraft('D-KEWW');
+        $zwei = $this->aircraft('D-EABC');
+        $linkEins = $this->link($anbindung, $eins, 'D-KEWW');
+        $this->link($anbindung, $zwei, 'D-EABC');
+
+        $this->fakeMaintenance(['motortime' => 100.0, 'flighttime' => 200.0, 'landingcount' => 300]);
+
+        $ergebnis = app(ReadAircraftTimes::class)->handle(
+            connection: $anbindung,
+            only: $linkEins,
+        );
+
+        $this->assertSame(1, $ergebnis['read']);
+        $this->assertNotNull($this->reading($eins, CounterKind::EngineHours));
+        $this->assertNull($this->reading($zwei, CounterKind::EngineHours));
+    }
+
+    /**
      * Ein unveränderter Stand erzeugt keine zweite Zeile.
      *
      * Ein Zählerstand ist unveränderlich — ein nächtlicher Lauf erzeugte sonst

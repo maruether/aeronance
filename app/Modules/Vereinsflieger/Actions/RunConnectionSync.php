@@ -7,6 +7,7 @@ namespace App\Modules\Vereinsflieger\Actions;
 use App\Core\Identity\RememberExternalGroups;
 use App\Modules\Vereinsflieger\Models\Connection;
 use App\Modules\Vereinsflieger\VereinsfliegerProvider;
+use Throwable;
 
 /**
  * Ein vollstaendiger Abgleich EINER Anbindung -- der eine Ablauf fuer alle Wege.
@@ -43,6 +44,7 @@ final class RunConnectionSync
      *     groups: array{seen: int, new: int}|null,
      *     accounts: array{created: int, updated: int, deactivated: int}|null,
      *     categories: array{seen: int, new: int}|null,
+     *     categories_error: string|null,
      *     times: array{read: int, failed: int, skipped: int},
      *     hours: array{sent: int, failed: int, skipped: int}|null,
      * }
@@ -54,6 +56,7 @@ final class RunConnectionSync
         $gruppen = null;
         $konten = null;
         $kategorien = null;
+        $kategorienFehler = null;
         $stunden = null;
 
         if ($anbindung->provides_identities) {
@@ -74,16 +77,30 @@ final class RunConnectionSync
              * Sitzung um die Mitgliederliste, der Kategorien-Endpunkt liegt
              * daneben. Drei Anfragen am Tag -- das Kontingent verkraftet das,
              * und die Auswahlliste in den Einstellungen bleibt frisch.
+             *
+             * ─────────────────────────────────────────────────────────────────
+             * UND DER SCHRITT DARF SCHEITERN, OHNE DEN LAUF ZU REISSEN.
+             * Gemessen am 12.08. auf test.aeronance.de: Die Kategorien-Tabelle
+             * fehlte (Update ohne Migration), die Ausnahme flog bis zum
+             * Aufrufer -- und die BETRIEBSZEITEN, der eigentliche Zweck des
+             * Laufs, wurden zwei Naechte lang nie gelesen. Eine Auswahlliste
+             * ist Komfort; sie hat nicht das Recht, die Pflicht zu verhindern.
+             * Der Fehler steht im Bericht und wird vom Aufrufer angesagt.
+             * ─────────────────────────────────────────────────────────────────
              */
-            $client = $anbindung->client();
+            try {
+                $client = $anbindung->client();
 
-            if ($client->signIn()) {
-                try {
-                    $kategorien = app(RememberWorkHourCategories::class)
-                        ->handle($client->workHourCategories());
-                } finally {
-                    $client->signOut();
+                if ($client->signIn()) {
+                    try {
+                        $kategorien = app(RememberWorkHourCategories::class)
+                            ->handle($client->workHourCategories());
+                    } finally {
+                        $client->signOut();
+                    }
                 }
+            } catch (Throwable $e) {
+                $kategorienFehler = mb_substr($e->getMessage(), 0, 300);
             }
         }
 
@@ -97,6 +114,7 @@ final class RunConnectionSync
             'groups' => $gruppen,
             'accounts' => $konten,
             'categories' => $kategorien,
+            'categories_error' => $kategorienFehler,
             'times' => $zeiten,
             'hours' => $stunden,
         ];

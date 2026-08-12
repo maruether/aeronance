@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * A paper that hangs on an aircraft.
@@ -19,9 +21,27 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * with no expiry does not expire -- it is not a document whose expiry somebody
  * forgot to type.
  */
-final class AircraftDocument extends Model
+final class AircraftDocument extends Model implements HasMedia
 {
+    use InteractsWithMedia;
     use SoftDeletes;
+
+    /** Die Datei selbst -- Feldtest: "Dokumente können nicht hochgeladen werden". */
+    public const FILE = 'file';
+
+    public function registerMediaCollections(): void
+    {
+        /*
+         * Bis hierher war der "Dokumenten-Upload" nur ein Metadatensatz --
+         * Typ, Titel, Fristen -- ohne jede Datei. Fuer Fristen reicht das,
+         * aber ein Waegebericht, den man nicht oeffnen kann, ist keiner.
+         * Private Disk, Auslieferung nur ueber die auth-gepruefte Route
+         * (fleet.document.file), wie bei jedem Nachweis.
+         */
+        $this->addMediaCollection(self::FILE)
+            ->useDisk('documents')
+            ->singleFile();
+    }
 
     protected $fillable = [
         'aircraft_id',

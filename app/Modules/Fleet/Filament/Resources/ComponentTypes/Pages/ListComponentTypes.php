@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Fleet\Filament\Resources\ComponentTypes\Pages;
 
+use App\Core\Modules\ModuleManager;
 use App\Modules\Fleet\Enums\ComponentKind;
+use App\Modules\Fleet\Enums\LimitKind;
 use App\Modules\Fleet\Filament\Resources\AircraftTypes\Pages\ListAircraftTypes;
 use App\Modules\Fleet\Filament\Resources\ComponentTypes\ComponentTypeResource;
 use App\Modules\Fleet\Models\AircraftType;
@@ -14,6 +16,7 @@ use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Component;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -24,6 +27,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The component catalogue.
@@ -235,6 +239,68 @@ final class ListComponentTypes extends ListRecords
                 ->url()
                 ->maxLength(500)
                 ->helperText(__('fleet.component_type.help.overview'))
+                ->columnSpanFull(),
+
+            /*
+             * Die Kopplung ans Lager -- nur sichtbar, wenn es eines gibt.
+             * Optionen per DB::table statt Model (Modulgrenze, Muster von
+             * AircraftLinkResource); unique, weil zwei Muster fuer denselben
+             * Bauteiltyp zwei Wahrheiten ueber dieselben Laufzeiten waeren.
+             */
+            Select::make('part_type_id')
+                ->label(__('fleet.component_type.field.part_type'))
+                ->options(fn (): array => DB::table('part_types')
+                    ->whereNull('deleted_at')
+                    ->orderBy('name')
+                    ->pluck('name', 'id')
+                    ->all())
+                ->searchable()
+                ->nullable()
+                ->unique(table: 'component_types', ignoreRecord: true)
+                ->visible(fn (): bool => app(ModuleManager::class)->isEnabled('warehouse'))
+                ->helperText(__('fleet.component_type.help.part_type'))
+                ->columnSpanFull(),
+
+            /*
+             * Die Muster-Laufzeiten. VORLAGEN: Beim Einbau aus dem Lager
+             * werden sie kopiert, nie referenziert -- eine spaetere Aenderung
+             * hier fasst keinen bestehenden Einbau an (E7). Deshalb ist es
+             * auch kein Fehler, sie leer zu lassen: Ein Oelfilter hat keine.
+             */
+            Repeater::make('limits')
+                ->label(__('fleet.component_type.field.limits'))
+                ->relationship('limits')
+                ->schema([
+                    Select::make('kind')
+                        ->label(__('fleet.limits.kind'))
+                        ->options(collect(LimitKind::cases())
+                            ->reject(fn (LimitKind $k): bool => $k === LimitKind::CalendarDate)
+                            ->mapWithKeys(fn (LimitKind $k): array => [$k->value => $k->label()])
+                            ->all())
+                        ->required(),
+
+                    TextInput::make('value')
+                        ->label(__('fleet.limits.value'))
+                        ->numeric()
+                        ->required(),
+
+                    TextInput::make('tolerance_percent')
+                        ->label(__('fleet.limits.tolerance_percent'))
+                        ->numeric(),
+
+                    TextInput::make('tolerance_absolute')
+                        ->label(__('fleet.limits.tolerance_absolute'))
+                        ->numeric(),
+
+                    TextInput::make('source')
+                        ->label(__('fleet.limits.source'))
+                        ->maxLength(160)
+                        ->columnSpanFull(),
+                ])
+                ->columns(2)
+                ->defaultItems(0)
+                ->addActionLabel(__('fleet.component_type.action.add_limit'))
+                ->helperText(__('fleet.component_type.help.limits'))
                 ->columnSpanFull(),
 
             Textarea::make('note')

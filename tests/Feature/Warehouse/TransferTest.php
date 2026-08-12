@@ -47,6 +47,7 @@ final class TransferTest extends TestCase
             Permissions::STOCK_TRANSFER,
             Permissions::STOCK_QUARANTINE,
             Permissions::STOCK_QUARANTINE_CERTIFY,
+            Permissions::STOCK_QUARANTINE_RELEASE,
             Permissions::STOCK_SCRAP,
             Permissions::STOCK_ISSUE,
         ] as $p) {
@@ -408,6 +409,10 @@ final class TransferTest extends TestCase
     {
         $user = $this->userWith(
             Permissions::STOCK_QUARANTINE_CERTIFY,
+            // Seit dem Feldtest ist der Weg aus der Eingangs-Quarantaene ein
+            // eigenes Recht (keine Lizenzfrage) -- der Mechaniker hier darf
+            // beides, der Test handelt von der Umlagerung danach.
+            Permissions::STOCK_QUARANTINE_RELEASE,
             Permissions::STOCK_SCRAP,
             Permissions::STOCK_TRANSFER,
         );

@@ -82,11 +82,21 @@ final class FindingResource extends Resource
                         : null),
 
                 TextColumn::make('found_on')
-                    ->label(__('taskcards.finding.field.title'))
+                    ->label(__('taskcards.finding.field.found_on'))
                     ->date('d.m.Y')
                     ->sortable()
                     ->toggleable(),
             ])
+            /*
+             * Die leere Liste muss sich selbst erklaeren. Feldtest, woertlich:
+             * "nix kann angelegt werden. was soll der reiter?" -- beides
+             * berechtigt, denn Befunde entstehen absichtlich NUR aus einem
+             * Vorgang heraus (canCreate ist hart false, siehe unten), und der
+             * Vorfilter blendet Erledigtes aus. Wer das nicht weiss, steht
+             * vor einer leeren Seite ohne Knopf und haelt sie fuer kaputt.
+             */
+            ->emptyStateHeading(__('taskcards.finding.empty.heading'))
+            ->emptyStateDescription(__('taskcards.finding.empty.description'))
             ->filters([
                 SelectFilter::make('state')
                     ->label(__('taskcards.work_order.field.state'))

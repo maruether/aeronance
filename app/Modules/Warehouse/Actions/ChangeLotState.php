@@ -86,7 +86,7 @@ final readonly class ChangeLotState
                 );
             }
 
-            $permission = $this->permissionFor($target);
+            $permission = $this->permissionFor(from: $from, target: $target);
 
             // Two different reasons for a refusal, and they need two different
             // messages: lacking the permission is an administrative matter, while
@@ -102,7 +102,15 @@ final readonly class ChangeLotState
 
             $qualification = $this->authority->qualificationFor($user, $permission);
 
-            if ($qualification === null) {
+            /*
+             * Ob eine Lizenz noetig ist, sagt die Authority-Karte -- nicht
+             * mehr diese Stelle. Frueher stand hier ein hartes "null heisst
+             * abgelehnt", und damit verlangte auch die Annahme des
+             * Wareneingangs eine Part-66-Lizenz (stock.quarantine.release
+             * steht bewusst NICHT in der Karte). Die uebrigen Feststellungen
+             * verlangen sie weiter, und dort greift diese Ablehnung wie zuvor.
+             */
+            if ($qualification === null && $this->authority->requiresQualification($permission)) {
                 throw new RuntimeException(
                     'This determination is reserved for qualified staff: a valid Part-66 licence is required.'
                 );
@@ -141,7 +149,10 @@ final readonly class ChangeLotState
                 'user_id' => $user?->id,
 
                 // Certificate content, copied rather than referenced -- E7.
-                'determined_by_name' => $qualification !== null ? $user?->name : null,
+                // Der NAME steht bei jeder Feststellung, auch der ohne
+                // Lizenzpflicht: Wer den Wareneingang angenommen hat, gehoert
+                // genauso in den Satz wie der, der freigegeben hat.
+                'determined_by_name' => $this->requiresQualification($from, $target) ? $user?->name : null,
                 'qualification_type' => $qualification?->type,
                 'qualification_reference' => $qualification?->reference,
                 'qualification_category' => $qualification?->category,
@@ -181,15 +192,21 @@ final readonly class ChangeLotState
     /**
      * Which permission covers this determination.
      *
-     * Scrapping and disposal sit together; everything else that is a
-     * determination -- unserviceable, or fit for service again -- is the
-     * quarantine certification. The two are NOT hierarchical: someone allowed
-     * to scrap does not thereby gain the right to release parts back into
-     * service. A role bundles them where that makes sense, which is a decision
-     * for the club rather than something baked into the code.
+     * Scrapping and disposal sit together; the way OUT of the incoming hold
+     * has its own verb since the field test (see STOCK_QUARANTINE_RELEASE);
+     * everything else that is a determination -- unserviceable, or the way
+     * back from unserviceable -- is the quarantine certification. None of
+     * these are hierarchical: someone allowed to scrap does not thereby gain
+     * the right to release parts back into service. A role bundles them where
+     * that makes sense, which is a decision for the club rather than
+     * something baked into the code.
      */
-    public function permissionFor(LotState $target): string
+    public function permissionFor(LotState $from, LotState $target): string
     {
+        if ($from === LotState::Quarantined && $target === LotState::Serviceable) {
+            return Permissions::STOCK_QUARANTINE_RELEASE;
+        }
+
         return match ($target) {
             LotState::Unsalvageable, LotState::Disposed => Permissions::STOCK_SCRAP,
             default => Permissions::STOCK_QUARANTINE_CERTIFY,

@@ -35,7 +35,7 @@ final class LotStateTest extends TestCase
     {
         parent::setUp();
 
-        foreach ([Permissions::STOCK_QUARANTINE, Permissions::STOCK_QUARANTINE_CERTIFY, Permissions::STOCK_SCRAP] as $p) {
+        foreach ([Permissions::STOCK_QUARANTINE, Permissions::STOCK_QUARANTINE_CERTIFY, Permissions::STOCK_QUARANTINE_RELEASE, Permissions::STOCK_SCRAP] as $p) {
             Permission::findOrCreate($p, 'web');
         }
     }
@@ -85,18 +85,22 @@ final class LotStateTest extends TestCase
         $this->assertSame(now()->format('Ym').'-002', $second->quarantine_tag);
     }
 
+    /**
+     * Die Rueckkehr aus der Eingangs-Quarantaene ist seit dem Feldtest eine
+     * RECHTEFRAGE (stock.quarantine.release), keine Lizenzfrage: "sollte
+     * jeder mit berechtigung duerfen." Ohne das Recht bleibt sie verwehrt --
+     * und die Ablehnung nennt das Recht, nicht die Lizenz.
+     */
     #[Test]
-    public function releasing_a_lot_back_into_service_needs_a_qualification(): void
+    public function releasing_the_incoming_hold_is_a_permission_matter(): void
     {
-        // The other direction is a statement that the part IS fit, which is a
-        // judgement somebody answers for -- not a matter of undoing a click.
         $lot = $this->lot();
         $storeman = $this->userWith(Permissions::STOCK_QUARANTINE, Permissions::STOCK_QUARANTINE_CERTIFY);
 
         app(ChangeLotState::class)->handle($lot, LotState::Quarantined, 'Papier fehlt', $storeman);
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessageMatches('/qualified staff/');
+        $this->expectExceptionMessageMatches('/permission/');
 
         app(ChangeLotState::class)->handle(
             $lot->fresh(), LotState::Serviceable, 'Form 1 nachgereicht', $storeman,
@@ -104,19 +108,43 @@ final class LotStateTest extends TestCase
     }
 
     #[Test]
-    public function qualified_staff_may_release_it_and_the_record_is_frozen(): void
+    public function the_release_right_suffices_and_the_name_is_still_recorded(): void
+    {
+        $lot = $this->lot();
+        $storeman = $this->userWith(Permissions::STOCK_QUARANTINE, Permissions::STOCK_QUARANTINE_RELEASE);
+
+        app(ChangeLotState::class)->handle($lot, LotState::Quarantined, 'Papier fehlt', $storeman);
+
+        $change = app(ChangeLotState::class)->handle(
+            $lot->fresh(), LotState::Serviceable, 'Form 1 nachgereicht', $storeman,
+        );
+
+        $this->assertSame(LotState::Serviceable, $lot->fresh()->state);
+
+        // Auch ohne Lizenzpflicht eine Feststellung MIT Namen -- nur die
+        // Lizenzfelder bleiben leer. Wer angenommen hat, steht im Satz.
+        $this->assertTrue($change->isDetermination());
+        $this->assertSame($storeman->name, $change->determined_by_name);
+        $this->assertNull($change->qualification_reference);
+    }
+
+    /**
+     * Was qualifiziert BLEIBT: das Urteil ueber den Zustand. Der Weg zurueck
+     * aus "unbrauchbar" verlangt weiterhin Recht UND Part-66 -- der
+     * Feldtest-Umbau betrifft nur die Eingangs-Quarantaene.
+     */
+    #[Test]
+    public function qualified_staff_determinations_still_freeze_the_record(): void
     {
         $lot = $this->lot();
         $mechanic = $this->userWith(Permissions::STOCK_QUARANTINE, Permissions::STOCK_QUARANTINE_CERTIFY);
         $this->givePart66($mechanic, 'DE.66.12345', 'B1.2');
 
-        app(ChangeLotState::class)->handle($lot, LotState::Quarantined, 'Papier fehlt', $mechanic);
-
         $change = app(ChangeLotState::class)->handle(
-            $lot->fresh(), LotState::Serviceable, 'Form 1 nachgereicht', $mechanic,
+            $lot, LotState::Unserviceable, 'Riss festgestellt', $mechanic,
         );
 
-        $this->assertSame(LotState::Serviceable, $lot->fresh()->state);
+        $this->assertSame(LotState::Unserviceable, $lot->fresh()->state);
         $this->assertTrue($change->isDetermination());
 
         // Copied, not referenced -- E7.
@@ -238,7 +266,11 @@ final class LotStateTest extends TestCase
         // A single set of columns on the lot would only remember the last
         // change, and the awkward questions are about earlier ones.
         $lot = $this->lot();
-        $mechanic = $this->userWith(Permissions::STOCK_QUARANTINE, Permissions::STOCK_QUARANTINE_CERTIFY);
+        $mechanic = $this->userWith(
+            Permissions::STOCK_QUARANTINE,
+            Permissions::STOCK_QUARANTINE_CERTIFY,
+            Permissions::STOCK_QUARANTINE_RELEASE,
+        );
         $this->givePart66($mechanic);
 
         $action = app(ChangeLotState::class);

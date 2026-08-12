@@ -292,22 +292,28 @@ final class IncomingInspectionTest extends TestCase
     }
 
     /**
-     * Wer nicht freigeben darf, gibt auch über die Eingangsprüfung nicht frei.
+     * Wer das Annahme-Recht nicht hält, gibt auch über die Eingangsprüfung
+     * nicht frei.
      *
      * Die Annahme hebt die Sperre auf, und das ist die Regel des Lagers. Sie
-     * hier zu umgehen wäre der bequemste Weg an einer Qualifikation vorbei.
+     * hier zu umgehen wäre der bequemste Weg an einem Recht vorbei. Seit dem
+     * Feldtest ("sollte jeder mit berechtigung dürfen") ist es ein RECHT und
+     * keine Lizenzfrage mehr — stock.quarantine.release, siehe Permissions.
      */
     #[Test]
-    public function acceptance_inherits_the_warehouses_qualification_rule(): void
+    public function acceptance_inherits_the_warehouses_permission_rule(): void
     {
         $bewegung = $this->receive();
         $pruefung = IncomingInspection::query()->where('stock_movement_id', $bewegung->id)->firstOrFail();
 
+        // Darf prüfen -- aber die Lagersperre nicht aufheben.
         $ungelernt = User::factory()->create(['is_active' => true]);
+        $ungelernt->givePermissionTo(Permissions::INSPECTION_PERFORM);
+        $ungelernt = $ungelernt->fresh();
 
         try {
             app(CompleteIncomingInspection::class)->accept($pruefung, $ungelernt, $this->allPass($pruefung));
-            $this->fail('Ohne Qualifikation darf die Sperre nicht fallen.');
+            $this->fail('Ohne das Annahme-Recht darf die Sperre nicht fallen.');
         } catch (\Throwable) {
             // So gewollt.
         }
@@ -350,25 +356,20 @@ final class IncomingInspectionTest extends TestCase
     }
 
     /**
-     * Jemand, der freigeben darf -- Recht UND Part-66-Qualifikation.
+     * Jemand, der annehmen darf -- zwei RECHTE, keine Lizenz.
      *
-     * Beides ist noetig, und das ist keine Doppelung: das Recht ist eine
-     * Verwaltungsfrage, die Qualifikation eine Aussage ueber die Person.
+     * Seit dem Feldtest ist die Annahme des Wareneingangs eine Rechtefrage
+     * (stock.quarantine.release): Die Eingangspruefung ist Papier- und
+     * Zustandspruefung nach Verfahren des Betriebs, keine Freigabe am
+     * Luftfahrzeug. Dass hier KEINE Qualification mehr angelegt wird, ist
+     * die eigentliche Aussage dieses Helfers.
      */
     private function qualifiedInspector(): User
     {
         $user = User::factory()->create(['is_active' => true]);
         $user->givePermissionTo(WarehousePermissions::STOCK_QUARANTINE);
-        $user->givePermissionTo(WarehousePermissions::STOCK_QUARANTINE_CERTIFY);
+        $user->givePermissionTo(WarehousePermissions::STOCK_QUARANTINE_RELEASE);
         $user->givePermissionTo(Permissions::INSPECTION_PERFORM);
-
-        Qualification::create([
-            'user_id' => $user->id,
-            'type' => Qualification::TYPE_PART66,
-            'reference' => 'DE.66.00000',
-            'category' => 'B1',
-            'valid_from' => now()->subYear()->toDateString(),
-        ]);
 
         return $user->fresh();
     }

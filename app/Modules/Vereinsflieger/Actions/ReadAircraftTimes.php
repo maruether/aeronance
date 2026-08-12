@@ -57,9 +57,12 @@ final class ReadAircraftTimes
     ];
 
     /**
+     * @param  AircraftLink|null  $only  genau diese eine Kopplung lesen -- der
+     *                                   "Jetzt lesen"-Knopf; null heisst alle
+     *                                   aktiven der Anbindung (Nachtlauf).
      * @return array{read: int, failed: int, skipped: int}
      */
-    public function handle(Connection $connection, ?VereinsfliegerClient $client = null): array
+    public function handle(Connection $connection, ?VereinsfliegerClient $client = null, ?AircraftLink $only = null): array
     {
         if (! app(ModuleManager::class)->isEnabled('fleet')) {
             return ['read' => 0, 'failed' => 0, 'skipped' => 0];
@@ -68,6 +71,7 @@ final class ReadAircraftTimes
         $links = AircraftLink::query()
             ->active()
             ->where('connection_id', $connection->id)
+            ->when($only !== null, fn ($query) => $query->whereKey($only->id))
             ->get();
 
         if ($links->isEmpty()) {

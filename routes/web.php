@@ -9,6 +9,7 @@ use App\Http\Middleware\BlockSetupWhenInstalled;
 use App\Http\Middleware\RedirectToSetupWhenNotInstalled;
 use App\Http\Middleware\RequireSetupAuthority;
 use App\Modules\Directives\Http\OverviewController;
+use App\Modules\Fleet\Http\AircraftDocumentFileController;
 use App\Modules\Fleet\Http\AircraftRecordController;
 use App\Modules\Part66\Http\ExperienceLogController;
 use App\Modules\TaskCards\Http\ReleaseController;
@@ -153,6 +154,10 @@ Route::middleware(['web', 'auth'])->group(function (): void {
 
     Route::get('/waegung/{weighing}', [AircraftRecordController::class, 'weighing'])
         ->name('fleet.weighing');
+
+    // Die Datei eines Luftfahrzeug-Dokuments -- Pruefung im Controller.
+    Route::get('/luftfahrzeug-dokument/{document}', AircraftDocumentFileController::class)
+        ->name('fleet.document.file');
 
     /*
      * Erfahrungsnachweis nach Part-66.

@@ -141,6 +141,12 @@ final class SyncCommand extends Command
             );
         }
 
+        if ($bericht['categories_error'] !== null) {
+            // Laut, aber nicht toedlich: Die Auswahlliste in den Einstellungen
+            // bleibt dann eben stehen -- die Betriebszeiten unten kamen trotzdem.
+            $this->components->warn('Kategorien nicht gelesen: '.$bericht['categories_error']);
+        }
+
         $zeiten = $bericht['times'];
 
         if ($zeiten !== ['read' => 0, 'failed' => 0, 'skipped' => 0]) {

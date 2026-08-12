@@ -33,6 +33,23 @@ final class Permissions
      *  Qualified act, frozen into the record. */
     public const STOCK_QUARANTINE_CERTIFY = 'stock.quarantine.certify';
 
+    /**
+     * Releasing an ARRIVAL from its precautionary hold -- permission only,
+     * no licence.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Split off from certify after the field test: the incoming chain demanded
+     * a Part-66 licence for accepting goods at the door, and the verdict was
+     * "sollte jeder mit berechtigung duerfen". Regulatorisch stimmt das:
+     * Die Eingangspruefung (145.A.42) ist Aufgabe kompetenten Lagerpersonals
+     * nach Verfahren des Betriebs -- keine Freigabe am Luftfahrzeug. Was
+     * qualifiziert BLEIBT: unbrauchbar erklaeren, der Weg zurueck aus
+     * unbrauchbar, ausmustern. Die urteilen ueber Zustand; hier wird Papier
+     * angenommen.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    public const STOCK_QUARANTINE_RELEASE = 'stock.quarantine.release';
+
     /** Unsalvageable and disposal. One-way, qualified act. */
     public const STOCK_SCRAP = 'stock.scrap';
 

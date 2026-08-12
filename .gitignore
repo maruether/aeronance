@@ -1,3 +1,13 @@
+# --- Marvins Feldtest-Notizen: Arbeitsstand, kein Repo-Inhalt ---
+# Was daraus wird, steht im CHANGELOG; die Rohnotizen bleiben lokal.
+/docs/ISSUES.md
+/docs/ISSUES_RESOLVED.md
+
+# --- Fremde Vorlagen (BWLV-Formulare u. ae.): Referenzmaterial, nicht unseres.
+# Nachgebaut wird die STRUKTUR in eigenen Views; die PDFs selbst tragen
+# fremdes Urheberrecht und bleiben lokal.
+/docs/vorlagen/
+
 # --- Abhängigkeiten (kommen aus composer.lock / package-lock.json) ---
 /vendor
 /node_modules

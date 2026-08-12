@@ -27,6 +27,71 @@ woran als Nächstes gearbeitet wird.
   Demomodus abschalten muss (Mails, Updates, echte Herstellerabrufe), ist
   Teil des Zuschnitts.
 
+## [0.1.2] — 2026-08-12
+
+Die zweite Feldtest-Runde, plus die Antwort auf „das Update-Skript hat
+nicht funktioniert". **Beim Update beachten:** nichts — `deploy/update.sh`
+bzw. `deploy/docker/update.sh` genügt. Wer das Docker-Update zuletzt von
+Hand gemacht hat (pull + up): genau dabei fehlte die Migration — diesmal
+bitte das Skript.
+
+### Neu
+
+- **Komponentenmuster kennen ihren Bauteiltyp — und der Einbau erbt die
+  Laufzeiten.** Feldtest: „Eine Schleppkupplung oder ein Höhenmesser können
+  beides sein." Ein Muster kann jetzt optional den Lager-Bauteiltyp benennen
+  und Muster-Laufzeiten tragen („24 Monate", „500 Starts"). Die Entnahme aus
+  dem Lager in ein Luftfahrzeug katalogisiert den Einbau automatisch und
+  kopiert die Laufzeiten an ihn — als Kopie, nie als Verweis: Wer später die
+  Vorlage ändert, ändert keinen bestehenden Einbau. Ohne Kopplung bleibt
+  alles exakt wie vorher; pro Bauteiltyp ist genau ein Muster zulässig, und
+  die Verweise bleiben lose (kein Fremdschlüssel über die Modulgrenze).
+
+### Behoben
+
+- **Das Docker-Update-Skript scheiterte an der Sicherung — und die
+  Sicherung an einer Raute im Datenbank-Passwort.** Die Optionsdatei für
+  mariadb-dump schrieb das Passwort unquotiert; ab `#` beginnt in einer
+  my.cnf ein Kommentar, das Passwort kam abgeschnitten an, „Access denied",
+  und update.sh verweigerte ohne Sicherung zu Recht. Die Anwendung selbst
+  verband sich fehlerfrei — der Fehler existierte nur im Werkzeugweg.
+  Werte stehen jetzt zitiert und maskiert in der Optionsdatei.
+- **Das v0.1.1-Image hatte die zip-Extension ohne ihre Bibliothek:** Das
+  `autoremove` nach dem Bau riss libzip4 mit, jeder Artisan-Aufruf warnte.
+  Die Laufzeit-Bibliotheken stehen jetzt ausdrücklich in der Paketliste,
+  und der Image-Bau beweist selbst, dass zip, intl und gd laden — sonst
+  bricht er ab.
+
+Aus dem Feldtest (docs/ISSUES.md, 2026-08-12):
+
+- **Eingangsprüfung entkoppelt von Part-66.** Die Annahme des Wareneingangs
+  verlangte über die Lagerregel eine Part-66-Lizenz — für eine Papier- und
+  Zustandsprüfung nach 145.A.42, die keine Freigabe ist. Neues Recht
+  `stock.quarantine.release` (Rechtefrage, keine Lizenzfrage); unbrauchbar
+  erklären, der Weg zurück daraus und Ausmustern bleiben qualifizierte
+  Feststellungen mit Part-66. Auch die lizenzfreie Annahme trägt den Namen
+  dessen, der sie getroffen hat.
+- **Lager/Lose:** Der Anlegen-Knopf führte in ein leeres Formular — er ist
+  weg, denn Lose entstehen ausschließlich über Buchungen.
+- **Werkzeuge:** Es gab keinen Weg, eines anzulegen — Formular und Seite
+  existierten, nur der Knopf fehlte. Er steht jetzt da.
+- **Befunde:** Die leere Liste erklärt jetzt, dass Befunde aus einem Vorgang
+  heraus erfasst werden und dies die flottenweite Übersicht ist; die
+  Datumsspalte trug außerdem das falsche Label.
+- **Luftfahrzeug-Dokumente:** Der Dialog nahm nur Metadaten an — jetzt kann
+  die Datei (PDF/JPG/PNG) mit hochgeladen werden, privat abgelegt und nur
+  angemeldet ausgeliefert; die Bezeichnung wird zum Link.
+- **Rollen-Editor:** 26 Rechte aus fünf Modulen standen als rohe Schlüssel
+  da (die Sprachdatei endete bei der Lager-Ära) — und die Abschnittstitel
+  waren wegen der Punkte in Gruppennamen nie aufgelöst worden. Beides
+  behoben; ein Test läuft seither über alle Rechte und Gruppen.
+- **VF-Abgleich:** Ein scheiternder Kategorien-Abruf (z. B. Update ohne
+  Migration) riss den ganzen Lauf ab, bevor die Betriebszeiten gelesen
+  wurden. Der Schritt ist jetzt ein Warnhinweis, kein Abbruch.
+- **VF-Kopplungen:** „Jetzt lesen" an jeder Zeile holt die Betriebszeiten
+  sofort; das Kennzeichen-Feld schlägt die eigene Flotte vor (Vereinsflieger
+  bietet keinen Flugzeuglisten-Endpunkt — nachgemessen).
+
 ## [0.1.1] — 2026-08-09
 
 Die Lehren des ersten echten Feldtests: 0.1.0 wurde am Tag nach dem Release

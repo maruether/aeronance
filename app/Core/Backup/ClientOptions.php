@@ -77,14 +77,37 @@ final class ClientOptions
 
         file_put_contents($pfad, sprintf(
             "[client]\nhost=%s\nport=%s\nuser=%s\npassword=%s\n%s",
-            $connection['host'] ?? '127.0.0.1',
+            self::quote((string) ($connection['host'] ?? '127.0.0.1')),
             $connection['port'] ?? 3306,
-            $connection['username'] ?? '',
-            $connection['password'] ?? '',
+            self::quote((string) ($connection['username'] ?? '')),
+            self::quote((string) ($connection['password'] ?? '')),
             self::tls($connection),
         ));
 
         return $pfad;
+    }
+
+    /**
+     * Ein Wert in Optionsdatei-Schreibweise -- immer in Anfuehrungszeichen.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * GEMESSEN AUF TEST.AERONANCE.DE, und der Fall war fies: Ein 126-Zeichen-
+     * Passwort mit einer RAUTE darin. In einer my.cnf beginnt ab # ein
+     * Kommentar -- auch mitten in der Zeile --, das Passwort kam abgeschnitten
+     * beim Server an, mariadb-dump bekam "Access denied", und weil update.sh
+     * ohne Sicherung zu Recht verweigert, sah es aus, als sei DAS SKRIPT
+     * kaputt. Die Anwendung selbst verband sich die ganze Zeit fehlerfrei:
+     * PDO reicht das Passwort direkt durch und kennt keine Kommentare.
+     *
+     * In Anfuehrungszeichen ist die Raute ein Zeichen wie jedes andere;
+     * Backslash und Anfuehrungszeichen selbst brauchen die Ausweichschreibung
+     * (\\ und \") -- die einzigen zwei, die MariaDB in zitierten Werten
+     * verlangt.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    private static function quote(string $wert): string
+    {
+        return '"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $wert).'"';
     }
 
     /**

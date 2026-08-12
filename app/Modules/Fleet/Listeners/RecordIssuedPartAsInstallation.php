@@ -6,6 +6,8 @@ namespace App\Modules\Fleet\Listeners;
 
 use App\Core\Modules\ModuleManager;
 use App\Modules\Fleet\Models\Aircraft;
+use App\Modules\Fleet\Models\ComponentLimit;
+use App\Modules\Fleet\Models\ComponentType;
 use App\Modules\Fleet\Models\Installation;
 use App\Modules\Warehouse\Events\PartIssuedToAircraft;
 
@@ -24,11 +26,17 @@ use App\Modules\Warehouse\Events\PartIssuedToAircraft;
  *    that matches no aircraft -- better absent than misfiled;
  *  - it is a standard part.
  *
- * What it does NOT do is invent life limits. Vorgabe: "daraus ergibt sich das
+ * What it does NOT do is INVENT life limits. Vorgabe: "daraus ergibt sich das
  * nicht jedes bauteil eine laufzeit hat. Ein Ölfilter geht z.B. automatisch mit
- * der Motorwartung und ein neuer kommt." The limits are entered by whoever knows
- * them, if there are any. An automatic guess would be wrong more often than
- * right, and wrong in the direction of a false sense of control.
+ * der Motorwartung und ein neuer kommt." An automatic guess would be wrong more
+ * often than right, and wrong in the direction of a false sense of control.
+ *
+ * Since the field test it DOES inherit them where somebody stated them: a
+ * component type explicitly linked to the issued part type (Feldtest:
+ * "eine schleppkupplung kann beides sein. Kopplung zwischen beiden?") hands
+ * its template limits to the installation -- as COPIES, E7-style, so a later
+ * edit of the master never touches an existing installation. A stated
+ * template is not a guess; the unlinked case stays exactly as before.
  */
 final readonly class RecordIssuedPartAsInstallation
 {
@@ -50,8 +58,18 @@ final readonly class RecordIssuedPartAsInstallation
             return;
         }
 
-        Installation::create([
+        /*
+         * Das verknuepfte Muster -- ueber die lose partTypeId aus der
+         * Event-Nutzlast, reiner Flotten-Code. Kein Treffer heisst: wie
+         * bisher, ohne Katalogeintrag und ohne Laufzeiten.
+         */
+        $muster = $event->partTypeId !== null
+            ? ComponentType::query()->where('part_type_id', $event->partTypeId)->first()
+            : null;
+
+        $installation = Installation::create([
             'aircraft_id' => $aircraft->id,
+            'component_type_id' => $muster?->id,
             'part_name' => $event->partName,
             'part_number' => $event->partNumber,
 
@@ -82,5 +100,27 @@ final readonly class RecordIssuedPartAsInstallation
 
             'counters_at_installation' => $aircraft->currentValues(),
         ]);
+
+        if ($muster === null) {
+            return;
+        }
+
+        /*
+         * Die Vorlagen KOPIEREN, nie referenzieren: Dieser Einbau lief unter
+         * den Grenzen von HEUTE, und genau die muss der Nachweis zeigen --
+         * auch wenn das Muster morgen andere bekommt (E7). Kalender-Grenzen
+         * ankern von selbst am installed_at (ComponentLimit::anchorDate).
+         */
+        foreach ($muster->limits as $vorlage) {
+            ComponentLimit::create([
+                'installation_id' => $installation->id,
+                'kind' => $vorlage->kind,
+                'value' => $vorlage->value,
+                'tolerance_percent' => $vorlage->tolerance_percent,
+                'tolerance_absolute' => $vorlage->tolerance_absolute,
+                'source' => $vorlage->source,
+                'note' => $vorlage->note,
+            ]);
+        }
     }
 }

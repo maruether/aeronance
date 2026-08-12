@@ -546,11 +546,15 @@ nicht sperren — dort ist die Prüfung ein Nachweis, keine Sperre.
   Punkt verhindert die Unterschrift, auch bei einer Zurückweisung. Annehmen
   trotz Beanstandung ist erlaubt (gedellte Verpackung um ein gutes Teil),
   aber nur mit Begründung.
-- **Die Annahme geht durch die Lagerfreigabe** und erbt deren
-  Qualifikationspflicht: Wer im Lager nicht freigeben darf
-  (`stock.quarantine.certify` + Part-66-Lizenz), kann auch hier nicht
-  annehmen. **Zurückweisen bewegt nichts** — die Ware bleibt gesperrt; was
-  mit ihr geschieht, ist ein eigener Vorgang.
+- **Die Annahme geht durch die Lagerfreigabe** und braucht deren Recht:
+  `stock.quarantine.release` — eine Rechtefrage, **keine Lizenzfrage**. Die
+  Eingangsprüfung ist Papier- und Zustandsprüfung nach Verfahren des
+  Betriebs (145.A.42), keine Freigabe am Luftfahrzeug; eine Part-66-Lizenz
+  ist dafür nicht nötig. Qualifiziert bleiben die Urteile über den
+  *Zustand*: unbrauchbar erklären, der Weg zurück aus unbrauchbar,
+  ausmustern (`stock.quarantine.certify` bzw. `stock.scrap` + Part-66).
+  **Zurückweisen bewegt nichts** — die Ware bleibt gesperrt; was mit ihr
+  geschieht, ist ein eigener Vorgang.
 - Prüfungen werden nie gelöscht und nie nachträglich geändert — eine
   Korrektur ist ein neuer Eintrag.
 
@@ -601,6 +605,15 @@ Aussage (nicht dasselbe wie ein leeres Feld) und löst auf der
 LTA/TM-Übersicht die Warnung aus, dass eine vollständig aussehende Liste
 keine sein muss.
 
+**Kopplung ans Lager:** Ein Komponentenmuster kann seinen **Bauteiltyp**
+benennen (eine Schleppkupplung ist beides — Lager-Stammsatz *und*
+Flotten-Muster) und **Muster-Laufzeiten** tragen, z. B. „24 Monate" und
+„500 Starts". Wird ein solches Teil aus dem Lager in ein Luftfahrzeug
+entnommen, ist der Einbau automatisch katalogisiert und erbt die
+Laufzeiten — als **Kopie**: Eine spätere Änderung am Muster fasst
+bestehende Einbauten nicht an. Ohne Kopplung bleibt alles wie gehabt
+(Laufzeiten von Hand); pro Bauteiltyp ist genau ein Muster zulässig.
+
 ### 9.3 Komponenten und Laufzeiten
 
 Eingebaute Komponenten zeigen TSN/TSO nebeneinander, „fällig in" und
@@ -633,7 +646,10 @@ Eingebaute Komponenten zeigen TSN/TSO nebeneinander, „fällig in" und
   hinterlegte Nachprüfung wird als **überfällig** gemeldet — es sähe sonst
   aus wie eines, bei dem alles in Ordnung ist.
 - **Dokumente** (AMP, Wägebericht, Lärmzeugnis, …): „Gültig bis" darf leer
-  bleiben — leer heißt „läuft nicht ab", nicht „vergessen".
+  bleiben — leer heißt „läuft nicht ab", nicht „vergessen". Die **Datei**
+  (PDF/JPG/PNG) kann mit hochgeladen werden; in der Übersicht wird die
+  Bezeichnung dann zum Link. Ohne Datei wird nur die Frist geführt — für
+  Papier, das im Ordner bleibt.
 - **Wägung:** eigenes Formular je Bauart (Segelflugzeug bauteilweise mit
   M.N.T.; Motorflugzeug auf Auflagen mit Abzügen samt Hebelarm), lebende
   Ergebnisrechnung mit Befunden vor der Unterschrift, Beladeplan. **„Speichern
@@ -990,7 +1006,9 @@ nicht — jedes Konto hat ein eigenes Aeronance-Passwort.
   hat Konten ohne Rechte — das ist der sichere Ausgangszustand.
 - **Luftfahrzeug-Kopplungen:** holen nachts Motorzeit, Flugzeit und
   Landungen als Zählerstände in die Flotte — nur bei Änderung, gekennzeichnet
-  als Schnittstellenwert ohne Ablese-Person.
+  als Schnittstellenwert ohne Ablese-Person. **„Jetzt lesen"** an der Zeile
+  holt die Zeiten sofort (eine Anfrage); das Kennzeichen-Feld schlägt die
+  eigene Flotte vor — Vereinsflieger bietet keinen Flugzeuglisten-Endpunkt.
 - **Arbeitsstunden-Rückschreibung** (ab Werk aus): schreibt erfasste
   Arbeitszeiten als Arbeitsstunden nach Vereinsflieger — **endgültig**,
   Vereinsflieger kann eine gebuchte Stunde weder ändern noch löschen.

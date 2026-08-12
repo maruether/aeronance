@@ -49,8 +49,17 @@ final class RoleForm
                 ->helperText(__('roles.help.name')),
         ];
 
+        /*
+         * Flach nachgeschlagen wie die Labels, und aus demselben Grund:
+         * Gruppennamen tragen Punkte ("core.people"), und __() liest Punkte
+         * als Verschachtelung -- der Abschnittstitel war deshalb von Anfang
+         * an der rohe Schluessel. Aufgefallen erst, als der Label-Test alle
+         * Gruppen ablief statt einer Stichprobe.
+         */
+        $groupTitles = (array) trans('permissions.group');
+
         foreach (app(PermissionRegistry::class)->grouped() as $group => $definitions) {
-            $sections[] = Section::make(__('permissions.group.'.$group))
+            $sections[] = Section::make($groupTitles[$group] ?? $group)
                 ->schema([
                     CheckboxList::make(self::fieldFor($group))
                         ->hiddenLabel()

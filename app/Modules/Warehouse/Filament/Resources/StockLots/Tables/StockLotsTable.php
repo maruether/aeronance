@@ -318,6 +318,10 @@ final class StockLotsTable
             ->visible(fn (StockLot $r): bool => $r->state->allowedTransitions() !== []
                 && (auth()->user()?->canAny([
                     Permissions::STOCK_QUARANTINE_CERTIFY,
+                    // Wer nur den Wareneingang annehmen darf, sieht den Knopf
+                    // auch -- welcher Uebergang ihm offensteht, entscheidet
+                    // ChangeLotState.
+                    Permissions::STOCK_QUARANTINE_RELEASE,
                     Permissions::STOCK_SCRAP,
                 ]) ?? false))
             ->schema(fn (StockLot $record): array => [

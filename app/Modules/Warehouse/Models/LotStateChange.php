@@ -82,11 +82,17 @@ final class LotStateChange extends Model
     }
 
     /**
-     * Whether this entry records a qualified determination.
+     * Whether this entry records a determination somebody answered for.
+     *
+     * Am NAMEN festgemacht, nicht am Qualifikationstyp: Seit der
+     * Feldtest-Korrektur gibt es eine Feststellung ohne Lizenzpflicht -- die
+     * Annahme des Wareneingangs (stock.quarantine.release). Auch sie traegt
+     * den Namen dessen, der sie getroffen hat; nur die Lizenzfelder bleiben
+     * leer.
      */
     public function isDetermination(): bool
     {
-        return $this->qualification_type !== null;
+        return $this->determined_by_name !== null;
     }
 
     /**
@@ -117,6 +123,12 @@ final class LotStateChange extends Model
     {
         if (! $this->isDetermination()) {
             return null;
+        }
+
+        // Ohne Lizenzpflicht (Wareneingangs-Annahme) steht nur der Name --
+        // eine Klammer mit leerem Typ waere eine Behauptung ohne Inhalt.
+        if ($this->qualification_type === null) {
+            return (string) $this->determined_by_name;
         }
 
         return sprintf(

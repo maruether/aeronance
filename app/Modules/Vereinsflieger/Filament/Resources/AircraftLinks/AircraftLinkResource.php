@@ -6,16 +6,19 @@ namespace App\Modules\Vereinsflieger\Filament\Resources\AircraftLinks;
 
 use App\Core\Access\CorePermissions;
 use App\Core\Modules\ModuleManager;
+use App\Modules\Vereinsflieger\Actions\ReadAircraftTimes;
 use App\Modules\Vereinsflieger\Filament\Resources\AircraftLinks\Pages\ListAircraftLinks;
 use App\Modules\Vereinsflieger\Models\AircraftLink;
 use App\Modules\Vereinsflieger\Models\Connection;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -138,10 +141,20 @@ final class AircraftLinkResource extends Resource
                     $set('callsign', self::registrationOf((int) $state));
                 }),
 
+            /*
+             * VORSCHLAGSLISTE, KEIN HARTES AUSWAHLFELD -- und das ist
+             * gemessen, nicht bequem: Vereinsflieger hat keinen
+             * Flugzeuglisten-Endpunkt (aircraft/list antwortet auf diesem
+             * Mandanten mit "Unknown Resource", GET wie POST). Die
+             * Vorschlaege kommen deshalb aus der eigenen Flotte; Freitext
+             * bleibt, weil Vereinsflieger ein Kennzeichen anders schreiben
+             * kann als das Schild am Leitwerk.
+             */
             TextInput::make('callsign')
                 ->label(__('vereinsflieger.link.field.callsign'))
                 ->required()
                 ->maxLength(32)
+                ->datalist(fn (): array => array_values(self::aircraftOptions()))
                 ->helperText(__('vereinsflieger.link.help.callsign')),
 
             Toggle::make('is_active')
@@ -181,7 +194,43 @@ final class AircraftLinkResource extends Resource
             ->defaultSort('callsign')
             ->emptyStateHeading(__('vereinsflieger.link.empty'))
             ->headerActions([CreateAction::make()])
-            ->recordActions([EditAction::make(), DeleteAction::make()]);
+            ->recordActions([
+                /*
+                 * Sofort lesen statt auf 02:00 warten -- EINE Anfrage an den
+                 * Dienst, deshalb ohne Bestaetigungsdialog und ohne Queue:
+                 * Das Ergebnis steht in derselben Sekunde in der Zeile
+                 * ("Zuletzt gelesen" bzw. der Fehler daneben).
+                 */
+                Action::make('read')
+                    ->label(__('vereinsflieger.link.read_now'))
+                    ->icon(Heroicon::OutlinedArrowPath)
+                    ->visible(fn (AircraftLink $record): bool => $record->is_active
+                        && $record->connection?->is_active === true)
+                    ->action(function (AircraftLink $record): void {
+                        $ergebnis = app(ReadAircraftTimes::class)->handle(
+                            connection: $record->connection,
+                            only: $record,
+                        );
+
+                        $record->refresh();
+
+                        // "Gelesen" heisst auch: gelesen und unveraendert --
+                        // geschrieben wird nur, was sich geaendert hat.
+                        if ($ergebnis['read'] > 0) {
+                            Notification::make()->success()
+                                ->title(__('vereinsflieger.link.read_done', ['callsign' => $record->callsign]))
+                                ->send();
+                        } else {
+                            Notification::make()->danger()
+                                ->title(__('vereinsflieger.link.read_failed'))
+                                ->body($record->last_error ?? __('vereinsflieger.link.read_failed'))
+                                ->persistent()
+                                ->send();
+                        }
+                    }),
+                EditAction::make(),
+                DeleteAction::make(),
+            ]);
     }
 
     /**

@@ -41,6 +41,34 @@ final class ClientOptionsTest extends TestCase
         $this->assertStringContainsString("ssl=0\n", $inhalt);
     }
 
+    /**
+     * Eine Raute im Passwort ueberlebt die Optionsdatei.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Gemessen auf test.aeronance.de: 126 Zeichen Passwort, eine Raute darin.
+     * Unquotiert beginnt in einer my.cnf ab # ein Kommentar -- auch mitten in
+     * der Zeile. mariadb-dump bekam "Access denied", update.sh verweigerte
+     * ohne Sicherung, und es sah aus, als sei das Update-Skript kaputt. Die
+     * Anwendung verband sich die ganze Zeit fehlerfrei (PDO kennt keine
+     * Kommentare) -- der Fehler existierte NUR im Werkzeugweg.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    #[Test]
+    public function a_hash_in_the_password_survives_the_options_file(): void
+    {
+        $inhalt = $this->inhaltFuer([
+            'host' => 'localhost',
+            'username' => 'aeronance',
+            'password' => 'vorne#hinten und "zitat" mit \\backslash',
+        ]);
+
+        $this->assertStringContainsString(
+            'password="vorne#hinten und \"zitat\" mit \\\\backslash"',
+            $inhalt,
+            'Das Passwort muss zitiert und nach my.cnf-Regeln maskiert sein.',
+        );
+    }
+
     #[Test]
     public function a_tls_connection_presents_the_same_ca(): void
     {

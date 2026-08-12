@@ -168,6 +168,38 @@ final class VereinsfliegerSyncCommandTest extends TestCase
     }
 
     /**
+     * Ein sterbender Kategorien-Abruf reisst den Lauf NICHT mehr ab.
+     *
+     * Gemessen am 12.08.: Nach einem Update ohne Migration fehlte die
+     * Kategorien-Tabelle, die Ausnahme flog bis zum Aufrufer -- und die
+     * Betriebszeiten, der eigentliche Zweck des Nachtlaufs, wurden zwei
+     * Naechte lang nicht gelesen. Die Auswahlliste ist Komfort; sie hat
+     * nicht das Recht, die Pflicht zu verhindern.
+     */
+    #[Test]
+    public function a_failing_category_fetch_does_not_kill_the_run(): void
+    {
+        Http::fake([
+            '*auth/accesstoken' => Http::response(['accesstoken' => str_repeat('a', 64), 'httpstatuscode' => 200]),
+            '*auth/signin' => Http::response(['httpstatuscode' => 200]),
+            '*user/list' => Http::response([
+                ['uid' => '1', 'msid' => '1', 'memberstatus' => 'aktiv'],
+                'httpstatuscode' => 200,
+            ]),
+            '*workhourcategories/list' => Http::response('kaputt', 500),
+            '*' => Http::response(['httpstatuscode' => 200]),
+        ]);
+
+        $this->artisan('aeronance:vereinsflieger-sync')
+            ->expectsOutputToContain('Kategorien nicht gelesen')
+            ->assertSuccessful();
+
+        // Der Lauf gilt als gelaufen, nicht als gescheitert -- der Fehler
+        // stand in der Ausgabe, die Anbindung traegt keinen Dauerfehler.
+        $this->assertNull(Connection::sole()->last_error);
+    }
+
+    /**
      * Der Knopf-Weg: derselbe Abgleich als Job, Ergebnis an der Anbindung.
      *
      * Rueckmeldung aus dem Betrieb: "es dauert und es wird nicht darauf

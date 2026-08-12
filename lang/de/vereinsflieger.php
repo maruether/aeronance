@@ -141,16 +141,21 @@ return [
             'last_read' => 'Zuletzt gelesen',
         ],
         'help' => [
-            'callsign' => 'So, wie es in Vereinsflieger steht. In der Regel identisch '
-                .'mit dem Kennzeichen am Luftfahrzeug — getrennt geführt, weil eine '
-                .'abweichende Schreibweise sonst zu einem Abgleich führt, der stumm '
-                .'nichts findet.',
+            'callsign' => 'So, wie es in Vereinsflieger steht. Die Vorschläge kommen '
+                .'aus der eigenen Flotte — Vereinsflieger bietet keinen Endpunkt, '
+                .'der seine Flugzeugliste liefert (nachgemessen). In der Regel '
+                .'identisch mit dem Kennzeichen am Luftfahrzeug; abweichende '
+                .'Schreibweise hier korrigieren, sonst findet der Abgleich stumm '
+                .'nichts.',
             'is_active' => 'Aus heißt: Die Kopplung bleibt stehen, nachts wird nichts '
                 .'geholt.',
         ],
         'no_fleet' => 'Das Flottenmodul ist nicht aktiv — ohne Luftfahrzeuge gibt es '
             .'nichts zu koppeln.',
         'empty' => 'Kein Luftfahrzeug gekoppelt',
+        'read_now' => 'Jetzt lesen',
+        'read_done' => 'Betriebszeiten für :callsign gelesen',
+        'read_failed' => 'Lesen fehlgeschlagen',
     ],
 
     // Ein 'workhours'-Block mit Kategorien-Texten stand hier und wurde nie

@@ -56,6 +56,7 @@ final class WarehouseModule implements AeronanceModule
                 Permissions::STOCK_ISSUE,
                 Permissions::STOCK_QUARANTINE,
                 Permissions::STOCK_QUARANTINE_CERTIFY,
+                Permissions::STOCK_QUARANTINE_RELEASE,
                 Permissions::STOCK_SCRAP,
                 Permissions::STOCK_TRANSFER,
                 Permissions::STOCK_CORRECT,

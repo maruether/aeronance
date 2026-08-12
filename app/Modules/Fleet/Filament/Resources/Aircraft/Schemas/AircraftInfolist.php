@@ -134,8 +134,21 @@ final class AircraftInfolist
                                 ->label(__('fleet.document.singular'))
                                 ->state(fn (AircraftDocument $d): string => $d->type->label()),
 
+                            /*
+                             * Mit Datei wird der Titel zum Link -- ein
+                             * Dokument, das man nicht oeffnen kann, ist nur
+                             * eine Behauptung. Ohne Datei bleibt er Text:
+                             * Metadatensaetze (nur Frist, Papier im Ordner)
+                             * bleiben erlaubt.
+                             */
                             TextEntry::make('title')
-                                ->label(__('fleet.document.field.title')),
+                                ->label(__('fleet.document.field.title'))
+                                ->url(fn (AircraftDocument $d): ?string => $d->hasMedia(AircraftDocument::FILE)
+                                    ? route('fleet.document.file', $d)
+                                    : null, shouldOpenInNewTab: true)
+                                ->color(fn (AircraftDocument $d): ?string => $d->hasMedia(AircraftDocument::FILE)
+                                    ? 'primary'
+                                    : null),
 
                             TextEntry::make('reference')
                                 ->label(__('fleet.document.field.reference'))

@@ -31,15 +31,30 @@ FROM php:${PHP_VERSION}-fpm-bookworm
 #
 # Die Extensions sind dieselben, die die CI installiert. Weicht das ab, läuft
 # getestet etwas anderes als ausgeliefert.
+#
+# DIE LAUFZEIT-BIBLIOTHEKEN STEHEN AUSDRUECKLICH MIT IN DER LISTE, und das ist
+# die Lehre aus einem stillen Fehler: Nur die -dev-Pakete zu installieren
+# heisst, dass ihre Laufzeit-Gegenstuecke als automatisch markiert sind -- und
+# `autoremove` nach dem Purge reisst mit, was kein anderes Paket festhaelt.
+# Genau so verlor v0.1.1 die libzip4: Die zip-Extension war gebaut, ihre
+# Bibliothek weg, und jeder Artisan-Aufruf warnte "Unable to load dynamic
+# library 'zip'". Dass intl und gd ueberlebten, war Glueck (poppler-utils
+# haelt deren Bibliotheken fest) -- Glueck ist keine Abhaengigkeitserklaerung.
 RUN apt-get update \
  && apt-get install -yqq --no-install-recommends \
       libzip-dev libicu-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
+      libzip4 libicu72 libpng16-16 libjpeg62-turbo libfreetype6 \
       poppler-utils mariadb-client \
  && docker-php-ext-configure gd --with-freetype --with-jpeg \
  && docker-php-ext-install -j"$(nproc)" pdo_mysql zip intl bcmath exif gd opcache \
  && apt-get purge -yqq libzip-dev libicu-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
  && apt-get autoremove -yqq \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ # Der Beweis gehoert in den Build: Laedt eine Extension nicht, bricht das
+ # Image hier ab -- nicht erst beim ersten Artisan-Aufruf eines Vereins.
+ && php -m | grep -qx zip \
+ && php -m | grep -qx intl \
+ && php -m | grep -qx gd
 
 # Opcache: ein Container wird nicht editiert, also darf der Cache die Dateien
 # nicht ständig neu prüfen.

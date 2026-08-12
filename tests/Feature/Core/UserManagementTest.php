@@ -310,6 +310,47 @@ final class UserManagementTest extends TestCase
         $this->assertSame('Zustand feststellen und freigeben', $labels['stock.quarantine.certify']);
     }
 
+    /**
+     * JEDES Recht jedes Moduls hat Label und Gruppentitel.
+     *
+     * Feldtest: "Es gibt noch einige berechtigungen ohne namen bei denen der
+     * key angezeigt wird" -- die Sprachdatei endete bei der Lager-Aera, 26
+     * Rechte aus fuenf spaeteren Modulen standen als rohe Schluessel im
+     * Rollen-Editor. Die Schleife statt einer Stichprobe, aus demselben Grund
+     * wie beim Einstellungs-Gruppen-Test: Ein Mensch sieht so etwas sofort,
+     * ein Stichproben-Test nie.
+     */
+    #[Test]
+    public function every_permission_of_every_module_has_a_label(): void
+    {
+        $labels = (array) trans('permissions.label');
+        $definitionen = CorePermissions::all();
+
+        foreach (glob(app_path('Modules/*/*Module.php')) as $datei) {
+            $klasse = 'App\\Modules\\'.basename(dirname($datei)).'\\'.basename($datei, '.php');
+            $modul = new $klasse;
+            $definitionen = [...$definitionen, ...$modul->permissions()];
+        }
+
+        $this->assertNotEmpty($definitionen);
+
+        foreach ($definitionen as $definition) {
+            $this->assertArrayHasKey(
+                $definition->name,
+                $labels,
+                sprintf('Dem Recht "%s" fehlt das Label in lang/de/permissions.php.', $definition->name),
+            );
+
+            // Flach wie in RoleForm -- Gruppennamen tragen Punkte, __() taugt
+            // dafuer nicht (genau so fiel auf, dass die Titel nie ankamen).
+            $this->assertArrayHasKey(
+                $definition->group,
+                (array) trans('permissions.group'),
+                sprintf('Der Gruppe "%s" fehlt der Titel in lang/de/permissions.php.', $definition->group),
+            );
+        }
+    }
+
     // ── Konten aus einem Provider ────────────────────────────────────────────
 
     /**
