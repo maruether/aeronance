@@ -24,7 +24,7 @@
 </head>
 <body>
 
-<div class="no-print"><button onclick="window.print()">Drucken</button></div>
+<div class="no-print"><button type="button" data-print>Drucken</button><script src="/js/print-button.js"></script></div>
 
 <div class="head">
     <div class="title">Erfahrungsnachweis nach Part-66</div>

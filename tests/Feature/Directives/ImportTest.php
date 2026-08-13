@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Directives;
 
+use App\Core\Http\FormFetcher;
+use App\Core\Http\HttpFetcher;
 use App\Core\Models\Qualification;
 use App\Models\User;
 use App\Modules\Directives\Actions\AssessDirective;
@@ -13,6 +15,8 @@ use App\Modules\Directives\Enums\DirectiveKind;
 use App\Modules\Directives\Enums\SubjectKind;
 use App\Modules\Directives\Models\Directive;
 use App\Modules\Directives\Permissions;
+use App\Modules\Directives\Sources\Configured\ConfiguredSource;
+use App\Modules\Directives\Sources\Configured\SourceSpec;
 use App\Modules\Directives\Sources\CsvSource;
 use App\Modules\Directives\Sources\SourceRegistry;
 use App\Modules\Fleet\Models\Aircraft;
@@ -21,6 +25,7 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Spatie\Permission\Models\Permission;
+use Symfony\Component\Yaml\Yaml;
 use Tests\TestCase;
 
 /**
@@ -362,6 +367,35 @@ final class ImportTest extends TestCase
         return $this->inspectorUser = $user->fresh();
     }
 
+    #[Test]
+    public function a_range_wide_ceapr_bulletin_survives_the_import_unclipped(): void
+    {
+        /*
+         * Feldtest, aus dem echten Fehler: SB 090702 gilt für die komplette
+         * Robin-Palette -- 135+ Zeichen Musteraufzählung, und subject_model
+         * war 96 breit. Der Import starb mit "Data too long", und zwar für
+         * die GANZE Quelle. Das Fixture ist die echte Liste; die Zeile muss
+         * VOLLSTÄNDIG ankommen -- gekürzt hieße still Muster verlieren.
+         */
+        app(SourceRegistry::class)->register(new ConfiguredSource(
+            SourceSpec::fromArray(
+                Yaml::parseFile(resource_path('directive-sources/ceapr.yaml')),
+                'ceapr.yaml',
+            ),
+            new SavedCeaprList(__DIR__.'/../../Fixtures/Ceapr/ls-bs-liste.json'),
+        ));
+
+        app(ImportDirectives::class)->fromSource(
+            'ceapr',
+            $this->userWith(Permissions::DIRECTIVES_MANAGE),
+        );
+
+        $sammel = Directive::query()->where('number', 'SB 090702')->firstOrFail();
+
+        $this->assertGreaterThan(96, mb_strlen((string) $sammel->subject_model));
+        $this->assertStringContainsString('DR380', (string) $sammel->subject_model);
+    }
+
     private function userWith(string ...$permissions): User
     {
         $user = User::factory()->create(['is_active' => true]);
@@ -371,5 +405,25 @@ final class ImportTest extends TestCase
         }
 
         return $user->fresh();
+    }
+}
+
+/**
+ * Die gespeicherte C.E.A.P.R.-Liste als Fetcher -- eigener Stub statt des
+ * SavedFile aus PoweredAircraftTest, weil Klassen in Testdateien nur laden,
+ * wenn ihre Datei laeuft (ein --filter auf diese Datei fande sie sonst nicht).
+ */
+final class SavedCeaprList implements FormFetcher, HttpFetcher
+{
+    public function __construct(private string $path) {}
+
+    public function get(string $url, array $headers = []): string
+    {
+        return (string) file_get_contents($this->path);
+    }
+
+    public function post(string $url, array $form, array $headers = []): string
+    {
+        return (string) file_get_contents($this->path);
     }
 }

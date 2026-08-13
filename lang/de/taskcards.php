@@ -34,9 +34,10 @@ return [
         ],
         'quick_repair_placeholder' => 'Reifen Hauptfahrwerk getauscht',
         'help' => [
-            'close' => 'Geht erst, wenn jede Karte abgezeichnet oder storniert ist. Eine '
-                .'nur „fertig gemeldete" Karte hat niemand geprüft — genau dafür gibt es '
-                .'die zweite Unterschrift.',
+            'close' => 'Für Vorgänge ohne freizugebende Arbeit — irrtümlich eröffnet oder '
+                .'nur stornierte Karten. Abgezeichnete Arbeit endet mit ihrer Freigabe, '
+                .'und die schließt den Vorgang von selbst.',
+
         ],
     ],
 

@@ -41,5 +41,5 @@
 </style>
 
 <div class="no-print">
-    <button onclick="window.print()">Drucken</button>
+    <button type="button" data-print>Drucken</button><script src="/js/print-button.js"></script>
 </div>

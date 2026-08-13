@@ -10,6 +10,7 @@ use App\Modules\Fleet\Actions\RecordManualRevision;
 use App\Modules\Fleet\Enums\ManualKind;
 use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\TaskCards\Actions\CertifyTaskCard;
+use App\Modules\TaskCards\Actions\IssueRelease;
 use App\Modules\TaskCards\Actions\ManageWorkOrder;
 use App\Modules\TaskCards\Actions\RecordFinding;
 use App\Modules\TaskCards\Enums\FindingState;
@@ -74,8 +75,11 @@ final class CardLifecycleTest extends TestCase
             $drop->fresh(), $this->mechanic(), 'Arbeit war beim Vorbesitzer schon erledigt',
         );
 
-        $closed = app(ManageWorkOrder::class)->close($order->fresh(), $this->inspector());
+        // Abgezeichnete Arbeit endet mit der Freigabe; die Stornierung hat
+        // den Weg dahin freigemacht -- und die Freigabe schliesst selbst.
+        app(IssueRelease::class)->handle($order->fresh(), $this->inspector());
 
+        $closed = $order->fresh();
         $this->assertSame(WorkOrder::STATE_CLOSED, $closed->state);
         $this->assertSame(TaskCardState::Cancelled, $drop->fresh()->state);
     }

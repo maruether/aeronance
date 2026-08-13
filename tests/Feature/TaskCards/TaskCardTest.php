@@ -14,6 +14,7 @@ use App\Modules\Fleet\Models\ComponentLimit;
 use App\Modules\Fleet\Models\CounterReading;
 use App\Modules\Fleet\Models\Installation;
 use App\Modules\TaskCards\Actions\CertifyTaskCard;
+use App\Modules\TaskCards\Actions\IssueRelease;
 use App\Modules\TaskCards\Actions\ManageWorkOrder;
 use App\Modules\TaskCards\Enums\ParticipationKind;
 use App\Modules\TaskCards\Enums\TaskCardState;
@@ -288,17 +289,47 @@ final class TaskCardTest extends TestCase
     }
 
     #[Test]
-    public function once_every_card_is_signed_the_visit_closes(): void
+    public function certified_work_stays_open_until_its_release(): void
     {
+        /*
+         * Feldtest: "ein vorgang bei dem alle arbeitskarten abgezeichnet
+         * sind, aber noch keine freigabe erteilt ist muss auch als offen
+         * erscheinen." Der Handgriff schloss frueher genau hier -- und der
+         * Vorgang sah fertig aus, waehrend die eine Unterschrift fehlte,
+         * auf die es ankommt.
+         */
         $order = $this->workOrder();
         $card = $this->cardWithTime($this->mechanic(), $order);
         app(CertifyTaskCard::class)->complete($card, $this->mechanic(), 'Gemacht');
         app(CertifyTaskCard::class)->certify($card->fresh(), $this->qualifiedInspector());
 
+        try {
+            app(ManageWorkOrder::class)->close($order->fresh(), $this->qualifiedInspector());
+            $this->fail('Abgezeichnete Arbeit ohne Freigabe darf nicht von Hand schliessen.');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('release', $e->getMessage());
+        }
+
+        // Offen heisst offen: der Vorgang steht weiter auf der Liste.
+        $this->assertTrue(WorkOrder::open()->whereKey($order->id)->exists());
+
+        // Die Freigabe beendet ihn -- und schliesst ihn dabei selbst.
+        app(IssueRelease::class)->handle($order->fresh(), $this->qualifiedInspector());
+
+        $abgeschlossen = $order->fresh();
+        $this->assertSame(WorkOrder::STATE_CLOSED, $abgeschlossen->state);
+        $this->assertNotNull($abgeschlossen->closed_at);
+    }
+
+    #[Test]
+    public function a_visit_without_certified_work_still_closes_by_hand(): void
+    {
+        // Irrtuemlich eroeffnet oder nur storniert: dafuer bleibt der Weg.
+        $order = $this->workOrder();
+
         $closed = app(ManageWorkOrder::class)->close($order->fresh(), $this->qualifiedInspector());
 
         $this->assertSame(WorkOrder::STATE_CLOSED, $closed->state);
-        $this->assertNotNull($closed->closed_at);
     }
 
     #[Test]
@@ -319,9 +350,11 @@ final class TaskCardTest extends TestCase
 
         $this->reading($aircraft->fresh(), 1240.0);
 
-        $closed = app(ManageWorkOrder::class)->close($order->fresh(), $this->qualifiedInspector());
+        // Abgezeichnete Arbeit endet mit der Freigabe -- die schreibt die
+        // Schlusszahlen in derselben Transaktion.
+        app(IssueRelease::class)->handle($order->fresh(), $this->qualifiedInspector());
 
-        $this->assertSame(1240.0, (float) $closed->counters_at_close['flight_hours']);
+        $this->assertSame(1240.0, (float) $order->fresh()->counters_at_close['flight_hours']);
     }
 
     private function aircraft(): Aircraft

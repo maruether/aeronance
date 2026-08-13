@@ -28,7 +28,7 @@
 </head>
 <body>
 
-<div class="no-print"><button onclick="window.print()">Drucken</button></div>
+<div class="no-print"><button type="button" data-print>Drucken</button><script src="/js/print-button.js"></script></div>
 
 @if ($supersededBy !== null)
     {{-- The one thing a stale printout must not do is look current. --}}
@@ -95,7 +95,10 @@
         <tr>
             <td><b>Freigegeben von</b>{{ $release->released_by_name }}</td>
             <td><b>Berechtigung</b>
-                {{ $release->qualification_type === 'part66' ? 'Part-66' : 'Pilot-Owner' }}
+                {{-- Ueber die Sprachdatei, nicht per Literal-Vergleich: gespeichert
+     wird part66_licence, und der alte Vergleich auf 'part66' erklaerte
+     jede Part-66-Freigabe zum Pilot-Owner (Feldtest). --}}
+                {{ __('qualifications.type.'.$release->qualification_type) }}
                 {{ $release->qualification_reference }}
                 {{ $release->qualification_category ? '('.$release->qualification_category.')' : '' }}</td>
             <td><b>Gültig bis</b>{{ $release->qualification_valid_until?->format('d.m.Y') ?? 'unbefristet' }}</td>

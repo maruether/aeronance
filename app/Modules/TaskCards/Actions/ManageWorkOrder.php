@@ -276,6 +276,24 @@ final class ManageWorkOrder
             ));
         }
 
+        /*
+         * CERTIFIED WORK ENDS WITH ITS RELEASE, not with this button.
+         *
+         * Feldtest: "ein vorgang bei dem alle arbeitskarten abgezeichnet sind,
+         * aber noch keine freigabe erteilt ist muss auch als offen erscheinen."
+         * Closing here let exactly that visit slip off the open list -- looking
+         * finished while the one signature that counts, the CRS, was never
+         * given. The release closes the visit itself (IssueRelease writes the
+         * closing figures in the same transaction); this path remains for
+         * visits WITHOUT certified work -- cancelled-only, or opened in error.
+         */
+        if ($order->hasCertifiedCards() && ! $order->isReleased()) {
+            throw new RuntimeException(
+                'This visit carries certified work but no release. Issue the CRS first -- '
+                .'the certificate is what ends the visit, and it closes it by itself.'
+            );
+        }
+
         return DB::transaction(function () use ($order, $closedAt): WorkOrder {
             $order->update([
                 'state' => WorkOrder::STATE_CLOSED,

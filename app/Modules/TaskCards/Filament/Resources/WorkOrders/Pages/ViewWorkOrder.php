@@ -994,7 +994,11 @@ final class ViewWorkOrder extends ViewRecord
             ->icon('heroicon-o-lock-closed')
             ->requiresConfirmation()
             ->modalDescription(__('taskcards.work_order.help.close'))
+            // Nur ohne abgezeichnete Arbeit: Die endet mit ihrer FREIGABE,
+            // und die schliesst den Vorgang selbst. Ein Knopf, der immer
+            // ablehnte, waere nur ein raetselhafter Fehler mit Verzoegerung.
             ->visible(fn (WorkOrder $record): bool => $record->isOpen()
+                && ! $record->hasCertifiedCards()
                 && (auth()->user()?->can(Permissions::WORK_ORDERS_MANAGE) ?? false))
             ->action(function (): void {
                 try {

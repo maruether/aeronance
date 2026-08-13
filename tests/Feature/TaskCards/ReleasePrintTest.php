@@ -62,7 +62,23 @@ final class ReleasePrintTest extends TestCase
             ->assertSee($release->number)
             ->assertSee('D-KABC')
             ->assertSee($release->released_by_name)
-            ->assertSee('DE.66.12345');
+            ->assertSee('DE.66.12345')
+            /*
+             * Das Etikett zur Nummer -- Feldtest: Eine Part-66-Freigabe stand
+             * als "Pilot-Owner DE.66.123456" auf der Bescheinigung, weil das
+             * Blade auf 'part66' verglich und gespeichert 'part66_licence'
+             * wird. Beides festgehalten: das richtige Wort da, das falsche weg.
+             */
+            ->assertSee('Part-66-Lizenz', false)
+            ->assertDontSee('Pilot-Owner', false)
+            /*
+             * Und der Knopf muss unter der CSP LEBEN: ein onclick-Attribut
+             * fuehrt sie nicht aus -- der Knopf war tot. Jetzt haengt der
+             * Handler in einer Datei eigener Herkunft.
+             */
+            ->assertSee('data-print', false)
+            ->assertSee('/js/print-button.js', false)
+            ->assertDontSee('onclick', false);
     }
 
     #[Test]

@@ -16,6 +16,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Illuminate\Support\HtmlString;
 
@@ -220,6 +221,16 @@ final class WeighingForm
                     Placeholder::make('result')
                         ->hiddenLabel()
                         ->content(fn (?Weighing $record): HtmlString => self::resultPanel($record)),
+
+                    /*
+                     * Die Hebelskizze auch HIER, nicht nur im Druck --
+                     * Feldtest: "bei den wägungen will ich die grafik nicht
+                     * nur beim drucken, sondern auch in der maske haben."
+                     * Dieselbe Zeichnung aus denselben Werten; sie erscheint,
+                     * sobald die zwei Auflagen gespeichert sind.
+                     */
+                    View::make('fleet.filament.weighing-sketch')
+                        ->columnSpanFull(),
                 ]),
 
             Section::make(__('fleet.review.field.issued_by_name'))

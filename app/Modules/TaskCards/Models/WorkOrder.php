@@ -7,6 +7,7 @@ namespace App\Modules\TaskCards\Models;
 use App\Models\User;
 use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\Fleet\Models\ExternalWorkOrder;
+use App\Modules\TaskCards\Enums\TaskCardState;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -176,6 +177,19 @@ final class WorkOrder extends Model
      * completed is one nobody has checked, and closing a visit over the top of
      * those would bury exactly the thing the second signature exists for.
      */
+    /**
+     * Whether any card on this visit was actually certified.
+     *
+     * The distinction close() needs: a cancelled-only visit may close by
+     * hand, certified work only through its release.
+     */
+    public function hasCertifiedCards(): bool
+    {
+        return $this->taskCards->contains(
+            fn (TaskCard $card): bool => $card->state === TaskCardState::Certified,
+        );
+    }
+
     public function allCardsClosed(): bool
     {
         return $this->taskCards->every(fn (TaskCard $card): bool => $card->state->isClosed());

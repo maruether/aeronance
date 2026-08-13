@@ -27,6 +27,42 @@ woran als Nächstes gearbeitet wird.
   Demomodus abschalten muss (Mails, Updates, echte Herstellerabrufe), ist
   Teil des Zuschnitts.
 
+## [0.1.5] — 2026-08-13
+
+Nachschlag aus dem laufenden Feldtest. **Beim Update beachten:** nichts —
+`deploy/update.sh` bzw. `deploy/docker/update.sh` genügt (eine Migration
+läuft mit).
+
+### Neu
+
+- **Die Wägeskizze steht jetzt auch in der Maske**, nicht nur auf dem
+  Ausdruck: Sobald die zwei Auflagen gespeichert sind, zeichnet der
+  Ergebnis-Abschnitt denselben Hebelplan wie das Formularblatt.
+- **Abgezeichnete Arbeit endet mit ihrer Freigabe:** Ein Vorgang, dessen
+  Karten alle abgezeichnet sind, bleibt offen, bis das CRS erteilt ist —
+  von Hand schließen lässt sich nur noch, was keine freizugebende Arbeit
+  trägt (irrtümlich eröffnet, nur storniert). Die Freigabe schließt den
+  Vorgang wie bisher selbst.
+
+### Behoben
+
+- **C.E.A.P.R.-Import bricht an Sammel-Anweisungen ab.** Bulletins wie
+  SB 090702 gelten für die komplette Robin-Palette — die Musteraufzählung
+  ist bis 142 Zeichen lang, die Spalte war 96 breit, und der Import starb
+  mit „Data too long" für die ganze Quelle. Die Musterspalten sind jetzt
+  breit genug (300 Zeichen), mit der echten Liste als Regressionstest.
+  Verbreitert statt gekürzt: Hinten abgeschnitten wäre still genau das
+  „gilt auch für DR 315" verloren gegangen, das für irgendeinen Verein
+  das entscheidende ist.
+- **Die Freigabebescheinigung nannte jede Berechtigung „Pilot-Owner"** —
+  auch eine Part-66-Lizenz. Das Etikett kommt jetzt aus derselben
+  Übersetzung wie überall sonst.
+- **Der Drucken-Knopf der Druckansichten war tot** — auf allen vier
+  Blättern (Freigabe, LTA-Übersicht, Erfahrungsnachweis, Wäge-/
+  Ausrüstungsblatt): Der Inline-Klick-Handler lief unter der
+  Sicherheitsrichtlinie (CSP) nie. Der Knopf hängt jetzt an einem
+  regulären Skript eigener Herkunft.
+
 ## [0.1.4] — 2026-08-13
 
 Runde fünf des Feldtests — der Befundbericht als neuer Meldeweg für jeden
