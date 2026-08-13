@@ -129,10 +129,13 @@ return [
 
     'credentials' => [
         'title' => 'Hersteller-Zugänge',
-        'subheading' => 'Manche Hersteller geben ihre LTA/TM-Liste nur an Kunden heraus. '
-            .'Hier stehen nur Quellen, die einen Zugang verlangen — alle übrigen '
-            .'(z. B. CEAPR) liest Aeronance ohne Anmeldung. Die Zugangsdaten liegen '
-            .'verschlüsselt in der Datenbank und werden nie wieder angezeigt.',
+        'subheading' => 'Manche Hersteller geben ihre LTA/TM-Liste nur an Kunden heraus, '
+            .'andere zeigen Abonnenten mehr als der Allgemeinheit. Hier stehen alle '
+            .'Quellen, die einen Zugang kennen — verlangt oder freiwillig; alle übrigen '
+            .'liest Aeronance ohne Anmeldung. Die Zugangsdaten liegen verschlüsselt '
+            .'in der Datenbank und werden nie wieder angezeigt.',
+        'optional_hint' => 'Freiwillig: Ohne Zugang wird die Liste anonym gelesen — '
+            .'ein eingetragenes Abo nutzt der Abruf automatisch.',
         'used_by' => 'Verwendet von: :sources',
         'username' => 'Benutzername',
         'password' => 'Passwort',
@@ -146,6 +149,8 @@ return [
         'saved' => 'Zugangsdaten gespeichert.',
         'removed' => 'Zugang entfernt.',
         'needs_user' => 'Ohne Benutzername lässt sich nichts speichern.',
+        'needs_password' => 'Beim ersten Speichern braucht es auch das Passwort — '
+            .'es ist noch keins hinterlegt, das behalten werden könnte.',
         'from_env_title' => 'Durch die Umgebung vorgegeben',
         'from_env_body' => 'Für dieses Profil stehen Zugangsdaten in der Serverkonfiguration '
             .'(.env oder Docker-Secret). Die haben Vorrang — ein hier eingetragener Wert '

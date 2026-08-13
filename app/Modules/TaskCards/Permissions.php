@@ -54,6 +54,18 @@ final class Permissions
     public const FINDINGS_RECORD = 'workorders.findings.record';
 
     /**
+     * Report a finding from outside the workshop.
+     *
+     * The P/O tier -- Vorgabe: "Ein Befundbericht sollte durch jeden P/O oder
+     * höher angelegt werden können." Its own permission and not a broader
+     * FINDINGS_RECORD, because the two flows differ in what they may say:
+     * a report only OBSERVES (always blocking, never on a card), while the
+     * workshop path also places a finding on the visit it surfaced in. A club
+     * hands this to whichever roles cover its pilot-owners and up.
+     */
+    public const FINDINGS_REPORT = 'workorders.findings.report';
+
+    /**
      * Defer a finding.
      *
      * Its own verb, and the one with teeth: deciding that a crack holds until

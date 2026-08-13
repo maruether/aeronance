@@ -153,9 +153,16 @@ final class MaintenanceManual extends Model implements HasMedia
 
     public function registerMediaCollections(): void
     {
+        /*
+         * EINE Datei je Eintrag, und das folgt dem Datenmodell: Jeder Eintrag
+         * ist eine Revision, und eine Revision hat ihr Dokument. Wer eine
+         * Ergänzung führt, führt sie als eigene Unterlage. Private Disk,
+         * Auslieferung nur über die auth-geprüfte Route (fleet.manual.file).
+         */
         $this->addMediaCollection(self::DOCUMENTS)
             ->useDisk('documents')
-            ->acceptsMimeTypes(['application/pdf', 'image/jpeg', 'image/png']);
+            ->acceptsMimeTypes(['application/pdf', 'image/jpeg', 'image/png'])
+            ->singleFile();
     }
 
     public function getActivitylogOptions(): LogOptions

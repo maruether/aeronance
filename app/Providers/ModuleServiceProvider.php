@@ -16,6 +16,7 @@ use App\Core\Console\RestoreCommand;
 use App\Core\Console\RetentionCommand;
 use App\Core\Console\SyncAccessCommand;
 use App\Core\Console\UpdateCheckCommand;
+use App\Core\Contracts\AircraftDirectory;
 use App\Core\Documents\ClamAvScanner;
 use App\Core\Documents\ContentTypeVerifier;
 use App\Core\Documents\DocumentIntake;
@@ -47,6 +48,7 @@ use App\Modules\Fleet\Events\AircraftTypeCreated;
 use App\Modules\Fleet\Events\ComponentRemovedFromAircraft;
 use App\Modules\Fleet\Listeners\FileReleaseAsAircraftDocument;
 use App\Modules\Fleet\Listeners\RecordIssuedPartAsInstallation;
+use App\Modules\Fleet\Support\FleetAircraftDirectory;
 use App\Modules\Fleet\TypeCertificates\EasaSource;
 use App\Modules\Fleet\TypeCertificates\Lba\LbaBlueBookSource;
 use App\Modules\Fleet\TypeCertificates\TypeCertificateRegistry;
@@ -260,6 +262,14 @@ final class ModuleServiceProvider extends ServiceProvider
 
             return $registry;
         });
+
+        /*
+         * Die Kennzeichen-Naht des Kerns. Bedingungslos gebunden wie die
+         * Airworthiness-Beitraege: Die Implementierung fragt selbst beim
+         * ModuleManager nach und antwortet leer, wenn die Flotte aus ist --
+         * der Kern faellt dann auf Freitext zurueck (siehe AircraftDirectory).
+         */
+        $this->app->bind(AircraftDirectory::class, FleetAircraftDirectory::class);
 
         // The network seam a manufacturer adapter reaches through. Bound as an
         // interface so a test can hand over saved pages -- the parser is the part

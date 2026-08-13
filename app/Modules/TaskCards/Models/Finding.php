@@ -47,6 +47,8 @@ final class Finding extends Model
         'found_by',
         'found_by_name',
         'found_on',
+        'reported_qualification_type',
+        'reported_qualification_reference',
         'deferred_until',
         'deferral_reason',
         'deferred_by',

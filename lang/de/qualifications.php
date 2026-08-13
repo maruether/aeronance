@@ -33,8 +33,10 @@ return [
             .'Freitext, weil die Bandbreite kein Schema hergibt: Musterschulungen, '
             .'Verfahren wie Kleben oder zerstörungsfreie Prüfung, Ausrüstung wie '
             .'Rettungsgeräte oder Sauerstoffanlagen, im 145-Umfeld Human Factors.',
-        'reference' => 'Lizenz- oder Berechtigungsnummer. Wird bei Feststellungen '
-            .'unveränderlich mitgeschrieben.',
+        'reference' => 'Lizenz- oder Berechtigungsnummer. Wird bei Feststellungen und '
+            .'Befundberichten unveränderlich mitgeschrieben. Bei einer '
+            .'Pilot-Owner-Berechtigung gehört hier die Flugscheinnummer hinein — '
+            .'mit ihr zeichnet der P/O seine Befundberichte ab.',
         'issuer' => 'Wer geschult oder ausgestellt hat — Schulungsstelle, Hersteller oder '
             .'Behörde. Ohne Aussteller ist ein Zertifikat eine Behauptung ohne Absender.',
         'certificate' => 'Die Urkunde als PDF oder Bild. Liegt auf der privaten Ablage, '

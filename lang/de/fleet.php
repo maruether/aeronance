@@ -723,6 +723,7 @@ return [
             'withdrawn_reason' => 'Grund',
             'scope' => 'Gilt für',
             'note' => 'Bemerkung',
+            'file' => 'Dokument',
         ],
         'help' => [
             'revision' => 'Wie der Hersteller ihn schreibt — „Rev. 12", „Ausgabe 3", '
@@ -732,6 +733,9 @@ return [
                 .'Stand im Mai gearbeitet wurde.',
             'scope' => 'Das Wartungshandbuch gilt meist fürs Muster, das '
                 .'Instandhaltungsprogramm oft für das einzelne Luftfahrzeug.',
+            'file' => 'Das Dokument dieses Revisionsstands (PDF; Scans auch als JPG/PNG). '
+                .'Es liegt geschützt ab und ist nur für angemeldete Mitglieder abrufbar. '
+                .'Ohne Datei bleibt der Eintrag ein Verweis auf den Papierordner.',
         ],
         'action' => [
             'supersede' => 'Neue Revision',
@@ -739,6 +743,7 @@ return [
             'withdraw' => 'Zurückziehen',
             'withdrawn' => 'Zurückgezogen.',
             'failed' => 'Nicht möglich',
+            'open' => 'Öffnen',
         ],
         'filter' => [
             'current' => 'Nur geltende',

@@ -12,6 +12,13 @@
 
             <x-slot name="description">
                 {{ __('directives.credentials.used_by', ['sources' => implode(', ', $row['labels'])]) }}
+                @if ($row['optional'])
+                    {{-- An offer, not a lack: without credentials this source
+                         keeps working anonymously. Said right here, because a
+                         listed-but-empty login otherwise reads as "broken until
+                         somebody types something". --}}
+                    {{ __('directives.credentials.optional_hint') }}
+                @endif
             </x-slot>
 
             @if ($row['from_env'])

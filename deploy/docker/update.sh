@@ -152,6 +152,12 @@ say "Migrationen"
 # DER SCHRITT, DEN DER HANDBETRIEB AUSLAESST.
 docker compose exec -T app php artisan migrate --force
 
+# Rechte, die diese Fassung neu einfuehrt, entstehen NICHT in einer
+# Migration, sondern in AccessSetup -- und das lief bisher nur im Setup und
+# beim Modul-Umschalten. Additiv und wiederholbar; bestehende Zuweisungen
+# bleiben unangetastet.
+docker compose exec -T app php artisan aeronance:sync-access
+
 say "Caches"
 docker compose exec -T app php artisan optimize:clear
 docker compose exec -T app php artisan config:cache

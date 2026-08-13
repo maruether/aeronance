@@ -77,6 +77,16 @@ final class ConfiguredSource implements DirectiveSource
             return true;
         }
 
+        /*
+         * An OPTIONAL login never gates the source: without credentials it runs
+         * anonymously (C.E.A.P.R. answers 286 rows that way). Gating it here
+         * would take a working source away from every club that simply has no
+         * subscription.
+         */
+        if ($this->spec->loginOptional) {
+            return true;
+        }
+
         [$user, $password] = $this->spec->credentials();
 
         return filled($user) && filled($password);
@@ -1246,6 +1256,17 @@ final class ConfiguredSource implements DirectiveSource
     /** @return array<string, string> */
     private function authHeaders(): array
     {
+        /*
+         * Basic auth is for sources WITHOUT a form login. Where the spec logs
+         * in through a form, the session cookie IS the authentication -- and
+         * sending the subscription password as a Basic header on every list
+         * request besides would hand the secret to a route that never asked
+         * for it. Review caught this on the first form-login JSON source.
+         */
+        if ($this->spec->needsLogin()) {
+            return [];
+        }
+
         [$user, $password] = $this->spec->credentials();
 
         if (blank($user) || blank($password)) {

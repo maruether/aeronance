@@ -58,18 +58,26 @@ final class ListInMaintenanceProgramme
                 ],
             );
 
-            Qualification::updateOrCreate(
-                [
-                    'user_id' => $person->id,
-                    'type' => Qualification::TYPE_PILOT_OWNER,
-                    'scope' => $aircraft->registration,
-                ],
-                [
-                    'reference' => $aircraft->registration,
-                    'valid_from' => now()->toDateString(),
-                    'valid_until' => $validUntil,
-                ],
-            );
+            /*
+             * Die Referenz wird nur beim ANLEGEN vorbelegt (Kennzeichen als
+             * Platzhalter). Der Befundbericht zeichnet mit dieser Nummer ab --
+             * trägt der Verein dort die Flugscheinnummer des P/O ein, darf
+             * ein erneutes Listen sie nicht wieder auf das Kennzeichen
+             * zurückdrehen. Gültigkeit wird dagegen immer nachgeführt.
+             */
+            $qualification = Qualification::firstOrNew([
+                'user_id' => $person->id,
+                'type' => Qualification::TYPE_PILOT_OWNER,
+                'scope' => $aircraft->registration,
+            ]);
+
+            if (! $qualification->exists) {
+                $qualification->reference = $aircraft->registration;
+                $qualification->valid_from = now()->toDateString();
+            }
+
+            $qualification->valid_until = $validUntil;
+            $qualification->save();
 
             return $listing;
         });

@@ -7,16 +7,19 @@
 # robin-aircraft.com ist reine Werbung und trägt keinen Dokumentbereich --
 # gesucht werden muss auf ceapr.com.
 #
-# KEIN LOGIN, und das ist nachgemessen, nicht angenommen. Die Einstiegsseite
-# /app/publications sagt „Cette partie du site est réservée aux abonnés à nos
-# publications en ligne" und sieht damit aus wie eine Bezahlschranke. Die Liste
-# dahinter ist es nicht: 286 Einträge, 0 davon ohne Dokument, und neun über die
-# ganze Liste verteilte Stichproben liefern anonym echte PDFs (94 kB bis 1,5 MB).
-# Vorgesehen war für diese Quelle Zugangsdaten hinterlegt; gebraucht werden sie
-# nicht, und was nicht gebraucht wird, gehört nicht in eine Spec.
+# LOGIN OPTIONAL, und beide Hälften des Satzes sind gemessen. Anonym antwortet
+# die Liste vollständig: 286 Einträge, 0 davon ohne Dokument, neun über die
+# ganze Liste verteilte Stichproben liefern echte PDFs (94 kB bis 1,5 MB) --
+# Stand der Messung 12.08.2026. Zugleich hat ceapr.com einen Abonnentenbereich
+# („Cette partie du site est réservée aux abonnés"), und der Feldtest verlangt
+# den Zugang ausdrücklich: „der ceapr login … sind noch nicht drin." Wer ein
+# Abo hat, trägt es unter Hersteller-Zugänge ein und fragt die Liste als
+# Abonnent ab; wer keins hat, verliert NICHTS -- `optional: true` hält die
+# Quelle ohne Zugangsdaten am Leben, statt sie zu verriegeln.
 #
 # NUR AUF POST. Derselbe Pfad antwortet auf JEDES GET mit HTTP 404 -- mit
-# Query-String und ohne. Deshalb `endpoint.method: POST`; siehe FormFetcher.
+# Query-String und ohne. Deshalb `endpoint.method: POST`; der SessionFetcher
+# kann seit diesem Eintrag auch Formulare beantworten (FormFetcher).
 # ─────────────────────────────────────────────────────────────────────────────
 
 name: ceapr
@@ -24,8 +27,33 @@ label: 'C.E.A.P.R. (Robin)'
 issuer: 'C.E.A.P.R.'
 type: json
 
+auth: ceapr
+
 default_kind: sb
 subject_kind: aircraft_model
+
+login:
+  # Vermessen am 13.08.2026: /app/espace-client leitet auf /login um (302,
+  # setzt PHPSESSID); dort stehen VIER Formulare, drei davon für vergessene
+  # Passwörter -- nur das Anmeldeformular trägt ein action-Attribut (leer,
+  # also POST auf dieselbe Adresse). Das Muster greift deshalb genau dieses.
+  url: 'https://www.ceapr.com/app/espace-client/login'
+
+  user_field: login_ident
+  password_field: mdp_ident
+
+  # Der Absende-Knopf heißt `valid` und ist ein <button>, kein <input> -- das
+  # Formular-Lesen sammelt ihn nicht ein, PHP-Logins prüfen aber gern
+  # isset($_POST['valid']). Das versteckte `langue` (leer) kommt von selbst mit.
+  extra:
+    valid: ''
+
+  # BEWUSST OHNE success_pattern: Wie die Seite nach GELUNGENER Anmeldung
+  # aussieht, lässt sich ohne Konto nicht messen, und ein geratenes Muster
+  # sperrte ausgerechnet die Vereine aus, die eins haben. Nachrüsten, sobald
+  # Zugangsdaten zum Vermessen da sind -- ohne Muster fällt ein falsches
+  # Passwort nicht hier auf, sondern erst daran, dass die Liste anonym bleibt.
+  optional: true
 
 endpoint:
   url: 'https://www.ceapr.com/app/publications/ls-bs-liste/1/choix-type-avion'

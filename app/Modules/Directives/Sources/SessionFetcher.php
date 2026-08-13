@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Directives\Sources;
 
 use App\Core\Http\CertificateChainResolver;
+use App\Core\Http\FormFetcher;
 use App\Core\Http\HttpFetcher;
+use App\Core\Http\HttpNotFound;
 use App\Modules\Directives\Sources\Configured\SourceSpec;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -29,7 +31,7 @@ use RuntimeException;
  * builds a shell command, and nothing logs a request body.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-final class SessionFetcher implements HttpFetcher
+final class SessionFetcher implements FormFetcher, HttpFetcher
 {
     /**
      * A login redirect chain is short; anything longer is a loop.
@@ -69,6 +71,40 @@ final class SessionFetcher implements HttpFetcher
         return $response->body();
     }
 
+    /**
+     * Answer a form behind the session -- C.E.A.P.R. is why.
+     *
+     * Its list only exists as an answer to a POST (see FormFetcher), and with
+     * the login being optional the same source now runs through THIS fetcher.
+     * Without this method a gated-or-optional POST source was a contradiction:
+     * the spec demanded a form answer, the fetcher could only GET.
+     *
+     * @param  array<string, string>  $form
+     * @param  array<string, string>  $headers
+     */
+    public function post(string $url, array $form, array $headers = []): string
+    {
+        $this->ensureLoggedIn();
+
+        /*
+         * The SAME request shape as GuzzleFetcher::post(), deliberately.
+         *
+         * C.E.A.P.R.'s anonymous list was measured through GuzzleFetcher --
+         * JSON-first Accept plus X-Requested-With, because these endpoints are
+         * a site's own AJAX routes and some answer a plain POST with the
+         * surrounding HTML page instead of the data. Moving the source onto
+         * this fetcher must not change what travels on the wire; review found
+         * exactly that regression. Only the ENDPOINT posts get these headers:
+         * the login POST below imitates a browser form and stays untouched.
+         */
+        $response = $this->request('POST', $url, $form, $headers + [
+            'Accept' => 'application/json, text/html',
+            'X-Requested-With' => 'XMLHttpRequest',
+        ]);
+
+        return $response->body();
+    }
+
     private function ensureLoggedIn(): void
     {
         if ($this->loggedIn || $this->spec->loginUrl === null) {
@@ -77,7 +113,22 @@ final class SessionFetcher implements HttpFetcher
 
         [$user, $password] = $this->spec->credentials();
 
+        if (blank($user) && blank($password) && $this->spec->loginOptional) {
+            /*
+             * No credentials, none required: the session stays anonymous. NOT
+             * latched as "logged in", deliberately -- a queue worker keeps this
+             * instance alive across jobs, and a club that enters its
+             * subscription mid-week must not stay anonymous until somebody
+             * restarts the worker. The blank-check costs one credentials
+             * lookup per fetch, which is what correctness costs here.
+             */
+            return;
+        }
+
         if (blank($user) || blank($password)) {
+            // Half a login -- a stored username without its password, or the
+            // other way round -- is a mistake worth naming even where the
+            // login itself is optional: somebody typed it expecting it to work.
             throw new RuntimeException(sprintf(
                 '%s needs a login. Set DIRECTIVES_%s_USER and DIRECTIVES_%s_PASSWORD in .env.',
                 $this->spec->label,
@@ -245,9 +296,27 @@ final class SessionFetcher implements HttpFetcher
             $location = (string) $response->header('Location');
 
             if ($location !== '') {
+                $target = $this->absolute($location);
+
+                /*
+                 * A login session does not follow a CHANGE OF HOST. The next
+                 * request would carry the session cookie -- and, on the way to
+                 * plain http, carry it readable. The Location header is the
+                 * server's word, not the spec's; a portal that suddenly points
+                 * somewhere else deserves a loud stop, not a quiet leak.
+                 */
+                if (! $this->sameOrigin($url, $target)) {
+                    throw new RuntimeException(sprintf(
+                        '%s redirected to %s -- another host (or a downgrade to http). '
+                        .'A login session does not follow that.',
+                        $url,
+                        $target,
+                    ));
+                }
+
                 // 303 is "see other" -- a GET, always. 301/302 after a login POST
                 // are treated the same, which is what browsers do.
-                return $this->request('GET', $this->absolute($location), [], $headers, $depth + 1);
+                return $this->request('GET', $target, [], $headers, $depth + 1);
             }
         }
 
@@ -270,10 +339,29 @@ final class SessionFetcher implements HttpFetcher
                 ));
             }
 
-            throw new RuntimeException(sprintf('%s answered HTTP %d.', $url, $response->status()));
+            $message = sprintf('%s answered HTTP %d.', $url, $response->status());
+
+            // 404 is told apart from every other failure, exactly as in
+            // GuzzleFetcher: a paged list ends with one, and a caller that
+            // walks pages needs to hear the difference -- see HttpNotFound.
+            throw $response->status() === 404
+                ? new HttpNotFound($message)
+                : new RuntimeException($message);
         }
 
         return $response;
+    }
+
+    /**
+     * Same scheme, same host -- what a session cookie is allowed to travel to.
+     */
+    private function sameOrigin(string $from, string $to): bool
+    {
+        $a = parse_url($from);
+        $b = parse_url($to);
+
+        return ($a['scheme'] ?? '') === ($b['scheme'] ?? '')
+            && ($a['host'] ?? '') === ($b['host'] ?? '');
     }
 
     private function rememberCookies(Response $response): void
@@ -298,6 +386,13 @@ final class SessionFetcher implements HttpFetcher
 
     private function absolute(string $url): string
     {
+        if ($url === '') {
+            // A form with an empty action posts back to the page it came from.
+            // C.E.A.P.R.'s login does exactly that; scheme://host alone would
+            // send the credentials to the site root instead.
+            return (string) $this->spec->loginUrl;
+        }
+
         if (str_starts_with($url, 'http')) {
             return $url;
         }

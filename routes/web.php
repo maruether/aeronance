@@ -11,6 +11,7 @@ use App\Http\Middleware\RequireSetupAuthority;
 use App\Modules\Directives\Http\OverviewController;
 use App\Modules\Fleet\Http\AircraftDocumentFileController;
 use App\Modules\Fleet\Http\AircraftRecordController;
+use App\Modules\Fleet\Http\MaintenanceManualFileController;
 use App\Modules\Part66\Http\ExperienceLogController;
 use App\Modules\TaskCards\Http\ReleaseController;
 use App\Modules\Warehouse\Http\CountingListController;
@@ -158,6 +159,10 @@ Route::middleware(['web', 'auth'])->group(function (): void {
     // Die Datei eines Luftfahrzeug-Dokuments -- Pruefung im Controller.
     Route::get('/luftfahrzeug-dokument/{document}', AircraftDocumentFileController::class)
         ->name('fleet.document.file');
+
+    // Die Datei einer Wartungsunterlage -- dasselbe Muster.
+    Route::get('/wartungsunterlage/{manual}', MaintenanceManualFileController::class)
+        ->name('fleet.manual.file');
 
     /*
      * Erfahrungsnachweis nach Part-66.

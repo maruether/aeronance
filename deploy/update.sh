@@ -268,6 +268,11 @@ php artisan aeronance:requirements || die "das System bringt nicht alles mit -- 
 say "Migrationen"
 php artisan migrate --force
 
+# Rechte, die diese Fassung neu einfuehrt, entstehen in AccessSetup, nicht in
+# einer Migration -- ohne diesen Aufruf existierten sie auf einer
+# aktualisierten Installation nicht. Additiv und wiederholbar.
+php artisan aeronance:sync-access
+
 say "Caches"
 php artisan optimize:clear
 php artisan config:cache

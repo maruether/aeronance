@@ -181,22 +181,26 @@ return [
             'deferred_until' => 'Zurückgestellt bis',
             'deferral_reason' => 'Begründung der Zurückstellung',
             'resolution' => 'Behebung',
+            'open_new_order' => 'Neuen Vorgang dafür eröffnen',
         ],
         'empty' => [
             'heading' => 'Keine offenen Befunde',
-            'description' => 'Befunde werden aus einem Vorgang heraus erfasst — Aktion '
-                .'„Befund erfassen" auf der Vorgangsseite. Diese Liste ist die '
-                .'flottenweite Übersicht: Hier wird zurückgestellt, behoben oder '
-                .'verworfen, nicht angelegt. Erledigte Befunde blendet der Filter '
-                .'oben aus.',
+            'description' => 'Befunde entstehen über „Befund melden" (für jeden mit '
+                .'Melderecht) oder aus einem Vorgang heraus — Aktion „Befund erfassen" '
+                .'auf der Vorgangsseite. Diese Liste ist die flottenweite Übersicht: '
+                .'Hier wird eingeplant, zurückgestellt, behoben oder verworfen. '
+                .'Erledigte Befunde blendet der Filter oben aus.',
         ],
         'action' => [
             'record' => 'Befund erfassen',
             'schedule' => 'Arbeitskarte anlegen',
+            'raise_card' => 'Arbeitskarte anlegen',
             'defer' => 'Zurückstellen',
             'resolve' => 'Als behoben erfassen',
             'dismiss' => 'Als kein Befund verwerfen',
         ],
+        'card_title' => 'Befunde :numbers',
+        'card_title_many' => 'Befunde: :count Punkte',
         'scheduled' => 'Arbeitskarte :card angelegt.',
         'deferral_lapsed' => 'Zurückstellung am :date abgelaufen',
         'help' => [
@@ -216,6 +220,10 @@ return [
             'dismiss' => 'Verworfen ist nicht behoben. Es wurde nichts gemacht, und ein '
                 .'Datensatz, der etwas anderes sagt, wäre auf eine Art falsch, auf die '
                 .'sich jemand verlassen könnte.',
+            'raise_card' => 'Alle angehakten Befunde kommen auf EINE Karte — so, wie '
+                .'gearbeitet wird: einmal aufmachen, Liste abarbeiten. Mit der '
+                .'Abzeichnung der Karte gelten alle als behoben. Die Auswahl muss zu '
+                .'einem Luftfahrzeug gehören und darf nur Offenes enthalten.',
         ],
     ],
 
@@ -225,6 +233,36 @@ return [
         'deferred' => 'zurückgestellt',
         'resolved' => 'behoben',
         'dismissed' => 'verworfen',
+    ],
+
+    'report' => [
+        'title' => 'Befund melden',
+        'subheading' => 'Aufgefallen ist etwas — hier kommt es ins Buch. Jeder Punkt '
+            .'wird ein eigener Befund mit Nummer; die Werkstatt macht daraus '
+            .'Arbeitskarten. Abgezeichnet wird der Bericht mit der Nummer, die zu '
+            .'Freigaben berechtigt — der Part-66-Lizenz oder der '
+            .'Pilot-Owner-Berechtigung für dieses Luftfahrzeug. Ob etwas harmlos '
+            .'ist, entscheidet nicht die Meldung: Bis jemand mit Qualifikation '
+            .'darüber befindet, gilt jeder Punkt als blockierend.',
+        'section' => [
+            'what' => 'Was ist aufgefallen?',
+        ],
+        'field' => [
+            'points' => 'Punkte',
+        ],
+        'add_point' => 'Weiteren Punkt hinzufügen',
+        'help' => [
+            'description' => 'Wo genau, wie groß, seit wann bemerkt — „Riss" allein '
+                .'sagt der nächsten Person nichts.',
+        ],
+        'submit' => 'Melden',
+        'done' => ':count Befund(e) gemeldet',
+        'refused' => 'Meldung nicht angenommen',
+        'mine' => [
+            'heading' => 'Meine offenen Meldungen',
+            'description' => 'Was du gemeldet hast und noch nicht erledigt ist — '
+                .'„eingeplant" heißt: steht auf einer Arbeitskarte.',
+        ],
     ],
 
     'external' => [

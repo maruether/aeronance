@@ -7,13 +7,17 @@ namespace App\Modules\Fleet\Filament\Resources\MaintenanceManuals\Schemas;
 use App\Modules\Fleet\Enums\ManualKind;
 use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\Fleet\Models\AircraftType;
+use App\Modules\Fleet\Models\MaintenanceManual;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
  * Eine Unterlage aufnehmen.
@@ -96,6 +100,24 @@ final class MaintenanceManualForm
                     Textarea::make('note')
                         ->label(__('fleet.manual.field.note'))
                         ->rows(3)
+                        ->columnSpanFull(),
+
+                    /*
+                     * Die Datei selbst. Feldtest: "wie bekomm ich die da von
+                     * hand rein?" -- die Ablage existierte am Modell, aber kein
+                     * Formular bot sie an; eine Geisterfunktion. Erzeugter
+                     * Dateiname (Fremdeingabe-Härtung), die Endung kommt aus
+                     * dem geprüften MIME-Typ, nicht vom Client.
+                     */
+                    SpatieMediaLibraryFileUpload::make('document')
+                        ->label(__('fleet.manual.field.file'))
+                        ->collection(MaintenanceManual::DOCUMENTS)
+                        ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
+                        ->maxSize((int) config('aeronance.documents.max_size_mb', 20) * 1024)
+                        ->getUploadedFileNameForStorageUsing(
+                            fn (TemporaryUploadedFile $file): string => Str::uuid().'.'.($file->guessExtension() ?: 'pdf'),
+                        )
+                        ->helperText(__('fleet.manual.help.file'))
                         ->columnSpanFull(),
                 ]),
         ]);

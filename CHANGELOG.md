@@ -27,6 +27,70 @@ woran als Nächstes gearbeitet wird.
   Demomodus abschalten muss (Mails, Updates, echte Herstellerabrufe), ist
   Teil des Zuschnitts.
 
+## [0.1.4] — 2026-08-13
+
+Runde fünf des Feldtests — der Befundbericht als neuer Meldeweg für jeden
+P/O, dazu Sidebar-Auto-Aktualisierung, der optionale C.E.A.P.R.-Zugang und
+der Datei-Upload an Wartungsunterlagen. **Beim Update beachten:** Das neue
+Recht **„Befunde melden (Befundbericht)"** (Gruppe *Werkstatt — Melden*) den
+Rollen zuteilen, die melden dürfen sollen — der Administrator hat es
+automatisch. Für die Abzeichnung der Berichte gehört die
+**Flugscheinnummer** des P/O in das Feld „Nummer" seiner
+Pilot-Owner-Qualifikation (bislang steht dort als Platzhalter das
+Kennzeichen). Sonst genügt `deploy/update.sh` bzw.
+`deploy/docker/update.sh`; zwei Migrationen laufen mit.
+
+### Neu
+
+- **Befundbericht:** Die Seite „Befund melden" nimmt beliebig viele Punkte
+  entgegen — jeder wird ein eigener Befund mit Nummer, immer blockierend
+  (herabstufen bleibt eine Feststellung mit Qualifikation). Abgezeichnet
+  wird mit der Nummer, die zu Freigaben berechtigt: Part-66-Lizenz, sonst
+  die Pilot-Owner-Berechtigung für genau dieses Luftfahrzeug — als
+  unveränderliche Kopie am Befund. Unter dem Formular zeigt „Meine offenen
+  Meldungen", was aus den eigenen Berichten geworden ist. Das Melderecht
+  ist grob verteilbar und trägt sonst nichts aus der Werkstatt.
+- **Punkte werden Arbeitskarten:** In der Befundliste lassen sich mehrere
+  Befunde anhaken und auf EINE Karte heben — in einen offenen Vorgang oder
+  einen implizit neu eröffneten. Die Abzeichnung der Karte erledigt alle
+  Punkte darauf; ein schon eingeplanter Punkt lässt sich nicht auf eine
+  zweite Karte heben (die erste verlöre ihre Spur).
+- **Die Seitenleiste aktualisiert sich selbst:** Die Zähler an den
+  Menüpunkten (offene Vorgänge, fällige Prüfungen, Mindestbestände) bauen
+  sich alle 30 Sekunden neu — ohne eigenes JavaScript, im
+  Hintergrund-Reiter gedrosselt.
+- **C.E.A.P.R. mit freiwilligem Zugang:** Wer ein Abonnement hat, trägt es
+  unter Hersteller-Zugänge ein; jeder Abruf läuft dann als Abonnent. Ohne
+  Zugang liest Aeronance die Liste weiter anonym (nachgemessen: 286
+  Einträge) — ein Pflicht-Login hätte Vereinen ohne Abo eine
+  funktionierende Quelle weggenommen. Der Unterbau (`login.optional`)
+  steht damit für weitere Hersteller bereit.
+- **Wartungsunterlagen tragen ihre Datei:** Upload beim Anlegen, Bearbeiten
+  und im „Neue Revision"-Dialog; „Öffnen" in der Liste liefert das PDF
+  auth-geprüft von der privaten Ablage. Ein Eintrag ohne Datei bleibt
+  erlaubt — der Verweis auf den Papierordner.
+- **Werkzeug und Verein im Kopf:** Oben links steht „Aeronance -
+  Vereinsname", und das Profilmenü zeigt die laufende Fassung mit Link
+  auf die Veröffentlichungen.
+- **LFZ-Auswahl statt Freitext:** Beim Pilot-Owner-Qualifikationseintrag
+  ist das Kennzeichen eine Auswahl aus der Flotte — Tippfehler dort
+  kosteten sonst still die Berechtigung.
+
+### Behoben
+
+- **Neue Rechte erreichen bestehende Installationen.** Rechte entstehen im
+  Rechte-Abgleich, und den rief bisher kein Update-Schritt auf — ein mit
+  einer neuen Fassung eingeführtes Recht existierte nach dem Update
+  schlicht nicht. Der Abgleich läuft jetzt als Migration bei jedem Update
+  mit (holt auch still fehlende Rechte früherer Fassungen nach) und
+  zusätzlich in beiden Update-Skripten.
+- **Erneutes Listen im Instandhaltungsprogramm** überschreibt eine von Hand
+  gepflegte Nummer der Pilot-Owner-Berechtigung nicht mehr.
+- **Abo-Zugangsdaten reisen nicht mehr als Basic-Header** auf
+  Listen-Anfragen von Formular-Login-Quellen mit, eine Login-Sitzung folgt
+  keinem Hostwechsel, und „Speichern" ohne je gesetztes Passwort wird
+  benannt abgewiesen statt mit „gespeichert" quittiert.
+
 ## [0.1.3] — 2026-08-12
 
 Runden drei und vier des Feldtests — Werkstatt-Komfort, die Bescheinigung

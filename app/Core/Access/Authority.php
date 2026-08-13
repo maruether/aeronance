@@ -183,6 +183,26 @@ final readonly class Authority
     }
 
     /**
+     * The credential a DOCUMENT is signed under -- not a permission gate.
+     *
+     * The finding report is why this exists: Vorgabe, it must carry "die
+     * Nummer, die zu Freigaben berechtigt" -- the Part-66 licence where one
+     * is held, otherwise the pilot-owner authorisation for this aircraft.
+     * That is the same widest-first order candidates() already guarantees,
+     * with all validity and scope rules applied; exposing it beats
+     * re-implementing them at the caller, which is how the backup/restore
+     * pair once diverged.
+     */
+    public function signingQualification(User $user, ?string $scope = null): ?Qualification
+    {
+        return $this->heldQualification(
+            $user,
+            [Qualification::TYPE_PART66, Qualification::TYPE_PILOT_OWNER],
+            $scope,
+        );
+    }
+
+    /**
      * The qualification this person may rely on, limitations applied.
      *
      * @param  list<string>  $acceptedTypes

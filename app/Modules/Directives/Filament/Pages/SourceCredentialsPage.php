@@ -95,7 +95,7 @@ final class SourceCredentialsPage extends Page
     {
         $credentials = app(SourceCredentials::class);
 
-        foreach (self::gatedSources() as $profile => $labels) {
+        foreach (array_keys(self::gatedSources()) as $profile) {
             // The username may be shown -- it is not the secret, and seeing it
             // is how somebody notices the wrong account is stored.
             $this->usernames[$profile] = (string) ($credentials->username($profile) ?? '');
@@ -110,7 +110,10 @@ final class SourceCredentialsPage extends Page
      * ask for the same login if Lindner ever gated theirs, and asking somebody to
      * type one password five times is how three of them end up wrong.
      *
-     * @return array<string, list<string>> profile => source labels
+     * A profile counts as OPTIONAL only when every source behind it says so --
+     * one gated source in the group, and the login stops being an offer.
+     *
+     * @return array<string, array{labels: list<string>, optional: bool}>
      */
     public static function gatedSources(): array
     {
@@ -127,7 +130,10 @@ final class SourceCredentialsPage extends Page
                 continue;
             }
 
-            $profiles[$profile][] = $source->label();
+            $profiles[$profile] ??= ['labels' => [], 'optional' => true];
+            $profiles[$profile]['labels'][] = $source->label();
+            $profiles[$profile]['optional'] = $profiles[$profile]['optional']
+                && $source->spec()->loginOptional;
         }
 
         ksort($profiles);
@@ -135,15 +141,16 @@ final class SourceCredentialsPage extends Page
         return $profiles;
     }
 
-    /** @return array<string, array{labels: list<string>, from_env: bool, set: bool}> */
+    /** @return array<string, array{labels: list<string>, optional: bool, from_env: bool, set: bool}> */
     public function rows(): array
     {
         $credentials = app(SourceCredentials::class);
         $rows = [];
 
-        foreach (self::gatedSources() as $profile => $labels) {
+        foreach (self::gatedSources() as $profile => $entry) {
             $rows[$profile] = [
-                'labels' => $labels,
+                'labels' => $entry['labels'],
+                'optional' => $entry['optional'],
                 'from_env' => $credentials->isFromEnvironment($profile),
                 'set' => $credentials->has($profile),
             ];
@@ -178,6 +185,19 @@ final class SourceCredentialsPage extends Page
 
         if ($username === '') {
             Notification::make()->danger()->title(__('directives.credentials.needs_user'))->send();
+
+            return;
+        }
+
+        /*
+         * An empty password means "keep the stored one" -- but where nothing is
+         * stored, there is nothing to keep, and store() would return without
+         * writing. Saying "gespeichert" to that would be a lie with a delay:
+         * for an optional login the fetch silently stays anonymous, and the
+         * club believes it reads as a subscriber. Review found exactly this.
+         */
+        if ($password === '' && ! $credentials->has($profile)) {
+            Notification::make()->danger()->title(__('directives.credentials.needs_password'))->send();
 
             return;
         }

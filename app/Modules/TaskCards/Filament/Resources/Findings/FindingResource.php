@@ -4,23 +4,31 @@ declare(strict_types=1);
 
 namespace App\Modules\TaskCards\Filament\Resources\Findings;
 
+use App\Modules\TaskCards\Actions\ManageWorkOrder;
 use App\Modules\TaskCards\Actions\RecordFinding;
 use App\Modules\TaskCards\Enums\FindingState;
 use App\Modules\TaskCards\Filament\Resources\Findings\Pages\ListFindings;
 use App\Modules\TaskCards\Models\Finding;
+use App\Modules\TaskCards\Models\WorkOrder;
 use App\Modules\TaskCards\Permissions;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
@@ -117,7 +125,110 @@ final class FindingResource extends Resource
                 self::deferAction(),
                 self::resolveAction(),
                 self::dismissAction(),
+            ])
+            ->toolbarActions([
+                self::raiseCardBulkAction(),
             ]);
+    }
+
+    /**
+     * Mehrere Punkte, EINE Karte -- der zweite Halbsatz des Feldtests:
+     * "Aus einzelnen oder mehreren Punkten soll dann eine Arbeitskarte
+     * erstellt werden können."
+     *
+     * Die Auswahl entscheidet, WAS zusammen behoben wird; der Dialog nur
+     * noch, in welchem Vorgang. Alles Fachliche (offen? dasselbe Flugzeug?)
+     * prüft scheduleMany serverseitig -- eine Regel, die nur die Oberfläche
+     * kennt, gilt als nicht vorhanden.
+     */
+    private static function raiseCardBulkAction(): BulkAction
+    {
+        return BulkAction::make('raiseCard')
+            ->label(__('taskcards.finding.action.raise_card'))
+            ->icon('heroicon-o-wrench')
+            ->visible(fn (): bool => auth()->user()?->can(Permissions::WORK_ORDERS_MANAGE) ?? false)
+            ->modalDescription(__('taskcards.finding.help.raise_card'))
+            ->deselectRecordsAfterCompletion()
+            ->schema(fn (Collection $records): array => [
+                /*
+                 * Vorbelegt, wenn das Flugzeug keinen offenen Vorgang hat --
+                 * dasselbe Muster wie beim Einplanen einer LTA-Karte. Das
+                 * Flugzeug steht mit der Auswahl fest (das der ersten Zeile;
+                 * eine gemischte Auswahl weist der Server ab).
+                 */
+                Checkbox::make('open_new_order')
+                    ->label(__('taskcards.finding.field.open_new_order'))
+                    ->live()
+                    ->default(fn (): bool => WorkOrder::query()
+                        ->where('aircraft_id', $records->first()?->aircraft_id)
+                        ->where('state', WorkOrder::STATE_OPEN)
+                        ->doesntExist()),
+
+                Select::make('work_order_id')
+                    ->label(__('taskcards.work_order.singular'))
+                    ->options(fn (): array => WorkOrder::query()
+                        ->where('aircraft_id', $records->first()?->aircraft_id)
+                        ->where('state', WorkOrder::STATE_OPEN)
+                        ->orderByDesc('opened_at')
+                        ->get()
+                        ->mapWithKeys(fn (WorkOrder $o): array => [$o->id => $o->label()])
+                        ->all())
+                    ->required(fn (Get $get): bool => ! (bool) $get('open_new_order'))
+                    ->visible(fn (Get $get): bool => ! (bool) $get('open_new_order')),
+            ])
+            ->action(function (Collection $records, array $data): void {
+                /** @var list<Finding> $findings */
+                $findings = $records->values()->all();
+
+                try {
+                    /*
+                     * EINE Transaktion um beides. Sonst stünde nach einer
+                     * abgewiesenen Auswahl (gemischte Flugzeuge, inzwischen
+                     * erledigter Befund) ein frisch eröffneter, leerer Vorgang
+                     * im Buch -- Nummer verbraucht, null Karten. Dieselbe
+                     * Klammer, die openQuick aus genau diesem Grund hat.
+                     */
+                    $card = DB::transaction(function () use ($findings, $data) {
+                        if ((bool) ($data['open_new_order'] ?? false)) {
+                            // Implizit wie bei der Schnellreparatur: Der
+                            // Vorgang trägt denselben Titel wie die Karte --
+                            // aus derselben Feder (cardTitle), damit die
+                            // beiden nie auseinanderlaufen.
+                            $order = app(ManageWorkOrder::class)->open(
+                                aircraft: $findings[0]->aircraft,
+                                title: app(RecordFinding::class)->cardTitle($findings),
+                                user: auth()->user(),
+                            );
+                        } else {
+                            $order = WorkOrder::find($data['work_order_id'] ?? null);
+                        }
+
+                        if ($order === null) {
+                            return null;
+                        }
+
+                        return app(RecordFinding::class)->scheduleMany(
+                            findings: $findings,
+                            order: $order,
+                            user: auth()->user(),
+                        );
+                    });
+                } catch (Throwable $e) {
+                    Notification::make()->danger()->title($e->getMessage())->persistent()->send();
+
+                    return;
+                }
+
+                if ($card === null) {
+                    return;
+                }
+
+                Notification::make()
+                    ->success()
+                    ->title(__('taskcards.finding.scheduled', ['card' => $card->number]))
+                    ->body(__('taskcards.finding.help.stays_open'))
+                    ->send();
+            });
     }
 
     /**

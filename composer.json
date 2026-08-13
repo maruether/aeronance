@@ -69,6 +69,10 @@
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
         ],
+        "test:rendering": [
+            "Composer\\Config::disableProcessTimeout",
+            "DB_DATABASE=test_aeronance_2 vendor/bin/phpunit --group rendering"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi",

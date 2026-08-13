@@ -28,7 +28,18 @@
         Job (render in .gitlab-ci.yml), PARALLEL zum normalen. Die Pipeline
         wird dadurch nicht langsamer, der schnelle Lauf bleibt schnell.
 
-        Von Hand:  vendor/bin/phpunit mit der Option "group rendering"
+        Von Hand:  composer test:rendering
+
+        Der Umweg ueber composer ist kein Komfort, sondern Isolation: Das
+        Skript setzt DB_DATABASE auf eine ZWEITE Datenbank (test_aeronance_2,
+        moeglich durch MariaDBs PUBLIC-Rechte auf test_%). Die Gruppe macht
+        migrate:fresh und zerlegte damit jeden gleichzeitig laufenden Lauf
+        auf aeronance_test. Mit getrennten Datenbanken laufen beide
+        nebeneinander, statt dass man auf den einen wartet, um den anderen
+        zu starten. (Kein Gedankenstrich aus zwei Bindestrichen in diesem
+        Kommentar: XML verbietet die Zeichenfolge in Kommentaren, PHPUnit
+        verweigert dann die ganze Datei. Genau so war diese Datei einmal
+        einen Pipelinelauf lang kaputt.)
     -->
     <groups>
         <exclude>

@@ -203,6 +203,17 @@ final readonly class SourceSpec
         public ?string $loginSuccessPattern,
 
         /**
+         * A login the source can also do WITHOUT.
+         *
+         * C.E.A.P.R. is why this exists: the list answers anonymously (measured,
+         * 286 rows), but subscribers get their subscription content behind the
+         * same portal. An optional login must not gate the source -- without
+         * credentials it runs anonymously instead of refusing, and the
+         * credentials page offers the login rather than demanding it.
+         */
+        public bool $loginOptional,
+
+        /**
          * A CA bundle completing an incomplete chain.
          *
          * Only ever ADDS an intermediate; the chain must still reach a trusted
@@ -669,6 +680,7 @@ final readonly class SourceSpec
             loginSuccessPattern: isset($login['success_pattern'])
                 ? (string) $login['success_pattern']
                 : null,
+            loginOptional: (bool) ($login['optional'] ?? false),
             caBundle: isset($tls['ca_bundle']) ? (string) $tls['ca_bundle'] : null,
             /*
              * An unknown kind is REFUSED, not quietly replaced by the default.

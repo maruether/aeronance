@@ -76,6 +76,82 @@ final readonly class RecordFinding
     }
 
     /**
+     * A report from outside the workshop -- the P/O path.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Field test: "Ein Befundbericht sollte durch jeden P/O oder höher
+     * angelegt werden können." The workshop's own path (record) sits behind
+     * the certify-tier permission; this one sits behind FINDINGS_REPORT,
+     * which a club hands to whichever roles cover its pilot-owners and up.
+     *
+     * TWO THINGS ARE DELIBERATELY NOT THE REPORTER'S TO SAY. is_blocking is
+     * always true here: "harmless" is a determination (E8), and downgrading a
+     * defect belongs to defer/dismiss, both of which demand the standing. And
+     * the report never lands on a card -- it has none; the workshop raises
+     * one from the points later.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    public function report(
+        Aircraft $aircraft,
+        string $title,
+        string $description,
+        User $user,
+        ?string $foundOn = null,
+    ): Finding {
+        if (trim($title) === '' || trim($description) === '') {
+            throw new InvalidArgumentException(
+                'A finding needs a description -- "Riss" on its own tells the next person '
+                .'nothing about where or how big.'
+            );
+        }
+
+        // The workshop permission implies the reporting one: whoever may
+        // decide over findings may certainly mention them.
+        if (! $this->authority->permits($user, Permissions::FINDINGS_REPORT)
+            && ! $this->authority->permits($user, Permissions::FINDINGS_RECORD)) {
+            throw new RuntimeException(sprintf(
+                'Reporting a finding requires the "%s" permission.',
+                Permissions::FINDINGS_REPORT,
+            ));
+        }
+
+        /*
+         * THE SIGNATURE. Vorgabe: "ein Befundbericht ist mit der
+         * entsprechenden nummer die zu freigaben berechtigt abgezeichnet" --
+         * the Part-66 licence where one is held, otherwise the pilot-owner
+         * authorisation for THIS aircraft (widest first, Authority's order).
+         * Frozen as a copy (E7), like the deferral's. Somebody below that
+         * tier is refused by name -- that is the "P/O oder höher" line.
+         */
+        $qualification = $this->authority->signingQualification($user, $aircraft->registration);
+
+        if ($qualification === null) {
+            throw new RuntimeException(
+                'A finding report is signed with the number that entitles its holder to '
+                .'releases: a valid Part-66 licence, or a pilot-owner authorisation for '
+                .'this aircraft. Neither is on file for this account.'
+            );
+        }
+
+        $when = $foundOn !== null ? Carbon::parse($foundOn) : now();
+
+        // The transaction is what makes nextNumber's lockForUpdate real --
+        // under autocommit the lock evaporates at the end of the SELECT.
+        return DB::transaction(fn (): Finding => Finding::create([
+            'aircraft_id' => $aircraft->id,
+            'number' => $this->nextNumber($when),
+            'title' => trim($title),
+            'description' => trim($description),
+            'is_blocking' => true,
+            'found_by' => $user->id,
+            'found_by_name' => $user->name,
+            'found_on' => $when->toDateString(),
+            'reported_qualification_type' => $qualification->type,
+            'reported_qualification_reference' => $qualification->reference,
+        ]));
+    }
+
+    /**
      * Raising a card to deal with it.
      *
      * The finding does not close here -- it becomes scheduled. It closes when
@@ -84,34 +160,141 @@ final readonly class RecordFinding
      */
     public function schedule(Finding $finding, WorkOrder $order, User $user): TaskCard
     {
-        if (! $finding->isOutstanding()) {
-            throw new RuntimeException(sprintf('This finding is already %s.', $finding->state->label()));
+        return $this->scheduleMany([$finding], $order, $user);
+    }
+
+    /**
+     * Several points, ONE card.
+     *
+     * Field test: "Aus einzelnen oder mehreren Punkten soll dann eine
+     * Arbeitskarte erstellt werden können." One card and not one per point,
+     * because that is how the work happens -- somebody takes the aircraft
+     * apart once and works the list. Certifying that card resolves every
+     * point on it (CertifyTaskCard already queries by card, not by finding),
+     * and cancelling it reopens every one.
+     *
+     * @param  list<Finding>  $findings
+     */
+    public function scheduleMany(array $findings, WorkOrder $order, User $user): TaskCard
+    {
+        if ($findings === []) {
+            throw new InvalidArgumentException('No findings selected -- a card needs something to fix.');
         }
 
-        // The same rule as linking an external order: a crack in D-KXYZ's spar
-        // scheduled into D-KABC's annual is a false trace in both records.
-        if ((int) $finding->aircraft_id !== (int) $order->aircraft_id) {
-            throw new RuntimeException(
-                'That finding belongs to a different aircraft than this visit. Scheduling '
-                .'it here would put a false trace into both records.'
-            );
+        /*
+         * Raising a card is workshop planning. The bulk action's UI gate is
+         * enforced by Filament, but a rule that lives only there counts as
+         * absent (security guardrail) -- so it stands here too. CARDS_WORK
+         * passes as well: scheduling a finding into an open visit is exactly
+         * what the schedule action on the visit page lets a mechanic do.
+         */
+        if (! $this->authority->permits($user, Permissions::WORK_ORDERS_MANAGE)
+            && ! $this->authority->permits($user, Permissions::CARDS_WORK)) {
+            throw new RuntimeException(sprintf(
+                'Raising a card for findings requires the "%s" permission.',
+                Permissions::WORK_ORDERS_MANAGE,
+            ));
         }
 
-        return DB::transaction(function () use ($finding, $order): TaskCard {
+        foreach ($findings as $finding) {
+            /*
+             * SCHEDULED is outstanding, but not schedulable AGAIN: a second
+             * card would steal the trace from the first -- certifying the old
+             * card would then resolve nothing, and one defect would live on
+             * two open cards. The visit page always excluded scheduled ones;
+             * the bulk action made the action-layer gap reachable.
+             */
+            if ($finding->state === FindingState::Scheduled) {
+                throw new RuntimeException(sprintf(
+                    'Finding %s is already scheduled onto a card. One defect, one card -- '
+                    .'cancel that card first if the plan has changed.',
+                    $finding->number,
+                ));
+            }
+
+            if (! $finding->isOutstanding()) {
+                throw new RuntimeException(sprintf(
+                    'Finding %s is already %s.', $finding->number, $finding->state->label(),
+                ));
+            }
+
+            // The same rule as linking an external order: a crack in D-KXYZ's
+            // spar scheduled into D-KABC's annual is a false trace in both
+            // records.
+            if ((int) $finding->aircraft_id !== (int) $order->aircraft_id) {
+                throw new RuntimeException(
+                    'That finding belongs to a different aircraft than this visit. Scheduling '
+                    .'it here would put a false trace into both records.'
+                );
+            }
+        }
+
+        return DB::transaction(function () use ($findings, $order): TaskCard {
             $card = app(ManageWorkOrder::class)->addCard(
-                $order,
-                $finding->title,
-                $finding->description,
-                ActivityKind::Repair,
+                order: $order,
+                title: $this->cardTitle($findings),
+                instruction: $this->cardInstruction($findings),
+                kind: ActivityKind::Repair,
             );
 
-            $finding->update([
-                'state' => FindingState::Scheduled,
-                'resolving_task_card_id' => $card->id,
-            ]);
+            foreach ($findings as $finding) {
+                $finding->update([
+                    'state' => FindingState::Scheduled,
+                    'resolving_task_card_id' => $card->id,
+                ]);
+            }
 
             return $card;
         });
+    }
+
+    /**
+     * The one title both the card and an implicitly opened visit carry.
+     *
+     * PUBLIC so the bulk action names its new visit identically instead of
+     * rebuilding the string -- two copies of this format would drift apart.
+     * Both columns are varchar(160); past a dozen findings the enumeration
+     * no longer fits, and a COUNT says more than a truncated list would.
+     *
+     * @param  list<Finding>  $findings
+     */
+    public function cardTitle(array $findings): string
+    {
+        if (count($findings) === 1) {
+            return $findings[0]->title;
+        }
+
+        $enumerated = __('taskcards.finding.card_title', [
+            'numbers' => implode(', ', array_map(
+                static fn (Finding $f): string => $f->number,
+                $findings,
+            )),
+        ]);
+
+        if (mb_strlen($enumerated) <= 160) {
+            return $enumerated;
+        }
+
+        return __('taskcards.finding.card_title_many', ['count' => count($findings)]);
+    }
+
+    /**
+     * Every point spelled out, so the card stands on its own at the bench.
+     *
+     * @param  list<Finding>  $findings
+     */
+    private function cardInstruction(array $findings): string
+    {
+        if (count($findings) === 1) {
+            return $findings[0]->description;
+        }
+
+        return implode("\n\n", array_map(
+            static fn (Finding $f): string => sprintf(
+                "%s — %s\n%s", $f->number, $f->title, $f->description,
+            ),
+            $findings,
+        ));
     }
 
     /**

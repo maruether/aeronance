@@ -66,6 +66,15 @@ final class TaskCardsModule implements AeronanceModule
                 Permissions::FINDINGS_RECORD,
                 Permissions::FINDINGS_DEFER,
             ],
+
+            /*
+             * Eigene Gruppe, damit ein Verein sie GROB verteilen kann: Das
+             * Melden geht an "jeden P/O oder höher" -- also an Rollen, die
+             * sonst nichts aus der Werkstatt tragen sollen.
+             */
+            'taskcards.report' => [
+                Permissions::FINDINGS_REPORT,
+            ],
         ]);
     }
 

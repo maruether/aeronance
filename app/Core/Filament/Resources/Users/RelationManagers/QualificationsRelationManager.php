@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Filament\Resources\Users\RelationManagers;
 
 use App\Core\Access\CorePermissions;
+use App\Core\Contracts\AircraftDirectory;
 use App\Core\Models\Qualification;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -90,13 +91,14 @@ final class QualificationsRelationManager extends RelationManager
             // The heart of E8: a pilot-owner authorisation is valid for the one
             // aircraft the person is entered against in its maintenance
             // programme, not in general.
-            TextInput::make('scope')
-                ->label(__('qualifications.field.scope'))
-                ->maxLength(64)
-                ->placeholder('D-KABC')
-                ->required(fn (callable $get): bool => $get('type') === Qualification::TYPE_PILOT_OWNER)
-                ->visible(fn (callable $get): bool => $get('type') === Qualification::TYPE_PILOT_OWNER)
-                ->helperText(__('qualifications.hint.pilot_owner')),
+            //
+            // ALS AUSWAHL, wenn die Flotte eine Liste liefert (Feldtest: "wäre
+            // es schön wenn ich in dem LFZ Feld eine Auswahlliste hätte") --
+            // ein Freitext produziert "d-kabc" und "D-KABC ", und die
+            // Rechteprüfung erkennt davon nur eine wieder. Über die
+            // AircraftDirectory-Naht, nie über Flottentabellen; ohne
+            // Flottenmodul bleibt es Freitext, und der Kern läuft allein.
+            ...self::scopeField(),
 
             /*
              * Die Urkunde selbst, auf der privaten Ablage -- sie enthaelt
@@ -125,6 +127,40 @@ final class QualificationsRelationManager extends RelationManager
                 ->rows(2)
                 ->columnSpanFull(),
         ])->columns(2);
+    }
+
+    /**
+     * Das Kennzeichen-Feld -- Auswahl, wenn die Flotte liefert, sonst Freitext.
+     *
+     * @return list<Select|TextInput>
+     */
+    private static function scopeField(): array
+    {
+        $kennzeichen = app(AircraftDirectory::class)->registrations();
+
+        $sichtbar = fn (callable $get): bool => $get('type') === Qualification::TYPE_PILOT_OWNER;
+
+        if ($kennzeichen === []) {
+            return [
+                TextInput::make('scope')
+                    ->label(__('qualifications.field.scope'))
+                    ->maxLength(64)
+                    ->placeholder('D-KABC')
+                    ->required($sichtbar)
+                    ->visible($sichtbar)
+                    ->helperText(__('qualifications.hint.pilot_owner')),
+            ];
+        }
+
+        return [
+            Select::make('scope')
+                ->label(__('qualifications.field.scope'))
+                ->options(array_combine($kennzeichen, $kennzeichen))
+                ->searchable()
+                ->required($sichtbar)
+                ->visible($sichtbar)
+                ->helperText(__('qualifications.hint.pilot_owner')),
+        ];
     }
 
     public function table(Table $table): Table

@@ -11,6 +11,7 @@ use App\Modules\Fleet\Permissions;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -20,6 +21,8 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Throwable;
 
 /**
@@ -62,10 +65,23 @@ final class MaintenanceManualsTable
                 Textarea::make('note')
                     ->label(__('fleet.manual.field.note'))
                     ->rows(2),
+
+                /*
+                 * Das neue PDF gehört in DENSELBEN Dialog: Eine neue Revision
+                 * ohne ihr Dokument ist der Normalfall des Vergessens.
+                 * storeFiles(false), weil der Zieldatensatz erst in action()
+                 * entsteht -- dasselbe Muster wie am Luftfahrzeug-Dokument.
+                 */
+                FileUpload::make('file')
+                    ->label(__('fleet.manual.field.file'))
+                    ->storeFiles(false)
+                    ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
+                    ->maxSize((int) config('aeronance.documents.max_size_mb', 20) * 1024)
+                    ->helperText(__('fleet.manual.help.file')),
             ])
             ->action(function (MaintenanceManual $record, array $data): void {
                 try {
-                    app(RecordManualRevision::class)->supersede(
+                    $neu = app(RecordManualRevision::class)->supersede(
                         previous: $record,
                         revision: (string) $data['revision'],
                         revisionDate: $data['revision_date'] ?? null,
@@ -73,6 +89,16 @@ final class MaintenanceManualsTable
                         user: auth()->user(),
                         note: $data['note'] ?? null,
                     );
+
+                    $datei = $data['file'] ?? null;
+
+                    if ($datei instanceof TemporaryUploadedFile) {
+                        // Erzeugter Name: ein hochgeladener Dateiname ist
+                        // Fremdeingabe (Härtungs-Leitplanke).
+                        $neu->addMedia($datei->getRealPath())
+                            ->usingFileName(Str::uuid().'.'.($datei->guessExtension() ?: 'pdf'))
+                            ->toMediaCollection(MaintenanceManual::DOCUMENTS);
+                    }
 
                     Notification::make()->success()->title(__('fleet.manual.action.superseded'))->send();
                 } catch (Throwable $e) {
@@ -171,6 +197,15 @@ final class MaintenanceManualsTable
                         ->all()),
             ])
             ->recordActions([
+                // Die Datei zuerst: Öffnen ist der häufigste Griff an dieser
+                // Liste -- wer hier ist, will meist LESEN, wonach gearbeitet wird.
+                Action::make('open')
+                    ->label(__('fleet.manual.action.open'))
+                    ->icon(Heroicon::OutlinedDocumentText)
+                    ->url(fn (MaintenanceManual $record): string => route('fleet.manual.file', ['manual' => $record]))
+                    ->openUrlInNewTab()
+                    ->visible(fn (MaintenanceManual $record): bool => $record->hasMedia(MaintenanceManual::DOCUMENTS)),
+
                 self::supersede(),
                 EditAction::make(),
                 self::withdraw(),

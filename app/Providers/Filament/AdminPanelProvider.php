@@ -10,6 +10,9 @@ use App\Core\Filament\InitialsAvatarProvider;
 use App\Core\Mail\Postman;
 use App\Core\Modules\Contracts\AeronanceModule;
 use App\Core\Modules\ModuleManager;
+use App\Core\Updates\ReleaseCheck;
+use App\Core\Version;
+use Filament\Actions\Action;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -19,6 +22,9 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Facades\FilamentView;
+use Filament\Support\Icons\Heroicon;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -44,6 +50,24 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
  */
 final class AdminPanelProvider extends PanelProvider
 {
+    /*
+     * Die Zähler der Seitenleiste altern nicht mehr.
+     *
+     * Filament rendert die Seitenleiste als eigene Livewire-Komponente, und
+     * dieser Hook hängt ein `wire:poll`-Element in genau diese Komponente --
+     * damit baut sich die Navigation samt aller Badges alle dreißig Sekunden
+     * serverseitig neu. Der Weg über die Komponente ist der einzige, der ohne
+     * eigenes JavaScript auskommt; jede andere Lösung hätte ein Skript
+     * gebraucht, und jedes Skript eine neue CSP-Freigabe.
+     */
+    public function boot(): void
+    {
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::SIDEBAR_NAV_START,
+            static fn () => view('core.filament.sidebar-refresh'),
+        );
+    }
+
     public function panel(Panel $panel): Panel
     {
         return $panel
@@ -102,7 +126,32 @@ final class AdminPanelProvider extends PanelProvider
              * bekommt, würde erst Wochen später merken, dass nichts ankommt.
              */
             ->profile(EditProfile::class, isSimple: false)
-            ->brandName(config('aeronance.organisation.name'))
+
+            /*
+             * Oben links steht das WERKZEUG, dann der Verein -- Vorgabe
+             * wörtlich: "Aeronance - Akaflieg Freiburg e.V." Vorher stand dort
+             * nur der Vereinsname, und auf einer frischen Installation ohne
+             * Namen gar nichts.
+             */
+            ->brandName(fn (): string => filled(config('aeronance.organisation.name'))
+                ? 'Aeronance - '.config('aeronance.organisation.name')
+                : 'Aeronance')
+
+            /*
+             * Die laufende Fassung, einen Klick hinter dem eigenen Namen --
+             * Vorgabe: "ich hätte gern das die Versionsnummer angezeigt wird".
+             * Der Eintrag führt zu den Veröffentlichungen (was ist neu?);
+             * ohne konfiguriertes Repo bleibt er ein reines Schild. Die
+             * Nummer selbst kommt aus der VERSION-Datei (siehe Core\Version);
+             * im Entwicklungsstand steht dort ehrlich "Entwicklungsstand".
+             */
+            ->userMenuItems([
+                Action::make('aeronance-version')
+                    ->label(fn (): string => 'Aeronance '.Version::label())
+                    ->icon(Heroicon::OutlinedTag)
+                    ->url(fn (): ?string => app(ReleaseCheck::class)->releasesUrl())
+                    ->openUrlInNewTab(),
+            ])
 
             /*
              * Das Logo der Organisation, wenn eines hinterlegt ist. Ueber die

@@ -21,6 +21,10 @@ return [
         'fleet.airworthiness' => 'Flotte — Lufttüchtigkeit',
         'taskcards.work' => 'Werkstatt — Arbeit',
         'taskcards.certify' => 'Werkstatt — Freigabe und Befunde',
+        // Eigene Gruppe, damit ein Verein sie grob verteilen kann: Melden geht
+        // an „jeden P/O oder höher" — Rollen, die sonst nichts aus der
+        // Werkstatt tragen.
+        'taskcards.report' => 'Werkstatt — Melden',
         'directives' => 'LTA / TM',
         'inspection' => 'Eingangsprüfung',
         'tooling' => 'Werkzeuge',
@@ -72,6 +76,7 @@ return [
         'workorders.cards.inspect' => 'Unabhängige Kontrolle durchführen',
         'workorders.cards.certify' => 'Arbeiten freigeben (CRS)',
         'workorders.findings.record' => 'Befunde erfassen',
+        'workorders.findings.report' => 'Befunde melden (Befundbericht)',
         'workorders.findings.defer' => 'Befunde zurückstellen',
 
         // LTA / TM
