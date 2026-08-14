@@ -141,24 +141,6 @@
                         @endforelse
                     </div>
 
-                    {{-- Mehr gefunden, als die Lose hergeben: eigenes Feld, weil es
-                         etwas anderes ist als eine Mengenkorrektur. --}}
-                    <div class="mt-3 rounded-lg bg-warning-50 p-3 dark:bg-warning-500/10">
-                        <div class="flex items-center justify-between gap-4 text-sm">
-                            <label class="text-warning-800 dark:text-warning-300">
-                                {{ __('warehouse.stocktake.found_label') }}
-                            </label>
-                            <input type="number" step="0.001" min="0"
-                                   wire:model="found.{{ $part->id }}"
-                                   class="w-24 rounded-lg border-gray-300 dark:bg-white/5 dark:border-white/10 text-sm text-right">
-                        </div>
-                        <input type="text" wire:model="foundNotes.{{ $part->id }}"
-                               placeholder="{{ __('warehouse.stocktake.found_note_placeholder') }}"
-                               class="mt-2 w-full rounded-lg border-gray-300 dark:bg-white/5 dark:border-white/10 text-sm">
-                        <p class="mt-2 text-xs text-warning-800 dark:text-warning-300">
-                            {{ __('warehouse.stocktake.found_hint') }}
-                        </p>
-                    </div>
                 @endif
             </x-filament::section>
         @endforeach
@@ -168,6 +150,46 @@
                 <div class="text-sm text-gray-500">{{ __('warehouse.counting.empty') }}</div>
             </x-filament::section>
         @endif
+
+        {{-- Gefunden wird selten, gezählt immer: Deshalb steht der Fund EINMAL
+             hier unten statt an jeder Kachel -- mit Auswahl des Bauteiltyps. --}}
+        <x-filament::section :heading="__('warehouse.stocktake.found_label')" class="mt-6">
+            <x-slot name="description">{{ __('warehouse.stocktake.found_hint') }}</x-slot>
+
+            <div class="space-y-3">
+                @foreach ($this->foundRows as $i => $row)
+                    <div class="grid gap-2 sm:grid-cols-12 sm:items-center">
+                        <select wire:model="foundRows.{{ $i }}.part_type_id"
+                                class="sm:col-span-5 rounded-lg border-gray-300 dark:bg-white/5 dark:border-white/10 text-sm">
+                            <option value="">{{ __('warehouse.stocktake.found_pick_part') }}</option>
+                            @foreach ($this->foundCandidates() as $id => $name)
+                                <option value="{{ $id }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+
+                        <input type="number" step="0.001" min="0"
+                               wire:model="foundRows.{{ $i }}.quantity"
+                               placeholder="{{ __('warehouse.counting.counted') }}"
+                               class="sm:col-span-2 rounded-lg border-gray-300 dark:bg-white/5 dark:border-white/10 text-sm text-right">
+
+                        <input type="text" wire:model="foundRows.{{ $i }}.note"
+                               placeholder="{{ __('warehouse.stocktake.found_note_placeholder') }}"
+                               class="sm:col-span-4 rounded-lg border-gray-300 dark:bg-white/5 dark:border-white/10 text-sm">
+
+                        <button type="button" wire:click="removeFoundRow({{ $i }})"
+                                class="sm:col-span-1 text-sm text-gray-500 hover:text-danger-600">
+                            {{ __('warehouse.stocktake.found_remove') }}
+                        </button>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="mt-3">
+                <x-filament::button type="button" size="sm" color="gray" wire:click="addFoundRow">
+                    {{ __('warehouse.stocktake.found_add') }}
+                </x-filament::button>
+            </div>
+        </x-filament::section>
 
         <div class="mt-6">
             <x-filament::button type="submit">

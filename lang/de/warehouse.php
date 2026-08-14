@@ -117,6 +117,10 @@ return [
     ],
 
     'part_type' => [
+        'form_one_duty_title' => ':count Los(e) gesperrt',
+        'form_one_duty_body' => 'Für diesen Bauteiltyp gilt ab jetzt die Form-1-Pflicht. '
+            .'Vorhandener Bestand ohne Nachweis ist gesperrt: :lots — er lässt sich '
+            .'freigeben, sobald der Nachweis am Los eingetragen ist.',
         'singular' => 'Bauteiltyp',
         'plural' => 'Bauteiltypen',
         'section' => [
@@ -494,9 +498,14 @@ return [
         ],
         'found_label' => 'Darüber hinaus gefunden',
         'found_note_placeholder' => 'Wo gefunden, Vermutung zur Herkunft …',
-        'found_hint' => 'Mehrbestand wird NICHT auf ein vorhandenes Los gebucht — das '
-            .'würde behaupten, das Teil sei von dessen Form 1 gedeckt. Es entsteht ein '
-            .'eigenes Los ohne Nachweis, das gesperrt ist, bis jemand die Herkunft klärt.',
+        'found_pick_part' => 'Bauteiltyp wählen …',
+        'found_add' => 'Weiteren Fund eintragen',
+        'found_remove' => 'Entfernen',
+        'found_hint' => 'Für Teile, die im Regal liegen, aber in keinem Los stehen. '
+            .'Mehrbestand wird NICHT auf ein vorhandenes Los gebucht — das würde '
+            .'behaupten, das Teil sei von dessen Form 1 gedeckt. Es entsteht ein eigenes '
+            .'Los ohne Nachweis, gesperrt, bis jemand die Herkunft klärt. Zur Auswahl '
+            .'stehen losgeführte Bauteiltypen; bei Sammelbestand genügt die Zählzahl oben.',
         'found_default_note' => 'Bei der Inventur gefunden, Herkunft ungeklärt',
         'nothing_to_book' => 'Keine Differenzen eingetragen.',
         'booked' => ':n Korrekturbuchung(en) erfasst.',
@@ -852,6 +861,7 @@ return [
             'tag' => 'Sperrzettel',
             'determined_by' => 'Festgestellt von',
         ],
+        'form_one_duty_reason' => 'Form-1-Pflicht nachträglich gesetzt — Nachweis fehlt',
         'action' => [
             'record_certificate' => 'Nachweis eintragen',
             'quarantine' => 'Sperren',

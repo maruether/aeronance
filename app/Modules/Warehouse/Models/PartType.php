@@ -180,9 +180,17 @@ final class PartType extends Model
     public static function availableMovements($query)
     {
         return $query->where(function ($q): void {
+            /*
+             * Verfuegbar ist, was auch ausgegeben werden darf -- deshalb
+             * derselbe Massstab wie beim Buchen (StockLot::scopeIssuable).
+             * Vorher zaehlte allein der Zustand, und ein Form-1-Los ohne
+             * Nachweis stand als verfuegbar in der Zahl, obwohl die Ausgabe
+             * es verweigert. Eine Zahl, die etwas verspricht, was der
+             * naechste Klick zurueckweist, ist schlimmer als keine.
+             */
             // Bulk stock has no lot, so nothing can be set aside.
             $q->whereNull('stock_lot_id')
-                ->orWhereHas('lot', fn ($lot) => $lot->where('state', LotState::Serviceable->value));
+                ->orWhereHas('lot', fn ($lot) => $lot->issuable());
         });
     }
 

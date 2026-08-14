@@ -27,6 +27,54 @@ woran als Nächstes gearbeitet wird.
   Demomodus abschalten muss (Mails, Updates, echte Herstellerabrufe), ist
   Teil des Zuschnitts.
 
+## [0.1.7] — 2026-08-14
+
+Direkt aus dem Feldtest der vorigen Fassung. **Beim Update beachten:**
+nichts — `deploy/update.sh` bzw. `deploy/docker/update.sh` genügt. Der
+Menüpunkt „Was liegt an" ist aus dem Lager verschwunden; sein Inhalt steht
+jetzt auf der Startseite.
+
+### Geändert
+
+- **„Was liegt an" ist ein Startseiten-Widget**, keine Lagerseite mehr:
+  Eine Liste offener Punkte hilft nur, wenn man sie sieht, ohne sie zu
+  suchen. Wer daran denkt, sie aufzurufen, weiß meist ohnehin, was ansteht.
+  Steht nichts an, erscheint der Kasten gar nicht — ein Widget, das täglich
+  „alles in Ordnung" meldet, wird nach einer Woche überlesen, und dann auch
+  an dem Tag, an dem etwas drinsteht. Die Direktlinks bleiben: Abgelaufenes
+  führt weiter zur Vernichtung mit vorbelegtem Los.
+
+### Geändert (Fortsetzung)
+
+- **Der Fund bei der Inventur steht einmal am Ende**, nicht in jeder
+  Bauteil-Kachel: mit Auswahl des Bauteiltyps, Menge und Notiz, beliebig
+  oft. Gezählt wird jedes Teil, gefunden fast nie eins — ein Feld je Kachel
+  kostete an jeder Zeile Aufmerksamkeit für den seltenen Fall. Zur Auswahl
+  stehen losgeführte Teile; bei Sammelbestand ist Mehrbestand die Zählzahl
+  oben. Am Ergebnis ändert sich nichts: eigenes Los, gesperrt, ohne
+  Nachweis und ohne erfundenes Verfallsdatum.
+
+### Behoben
+
+- **Der Nachweis ließ sich nicht nachtragen.** Die rote Meldung verwies auf
+  die Los-Ansicht — und die hatte überhaupt keine Aktionen; sie wohnten alle
+  in der Liste nebenan. Die Ansicht trägt jetzt dieselben: Nachweis
+  eintragen, Sperren, Zustand feststellen.
+- **Leere Lose standen weiter auf der Mängelliste.** Was keine Restmenge
+  mehr hat, kann niemand einbauen; der Datensatz bleibt als Nachweis, die
+  Meldung verschwindet.
+- **„Verfügbar" zählte Bestand, den die Ausgabe verweigert.** Die Zahl maß
+  allein den Zustand, also stand ein Form-1-Los ohne Nachweis darin. Sie
+  misst jetzt denselben Maßstab wie das Buchen; der aktuelle Bestand zeigt
+  die Ware weiterhin — sie ist ja da.
+- **Die Form-1-Pflicht nachträglich zu setzen ließ den vorhandenen Bestand
+  unberührt.** Genau so entsteht der Fall aus dem Feldtest: Haken gesetzt,
+  und die Lose sagten weiter „verwendbar" für Ware, die sich nicht mehr
+  ausgeben ließ. Das Speichern sperrt diesen Bestand jetzt — mit Begründung
+  im Protokoll und der Angabe, welche Lose es traf. Gesperrt, nicht
+  gelöscht: Sobald der Nachweis am Los steht, wird regulär freigegeben.
+  Ausbau-Lose und leere Lose bleiben ausgenommen.
+
 ## [0.1.6] — 2026-08-14
 
 Runde sechs des Feldtests — und eine Lufttüchtigkeits-Naht, die fehlte.

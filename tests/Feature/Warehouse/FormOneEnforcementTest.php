@@ -8,13 +8,15 @@ use App\Core\Access\AccessSetup;
 use App\Core\Models\Qualification;
 use App\Core\Modules\ModuleManager;
 use App\Models\User;
+use App\Modules\Warehouse\Actions\ApplyFormOneDutyToStock;
 use App\Modules\Warehouse\Actions\ChangeLotState;
+use App\Modules\Warehouse\Actions\DisposeStock;
 use App\Modules\Warehouse\Actions\IssueStock;
 use App\Modules\Warehouse\Actions\ReceiveStock;
 use App\Modules\Warehouse\Actions\RemovePartFromAircraft;
 use App\Modules\Warehouse\Enums\LotState;
 use App\Modules\Warehouse\Enums\PartClassification;
-use App\Modules\Warehouse\Filament\Pages\StockAttention;
+use App\Modules\Warehouse\Filament\Widgets\StockAttentionWidget;
 use App\Modules\Warehouse\Models\PartType;
 use App\Modules\Warehouse\Models\StockLot;
 use App\Modules\Warehouse\Permissions;
@@ -138,10 +140,10 @@ final class FormOneEnforcementTest extends TestCase
          */
         [, $ohne] = $this->lotWithoutCertificate();
 
-        $this->assertTrue(StockAttention::withoutCertificate()->contains(
+        $this->assertTrue(StockAttentionWidget::withoutCertificate()->contains(
             fn (StockLot $l): bool => $l->id === $ohne->id,
         ));
-        $this->assertFalse(StockAttention::missingDocuments()->contains(
+        $this->assertFalse(StockAttentionWidget::missingDocuments()->contains(
             fn (StockLot $l): bool => $l->id === $ohne->id,
         ));
 
@@ -151,10 +153,10 @@ final class FormOneEnforcementTest extends TestCase
             'document_reference' => 'EASA-F1-2026-0815',
         ])->save();
 
-        $this->assertFalse(StockAttention::withoutCertificate()->contains(
+        $this->assertFalse(StockAttentionWidget::withoutCertificate()->contains(
             fn (StockLot $l): bool => $l->id === $ohne->id,
         ));
-        $this->assertTrue(StockAttention::missingDocuments()->contains(
+        $this->assertTrue(StockAttentionWidget::missingDocuments()->contains(
             fn (StockLot $l): bool => $l->id === $ohne->id,
         ));
     }
@@ -263,6 +265,66 @@ final class FormOneEnforcementTest extends TestCase
         );
     }
 
+    #[Test]
+    public function an_empty_lot_is_no_longer_reported(): void
+    {
+        /*
+         * Feldtest: "außerdem ist die menge auf 0, also sollte das los doch
+         * auch weg sein?" -- ja. Der Datensatz bleibt (er ist der Nachweis,
+         * dass es das Teil gab), aber was nicht mehr im Regal liegt, kann
+         * niemand mehr einbauen und gehört nicht auf die Mängelliste.
+         */
+        [$teil, $los] = $this->lotWithoutCertificate();
+
+        $this->assertTrue(StockAttentionWidget::withoutCertificate()->contains(
+            fn (StockLot $l): bool => $l->id === $los->id,
+        ));
+
+        // Leerräumen -- hier über die Vernichtung, der ehrlichste Weg für ein
+        // Teil ohne Nachweis.
+        app(DisposeStock::class)->handle(
+            $teil,
+            1.0,
+            $los,
+            $this->qualifiedMechanic(),
+            'Testeintrag, ohne Nachweis nicht verwendbar',
+        );
+
+        $this->assertSame(0.0, $los->fresh()->remainingQuantity());
+        $this->assertFalse(StockAttentionWidget::withoutCertificate()->contains(
+            fn (StockLot $l): bool => $l->id === $los->id,
+        ));
+    }
+
+    #[Test]
+    public function switching_the_duty_on_quarantines_the_stock_already_there(): void
+    {
+        /*
+         * Review-Fund: Der Haken am Bauteiltyp fasste bestehende Lose nicht
+         * an -- danach stand weiter "verwendbar" an Ware, die sich nicht mehr
+         * ausgeben ließ. Jetzt nimmt das Einschalten den Bestand mit.
+         */
+        [$teil, $los] = $this->lotWithoutCertificate();
+
+        $this->assertSame(LotState::Serviceable, $los->state);
+
+        $gesperrt = app(ApplyFormOneDutyToStock::class)->handle($teil, $this->storekeeper());
+
+        $this->assertSame([$los->lot_number], $gesperrt);
+        $this->assertSame(LotState::Quarantined, $los->fresh()->state);
+    }
+
+    #[Test]
+    public function stock_without_its_certificate_no_longer_counts_as_available(): void
+    {
+        // Eine Zahl, die etwas verspricht, was der nächste Klick zurückweist,
+        // ist schlimmer als keine.
+        [$teil] = $this->lotWithoutCertificate();
+
+        $this->assertSame(0.0, $teil->fresh()->availableStock());
+        $this->assertSame(1.0, $teil->fresh()->currentStock(), 'Da ist es trotzdem.');
+    }
+
     /**
      * Ein serialisiertes Form-1-Teil, das ohne Nachweis im Regal steht.
      *
@@ -317,7 +379,11 @@ final class FormOneEnforcementTest extends TestCase
     private function qualifiedMechanic(): User
     {
         $user = User::factory()->create(['is_active' => true]);
-        $user->givePermissionTo(Permissions::STOCK_RECEIVE, Permissions::STOCK_QUARANTINE_CERTIFY);
+        $user->givePermissionTo(
+            Permissions::STOCK_RECEIVE,
+            Permissions::STOCK_QUARANTINE_CERTIFY,
+            Permissions::STOCK_SCRAP,
+        );
 
         Qualification::create([
             'user_id' => $user->id,

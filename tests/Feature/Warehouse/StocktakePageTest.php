@@ -92,8 +92,12 @@ final class StocktakePageTest extends TestCase
 
         Livewire::test(StocktakePage::class)
             ->set('countedAt', now()->toDateString())
-            ->set('found.'.$filters->id, '1')
-            ->set('foundNotes.'.$filters->id, 'Im Regal daneben gefunden')
+            // Seit dem Feldtest EINE Fundzeile am Ende mit Auswahl statt eines
+            // Feldes je Kachel: "es wird schnell unübersichtlich wenn das bei
+            // jedem möglichen teil auftaucht."
+            ->set('foundRows.0.part_type_id', $filters->id)
+            ->set('foundRows.0.quantity', '1')
+            ->set('foundRows.0.note', 'Im Regal daneben gefunden')
             ->call('submit');
 
         $this->assertSame(4.0, $certified->fresh()->remainingQuantity(), 'The certified lot is untouched.');

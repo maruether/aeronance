@@ -273,7 +273,7 @@ final class StockLotsTable
     /**
      * Setting a lot aside -- precautionary, reversible, no qualification.
      */
-    private static function quarantineAction(): Action
+    public static function quarantineAction(): Action
     {
         return Action::make('quarantine')
             ->label(__('warehouse.lot.action.quarantine'))
@@ -328,7 +328,7 @@ final class StockLotsTable
      * der Scan seine Vollständigkeit fürs Audit.
      * ─────────────────────────────────────────────────────────────────────────
      */
-    private static function recordCertificateAction(): Action
+    public static function recordCertificateAction(): Action
     {
         return Action::make('recordCertificate')
             ->label(__('warehouse.lot.action.record_certificate'))
@@ -373,7 +373,7 @@ final class StockLotsTable
             });
     }
 
-    private static function determineAction(): Action
+    public static function determineAction(): Action
     {
         return Action::make('determine')
             ->label(__('warehouse.lot.action.determine'))

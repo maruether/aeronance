@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Modules\Warehouse\Actions\ReceiveStock;
 use App\Modules\Warehouse\Enums\PartClassification;
 use App\Modules\Warehouse\Filament\Pages\DisposalPage;
-use App\Modules\Warehouse\Filament\Pages\StockAttention;
+use App\Modules\Warehouse\Filament\Widgets\StockAttentionWidget;
 use App\Modules\Warehouse\Models\PartType;
 use App\Modules\Warehouse\Models\StockLot;
 use App\Modules\Warehouse\Permissions;
@@ -42,8 +42,11 @@ final class AttentionLinksTest extends TestCase
     {
         parent::setUp();
 
-        // Die Seite verlinkt auf Modul-Ressourcen -- deren Routen entstehen
+        // Das Widget verlinkt auf Modul-Ressourcen -- deren Routen entstehen
         // erst beim Panel-Bau mit aktivem Modul, daher rendering-Gruppe.
+        // (Seit Runde sechs ein Dashboard-Widget statt einer Lagerseite:
+        // "diese ‚Was steht an' ist nix für ne seite im lager sondern für
+        // das dashboard".)
         $this->bootWithModules();
 
         foreach ([Permissions::STOCK_VIEW, Permissions::STOCK_SCRAP, Permissions::STOCK_RECEIVE] as $p) {
@@ -61,7 +64,7 @@ final class AttentionLinksTest extends TestCase
         $user->givePermissionTo(Permissions::STOCK_SCRAP);
         $this->actingAs($user->fresh());
 
-        Livewire::test(StockAttention::class)
+        Livewire::test(StockAttentionWidget::class)
             ->assertSuccessful()
             ->assertSeeHtml(DisposalPage::getUrl(['lot' => $lot->id]));
     }
@@ -77,7 +80,7 @@ final class AttentionLinksTest extends TestCase
         $user->givePermissionTo(Permissions::STOCK_VIEW);
         $this->actingAs($user->fresh());
 
-        Livewire::test(StockAttention::class)
+        Livewire::test(StockAttentionWidget::class)
             ->assertSuccessful()
             ->assertDontSeeHtml('vernichten?lot=');
     }

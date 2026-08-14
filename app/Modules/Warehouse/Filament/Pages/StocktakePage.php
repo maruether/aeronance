@@ -57,11 +57,23 @@ final class StocktakePage extends Page
     /** @var array<int, string> counted quantity per bulk part type */
     public array $bulkCounts = [];
 
-    /** @var array<int, string> quantity found beyond any lot, keyed by part type */
-    public array $found = [];
-
-    /** @var array<int, string> */
-    public array $foundNotes = [];
+    /**
+     * Was ausserhalb aller Lose gefunden wurde -- EINMAL am Ende, mit Auswahl.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Feldtest: "es wird schnell unübersichtlich wenn das bei jedem möglichen
+     * teil auftaucht. ich denke es wäre besser das am ende der inventur einmal
+     * anzuzeigen mit auswahl des bauteiltypen."
+     *
+     * Und das trifft die Häufigkeit: Gezählt wird jedes Teil, GEFUNDEN wird
+     * fast nie eins. Ein Feld je Kachel kostete an jeder Zeile Aufmerksamkeit
+     * für den seltenen Fall -- jetzt steht es einmal unten, und wer nichts
+     * gefunden hat, sieht nur eine leere Zeile.
+     * ─────────────────────────────────────────────────────────────────────────
+     *
+     * @var list<array{part_type_id?: string|int|null, quantity?: string|null, note?: string|null}>
+     */
+    public array $foundRows = [];
 
     public static function getNavigationGroup(): ?string
     {
@@ -96,6 +108,47 @@ final class StocktakePage extends Page
     public function mount(): void
     {
         $this->countedAt = now()->toDateString();
+        $this->foundRows = [self::emptyFoundRow()];
+    }
+
+    /** @return array{part_type_id: null, quantity: null, note: null} */
+    private static function emptyFoundRow(): array
+    {
+        return ['part_type_id' => null, 'quantity' => null, 'note' => null];
+    }
+
+    public function addFoundRow(): void
+    {
+        $this->foundRows[] = self::emptyFoundRow();
+    }
+
+    public function removeFoundRow(int $index): void
+    {
+        unset($this->foundRows[$index]);
+
+        $this->foundRows = array_values($this->foundRows);
+
+        if ($this->foundRows === []) {
+            $this->foundRows = [self::emptyFoundRow()];
+        }
+    }
+
+    /**
+     * Die Teile, die überhaupt als Fund in Frage kommen.
+     *
+     * Nur losgeführte: Bei Sammelbestand ist Mehrbestand schlicht eine
+     * Zahlkorrektur oben -- ein zweiter Weg dafür wäre eine zweite Wahrheit.
+     *
+     * @return array<int, string>
+     */
+    public function foundCandidates(): array
+    {
+        return PartType::query()
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (PartType $p): bool => $p->isLotTracked())
+            ->mapWithKeys(fn (PartType $p): array => [$p->id => $p->name])
+            ->all();
     }
 
     /**
@@ -240,23 +293,24 @@ final class StocktakePage extends Page
             }
         }
 
-        foreach ($this->found as $partId => $value) {
-            if ($value === '' || $value === null || (float) $value <= 0) {
-                continue;
-            }
+        foreach ($this->foundRows as $row) {
+            $menge = (float) ($row['quantity'] ?? 0);
+            $part = PartType::find($row['part_type_id'] ?? null);
 
-            $part = PartType::find($partId);
-
-            if ($part === null) {
+            // Eine leere Zeile ist der Normalfall, kein Fehler: Sie steht da,
+            // weil sie angeboten wird, nicht weil jemand etwas gefunden hat.
+            if ($part === null || $menge <= 0) {
                 continue;
             }
 
             try {
                 $lot = $action->recordFound(
                     $part,
-                    (float) $value,
+                    $menge,
                     $user,
-                    $this->foundNotes[$partId] ?? __('warehouse.stocktake.found_default_note'),
+                    trim((string) ($row['note'] ?? '')) !== ''
+                        ? (string) $row['note']
+                        : __('warehouse.stocktake.found_default_note'),
                     $this->countedAt,
                 );
                 $foundLots[] = $lot->lot_number;
@@ -269,8 +323,7 @@ final class StocktakePage extends Page
 
         $this->lotCounts = [];
         $this->bulkCounts = [];
-        $this->found = [];
-        $this->foundNotes = [];
+        $this->foundRows = [self::emptyFoundRow()];
     }
 
     /**
