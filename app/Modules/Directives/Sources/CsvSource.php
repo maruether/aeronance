@@ -103,7 +103,15 @@ final class CsvSource implements DirectiveSource
             $rows[] = new DirectiveRow(
                 number: $number,
                 title: $title,
-                kind: DirectiveKind::tryFrom((string) ($options['kind'] ?? 'lta')) ?? DirectiveKind::Lta,
+                /*
+                 * Die Art aus der Nummer, wo das Dokument sie selbst nennt
+                 * ("TM 300/12" IST eine TM) -- die Auswahl im Dialog ist nur
+                 * noch der Vorgabewert fuer Zeilen ohne Kuerzel. Feldtest:
+                 * "koennen wir beim import auf die 'art' verzichten und das
+                 * automatisch rausfinden?"
+                 */
+                kind: DirectiveKind::fromNumber($number)
+                    ?? (DirectiveKind::tryFrom((string) ($options['kind'] ?? 'lta')) ?? DirectiveKind::Lta),
                 subjectKind: SubjectKind::tryFrom((string) ($options['subject_kind'] ?? 'aircraft_model'))
                     ?? SubjectKind::AircraftModel,
 

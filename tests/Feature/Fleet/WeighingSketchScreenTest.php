@@ -46,11 +46,11 @@ final class WeighingSketchScreenTest extends TestCase
     }
 
     #[Test]
-    public function the_edit_screen_draws_the_sketch_for_a_two_point_weighing(): void
+    public function a_glider_gets_the_lever_sketch(): void
     {
         $weighing = $this->gliderWeighing();
-        $this->support($weighing, 'Hauptrad', 248.0, 2.0);
-        $this->support($weighing, 'Sporn', 32.0, 1.0);
+        $this->support($weighing, 'Auflage vorn G1', 248.0, 2.0);
+        $this->support($weighing, 'Auflage hinten G2', 32.0, 1.0);
 
         $this->actingAs($this->manager());
 
@@ -59,22 +59,46 @@ final class WeighingSketchScreenTest extends TestCase
         Livewire::test(EditWeighing::class, ['record' => $weighing->getKey()])
             ->assertOk()
             ->assertSee('stroke-dasharray', escape: false)
-            ->assertSee('G1', escape: false);
+            ->assertSee('Hebelarme hinter dem Bezugspunkt', escape: false);
     }
 
     #[Test]
-    public function without_two_supports_there_is_honestly_nothing_to_draw(): void
+    public function a_powered_aircraft_gets_the_moment_sketch_not_the_lever(): void
     {
-        $weighing = $this->gliderWeighing();
-        $this->support($weighing, 'Hauptrad', 248.0, 2.0);
+        /*
+         * DER FELDTEST-FEHLER: Motorflugzeuge stehen auf DREI Auflagen
+         * (WeighingKind::defaultSupports), und die alte Fassung zeichnete nur
+         * bei exakt zwei -- an einer Robin erschien nie eine Skizze. Und die
+         * Hebelzeichnung waere dort auch das falsche Bild: Das Motorflugblatt
+         * rechnet ueber Momente, jede Auflage mit eigenem Arm.
+         */
+        $weighing = $this->poweredWeighing();
+        $this->support($weighing, 'Auflage links G1l', 210.0, 0.0, 1200.0);
+        $this->support($weighing, 'Auflage rechts G1r', 208.0, 0.0, 1200.0);
+        $this->support($weighing, 'Auflage vorn G2', 120.0, 0.0, -400.0);
 
         $this->actingAs($this->manager());
 
-        // assertOk zuerst: Ein 403 enthielte den Marker auch nicht -- der
-        // Test waere gruen und pruefte nichts (beim ersten Anlauf passiert).
         Livewire::test(EditWeighing::class, ['record' => $weighing->getKey()])
             ->assertOk()
-            ->assertDontSee('stroke-dasharray', escape: false);
+            ->assertSee('stroke-dasharray', escape: false)
+            ->assertSee('Drei Auflagen, drei Hebelarme', escape: false)
+            ->assertDontSee('Hebelarme hinter dem Bezugspunkt', escape: false);
+    }
+
+    #[Test]
+    public function without_supports_the_screen_says_what_is_missing(): void
+    {
+        // Eine leere Stelle sieht aus wie ein Fehler -- und wurde genau so
+        // gemeldet. Also sagt sie, worauf sie wartet.
+        $weighing = $this->gliderWeighing();
+
+        $this->actingAs($this->manager());
+
+        Livewire::test(EditWeighing::class, ['record' => $weighing->getKey()])
+            ->assertOk()
+            ->assertDontSee('stroke-dasharray', escape: false)
+            ->assertSee(__('fleet.weighing.sketch_pending'), escape: false);
     }
 
     private function gliderWeighing(): Weighing
@@ -90,14 +114,31 @@ final class WeighingSketchScreenTest extends TestCase
         ]);
     }
 
-    private function support(Weighing $w, string $label, float $gross, float $tare): WeighingEntry
+    private function poweredWeighing(): Weighing
     {
+        $aircraft = Aircraft::create(['registration' => 'D-EABC', 'model' => 'DR 400/180']);
+
+        return Weighing::create([
+            'aircraft_id' => $aircraft->id,
+            'kind' => WeighingKind::Powered,
+            'weighed_at' => now()->toDateString(),
+        ]);
+    }
+
+    private function support(
+        Weighing $w,
+        string $label,
+        float $gross,
+        float $tare,
+        ?float $arm = null,
+    ): WeighingEntry {
         return WeighingEntry::create([
             'weighing_id' => $w->id,
             'section' => WeighingEntry::SECTION_SUPPORT,
             'label' => $label,
             'gross_kg' => $gross,
             'tare_kg' => $tare,
+            'arm_mm' => $arm,
         ]);
     }
 

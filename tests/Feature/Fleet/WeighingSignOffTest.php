@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Fleet;
 
+use App\Core\Access\AccessSetup;
+use App\Core\Modules\ModuleManager;
 use App\Models\User;
 use App\Modules\Fleet\Actions\PrepareWeighing;
 use App\Modules\Fleet\Actions\SignOffWeighing;
 use App\Modules\Fleet\Enums\WeighingKind;
+use App\Modules\Fleet\Filament\Resources\Weighings\WeighingResource;
 use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\Fleet\Models\Weighing;
 use App\Modules\Fleet\Models\WeighingEntry;
+use App\Modules\Fleet\Permissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
@@ -220,6 +224,42 @@ final class WeighingSignOffTest extends TestCase
         $next = app(PrepareWeighing::class)->from($aircraft->fresh(), $this->mechanic());
 
         $this->assertNull($next->max_mass_kg);
+    }
+
+    #[Test]
+    public function an_unsigned_sheet_can_be_deleted_a_signed_one_cannot(): void
+    {
+        /*
+         * Feldtest: "nicht abgeschlossene wägeberichte müssen löschbar sein.
+         * Eine fälschlicherweise angelegte wägung müllt sonst die liste voll."
+         * Das Modell konnte das immer -- die Oberfläche verbot es pauschal
+         * (WeighingResource::canDelete war hart false). Beide Richtungen
+         * stehen hier fest, damit die Grenze nicht mit dem Knopf verrutscht.
+         */
+        // Angemeldet mit dem Nachpruefungs-Recht: canDelete fragt danach.
+        // Das Recht entsteht erst mit dem aktiven Modul (AccessSetup).
+        app(ModuleManager::class)->enable('fleet');
+        app(ModuleManager::class)->forgetCache();
+        app(AccessSetup::class)->run();
+        $pruefer = $this->mechanic();
+        $pruefer->givePermissionTo(Permissions::REVIEWS_RECORD);
+        $this->actingAs($pruefer->fresh());
+
+        $entwurf = $this->weighing();
+        $this->assertFalse($entwurf->isSignedOff());
+        $this->assertTrue(WeighingResource::canDelete($entwurf));
+
+        $entwurf->delete();
+        $this->assertNull(Weighing::find($entwurf->id));
+
+        $unterschrieben = $this->weighing();
+        $this->massRow($unterschrieben, 'Gesamt', 250.0);
+        app(SignOffWeighing::class)->handle($unterschrieben->fresh(), $this->mechanic());
+
+        $this->assertFalse(WeighingResource::canDelete($unterschrieben->fresh()));
+
+        $this->expectException(RuntimeException::class);
+        $unterschrieben->fresh()->delete();
     }
 
     private function aircraft(): Aircraft

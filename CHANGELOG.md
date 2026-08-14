@@ -27,6 +27,65 @@ woran als Nächstes gearbeitet wird.
   Demomodus abschalten muss (Mails, Updates, echte Herstellerabrufe), ist
   Teil des Zuschnitts.
 
+## [0.1.6] — 2026-08-14
+
+Runde sechs des Feldtests — und eine Lufttüchtigkeits-Naht, die fehlte.
+**Beim Update beachten:** nichts — `deploy/update.sh` bzw.
+`deploy/docker/update.sh` genügt (eine Migration läuft mit). Nach dem Update
+lohnt ein Blick auf „Lager → Was steht an": Der neue Abschnitt
+„Form-1-pflichtig, aber ohne Nachweis" zeigt Bestand, der ab jetzt nicht
+mehr ausgegeben wird.
+
+### Behoben
+
+- **Form-1-pflichtige Teile ohne Nachweis waren einbaubar.** Der
+  Wareneingang verweigert sie seit jeher — die AUSGABE prüfte den Nachweis
+  nie, und die Freigabe aus der Quarantäne auch nicht. Damit half die
+  Eingangswache nur so lange, wie niemand einen anderen Weg ins Regal fand
+  (nachträglich gesetzte Form-1-Pflicht, Inventurfund, Reparaturrückkehr).
+  Jetzt gilt: ohne Nachweis kein Einbau und keine Freigabe (ML.A.501).
+  Ausgenommen bleibt der Rückbau in DAS Luftfahrzeug, aus dem das Teil
+  stammt — dort trägt die Feststellung des Ausbaus, und weiter reicht sie
+  nicht.
+- **Eingangsprüfung:** Ein durchgefallener Zertifikats-Punkt führt nicht
+  mehr zur Freigabe. Angenommen wird die Ware trotzdem — sie liegt ja da —,
+  aber das Los bleibt gesperrt. Annehmen ist nicht Freigeben.
+- **„Was steht an" nannte fehlende Nachweise beruhigend.** „Nachweis
+  erfasst, Dokument fehlt" stand auch über Losen, für die nie einer erfasst
+  wurde. Jetzt zwei Abschnitte: die Sperre oben in Rot, die Audit-Mahnung
+  für fehlende Scans darunter.
+- **Der DR300-Import brach die Seite ab.** Der Import lief durch, die
+  Erfolgsmeldung riss ab — sie reichte das ganze Ergebnis an den Übersetzer
+  durch, samt Listen. Die Bescheinigung darüber, was importiert wurde,
+  erscheint wieder.
+- **Die Wägeskizze erschien bei Motorflugzeugen nie:** Sie verlangte genau
+  zwei Auflagen, ein Motorflugzeug steht auf dreien. Es gibt jetzt zwei
+  Zeichnungen — Hebel fürs Segelflugblatt, Momente fürs Motorflugblatt —
+  und die Maske zeichnet live beim Ausfüllen statt erst nach dem Speichern.
+
+### Neu
+
+- **Nachweis nachtragen:** Am Los lässt sich der Nachweis eintragen — Art,
+  Nummer und, wenn vorhanden, der Scan. Ohne diesen Weg wäre die neue
+  Sperre eine Sackgasse.
+- **Befund melden ist ein Knopf**, keine eigene Seite mehr: Er sitzt im
+  Kopf der Befundliste, und das Melderecht öffnet die Liste. Wer meldet,
+  sieht damit auch, was aus seiner Meldung wird.
+- **LTA/TM-Liste aufräumen:** Ein Knopf entfernt alle Zeilen, auf die kein
+  Luftfahrzeug im Bestand passt — mit Vorschau im Bestätigungsdialog.
+  Beurteilte Zeilen bleiben (ein Nachweis wird nicht weggeräumt), gelöscht
+  wird weich (kommt das Muster später in die Flotte, holt der nächste
+  Import die Zeile zurück), und eine leere Flotte räumt gar nichts.
+- **Nicht abgeschlossene Wägeberichte sind löschbar.** Eine versehentlich
+  angelegte Wägung muss nicht stehen bleiben; abgezeichnete Blätter bleiben
+  unantastbar.
+- **LTA/TM-Import fragt weniger:** Bei den Herstellerquellen sind Art,
+  Gegenstand, Verbindlichkeit und Herausgeber ausgeblendet — die
+  Quellendatei bestimmt sie ohnehin. Beim Einfügen einer Liste liest der
+  Import die Art aus der NUMMER („TM 300/12" ist eine TM). Und wo noch
+  gewählt wird, sind es zwei Paare statt vier Werten: „LTA / AD" und
+  „TM / SB" sind jeweils dasselbe auf Deutsch und Englisch.
+
 ## [0.1.5] — 2026-08-13
 
 Nachschlag aus dem laufenden Feldtest. **Beim Update beachten:** nichts —

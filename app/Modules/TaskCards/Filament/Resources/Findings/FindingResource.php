@@ -96,12 +96,11 @@ final class FindingResource extends Resource
                     ->toggleable(),
             ])
             /*
-             * Die leere Liste muss sich selbst erklaeren. Feldtest, woertlich:
-             * "nix kann angelegt werden. was soll der reiter?" -- beides
-             * berechtigt, denn Befunde entstehen absichtlich NUR aus einem
-             * Vorgang heraus (canCreate ist hart false, siehe unten), und der
-             * Vorfilter blendet Erledigtes aus. Wer das nicht weiss, steht
-             * vor einer leeren Seite ohne Knopf und haelt sie fuer kaputt.
+             * Die leere Liste muss sich selbst erklaeren: Der Vorfilter
+             * blendet Erledigtes aus, und Befunde entstehen ueber den
+             * Melde-Knopf im Kopf dieser Liste oder aus einem Vorgang heraus
+             * -- canCreate bleibt hart false, damit Filament keinen dritten,
+             * ungesicherten Anlege-Weg dazustellt.
              */
             ->emptyStateHeading(__('taskcards.finding.empty.heading'))
             ->emptyStateDescription(__('taskcards.finding.empty.description'))
@@ -366,7 +365,16 @@ final class FindingResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->can(Permissions::WORK_ORDERS_VIEW) ?? false;
+        /*
+         * Auch das MELDERECHT öffnet die Liste: Der Melde-Knopf wohnt hier
+         * (Feldtest: "es reicht ein button bei den befunden"), und wer meldet,
+         * muss sehen können, was aus seiner Meldung geworden ist. Die
+         * Eingriffe (zurückstellen, beheben, einplanen) prüfen ihre Rechte
+         * ohnehin einzeln.
+         */
+        return (auth()->user()?->can(Permissions::WORK_ORDERS_VIEW) ?? false)
+            || (auth()->user()?->can(Permissions::FINDINGS_REPORT) ?? false)
+            || (auth()->user()?->can(Permissions::FINDINGS_RECORD) ?? false);
     }
 
     public static function canCreate(): bool

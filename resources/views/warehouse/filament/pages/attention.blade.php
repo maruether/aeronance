@@ -16,15 +16,40 @@
         $short    = \App\Modules\Warehouse\Filament\Pages\StockAttention::belowMinimum();
         $blocked  = \App\Modules\Warehouse\Filament\Pages\StockAttention::blockedLots();
         $noDocs   = \App\Modules\Warehouse\Filament\Pages\StockAttention::missingDocuments();
+        $keinNachweis = \App\Modules\Warehouse\Filament\Pages\StockAttention::withoutCertificate();
 
         $number = fn (float $v): string => rtrim(rtrim(number_format($v, 3, ',', '.'), '0'), ',');
     @endphp
 
     @if ($expired->isEmpty() && $expiring->isEmpty() && $short->isEmpty()
-         && $blocked->isEmpty() && $noDocs->isEmpty())
+         && $blocked->isEmpty() && $noDocs->isEmpty() && $keinNachweis->isEmpty())
         <x-filament::section>
             <div class="text-sm text-gray-500 dark:text-gray-400">
                 {{ __('warehouse.attention.all_clear') }}
+            </div>
+        </x-filament::section>
+    @endif
+
+    {{-- Ganz oben: Form-1-Ware ohne jeden Nachweis. Ausgeben laesst sie sich
+         nicht mehr (IssueStock) -- aber sie steht als "verwendbar" im Regal,
+         und das muss jemand sehen, bevor er danach greift. --}}
+    @if ($keinNachweis->isNotEmpty())
+        <x-filament::section>
+            <x-slot name="heading">
+                <span class="text-danger-600">{{ __('warehouse.attention.without_certificate') }}</span>
+            </x-slot>
+            <x-slot name="description">{{ __('warehouse.attention.without_certificate_hint') }}</x-slot>
+
+            <div class="divide-y divide-gray-100 dark:divide-white/5 text-sm">
+                @foreach ($keinNachweis as $lot)
+                    <a href="{{ \App\Modules\Warehouse\Filament\Resources\StockLots\StockLotResource::getUrl('view', ['record' => $lot]) }}" class="{{ $zeile }}">
+                        <div>
+                            <div class="font-medium">{{ $lot->partType?->name }}</div>
+                            <div class="text-gray-500">{{ $lot->label() }}</div>
+                        </div>
+                        <div class="text-danger-600">{{ __('warehouse.attention.no_reference') }}</div>
+                    </a>
+                @endforeach
             </div>
         </x-filament::section>
     @endif

@@ -396,6 +396,32 @@ final class ImportTest extends TestCase
         $this->assertStringContainsString('DR380', (string) $sammel->subject_model);
     }
 
+    #[Test]
+    public function the_kind_is_read_from_the_number_where_it_names_itself(): void
+    {
+        /*
+         * Feldtest: "koennen wir beim import auf die 'art' verzichten und das
+         * automatisch rausfinden?" Wo die Nummer die Art selbst nennt: ja --
+         * das ist das eigene Wort des Dokuments, keine Raterei. Ohne Kuerzel
+         * gilt der gewaehlte Vorgabewert.
+         */
+        $rows = (new CsvSource)->fetch([
+            'body' => implode("\n", [
+                'TM 300/12;Hoehenruderanlenkung pruefen',
+                'SB 090702;Installation of battery',
+                'AD 2020-15;Spar inspection',
+                'LTA 03-001;Bruchrippe',
+                '72-123;Ohne Kuerzel -- nimmt den Vorgabewert',
+            ]),
+            'kind' => 'tm',
+        ]);
+
+        $this->assertSame(
+            ['tm', 'sb', 'ad', 'lta', 'tm'],
+            array_map(fn ($r): string => $r->kind->value, $rows),
+        );
+    }
+
     private function userWith(string ...$permissions): User
     {
         $user = User::factory()->create(['is_active' => true]);

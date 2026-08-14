@@ -16,7 +16,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\View;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Support\HtmlString;
 
@@ -223,13 +223,19 @@ final class WeighingForm
                         ->content(fn (?Weighing $record): HtmlString => self::resultPanel($record)),
 
                     /*
-                     * Die Hebelskizze auch HIER, nicht nur im Druck --
-                     * Feldtest: "bei den wägungen will ich die grafik nicht
-                     * nur beim drucken, sondern auch in der maske haben."
-                     * Dieselbe Zeichnung aus denselben Werten; sie erscheint,
-                     * sobald die zwei Auflagen gespeichert sind.
+                     * Die Skizze auch HIER, nicht nur im Druck -- Feldtest:
+                     * "bei den wägungen will ich die grafik nicht nur beim
+                     * drucken, sondern auch in der maske haben."
+                     *
+                     * AUS DEM FORMULARZUSTAND, nicht aus dem gespeicherten
+                     * Datensatz: Die erste Fassung las den Record und blieb
+                     * deshalb beim Ausfüllen leer -- Feldtest: "hab ich immer
+                     * noch das alte Formular statt der gewünschten grafik".
+                     * Die Auflagenfelder sind live, also zeichnet sie mit.
                      */
-                    View::make('fleet.filament.weighing-sketch')
+                    Placeholder::make('sketch')
+                        ->hiddenLabel()
+                        ->content(fn (Get $get, ?Weighing $record): HtmlString => self::sketchPanel($get, $record))
                         ->columnSpanFull(),
                 ]),
 
@@ -242,6 +248,125 @@ final class WeighingForm
                 ])
                 ->columns(3),
         ]);
+    }
+
+    /**
+     * Die Skizze zur Schwerpunktermittlung -- passend zur Wägungsart.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * ZWEI ZEICHNUNGEN, weil es zwei Rechenwege sind: Das Segelflugblatt legt
+     * einen Hebel zwischen zwei Auflagen (X = G2·b/G + a), das Motorflugblatt
+     * summiert Momente über drei Auflagen mit je eigenem Arm. Dieselbe Skizze
+     * für beides wäre das falsche Bild zur richtigen Zahl.
+     *
+     * Gelesen wird der FORMULARZUSTAND: Wer die Wägung gerade einträgt, soll
+     * die Skizze mitwachsen sehen -- nicht erst nach dem Speichern.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    private static function sketchPanel(Get $get, ?Weighing $record): HtmlString
+    {
+        $fmt = fn (?float $v, int $d = 2): string => $v === null ? '' : number_format($v, $d, ',', '.');
+        $supports = self::supportsFromForm($get, $record);
+        $kind = WeighingKind::tryFrom((string) $get('kind')) ?? $record?->kind ?? WeighingKind::Glider;
+
+        $total = array_sum(array_map(static fn (array $s): float => $s['mass'], $supports));
+
+        // Zwei Auflagen: der Hebel des Segelflugblattes.
+        if (count($supports) === 2 && $kind !== WeighingKind::Powered) {
+            $a = (float) ($get('front_support_arm_mm') ?? $record?->front_support_arm_mm ?? 0);
+            $b = $get('support_distance_mm') ?? $record?->support_distance_mm;
+            $b = $b === null || $b === '' ? null : (float) $b;
+
+            $x = ($b !== null && $total > 0)
+                ? round(($supports[1]['mass'] * $b) / $total + $a, 2)
+                : null;
+
+            return new HtmlString(view('fleet.print._weighing_sketch', [
+                'a' => $a,
+                'b' => $b,
+                'g1' => $supports[0]['mass'],
+                'g2' => $supports[1]['mass'],
+                'g' => $total,
+                'x' => $x,
+                'fmt' => $fmt,
+            ])->render());
+        }
+
+        // Drei und mehr: Momente, jede Auflage mit ihrem Arm.
+        if (count($supports) >= 3 || ($kind === WeighingKind::Powered && count($supports) >= 2)) {
+            $moment = 0.0;
+            $vollstaendig = true;
+
+            foreach ($supports as $s) {
+                if ($s['arm'] === null) {
+                    $vollstaendig = false;
+
+                    continue;
+                }
+
+                $moment += $s['mass'] * $s['arm'];
+            }
+
+            return new HtmlString(view('fleet.print._weighing_moment_sketch', [
+                'supports' => $supports,
+                'total' => $total,
+                'x' => ($vollstaendig && $total > 0) ? round($moment / $total, 2) : null,
+                'fmt' => $fmt,
+            ])->render());
+        }
+
+        /*
+         * Nichts zu zeichnen -- aber NICHT schweigen: Eine leere Stelle sieht
+         * aus wie ein Fehler, und genau so wurde sie auch gemeldet.
+         */
+        return new HtmlString(
+            '<p class="text-sm text-gray-500 dark:text-gray-400">'
+            .e(__('fleet.weighing.sketch_pending'))
+            .'</p>',
+        );
+    }
+
+    /**
+     * Die Auflagen, wie sie GERADE im Formular stehen.
+     *
+     * Fällt auf den gespeicherten Stand zurück, solange der Repeater noch
+     * nichts in den Zustand geschrieben hat (frisch geöffnetes Formular).
+     *
+     * @return list<array{label: string, mass: float, arm: float|null}>
+     */
+    private static function supportsFromForm(Get $get, ?Weighing $record): array
+    {
+        $rows = $get('supportEntries');
+
+        if (! is_array($rows) || $rows === []) {
+            return $record === null ? [] : $record->entriesOf(WeighingEntry::SECTION_SUPPORT)
+                ->map(fn (WeighingEntry $e): array => [
+                    'label' => (string) $e->label,
+                    'mass' => $e->netto(),
+                    'arm' => $e->arm_mm === null ? null : (float) $e->arm_mm,
+                ])
+                ->values()
+                ->all();
+        }
+
+        $supports = [];
+
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $arm = $row['arm_mm'] ?? null;
+
+            $supports[] = [
+                'label' => (string) ($row['label'] ?? ''),
+                // Netto wie im Modell: brutto minus Tara, nie negativ.
+                'mass' => max(0.0, (float) ($row['gross_kg'] ?? 0) - (float) ($row['tare_kg'] ?? 0)),
+                'arm' => ($arm === null || $arm === '') ? null : (float) $arm,
+            ];
+        }
+
+        return $supports;
     }
 
     /**

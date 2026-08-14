@@ -20,6 +20,16 @@ return [
         'sb' => 'SB',
     ],
 
+    /*
+     * Die PAARE fuer Auswahl und Filter: LTA/AD und TM/SB sind jeweils
+     * dasselbe auf Deutsch und Englisch -- gewaehlt wird die Familie, die
+     * Liste zeigt weiter das eigene Wort des Dokuments.
+     */
+    'kind_family' => [
+        'lta' => 'LTA / AD (verbindlich)',
+        'tm' => 'TM / SB (Herstellermitteilung)',
+    ],
+
     'subject' => [
         'aircraft_model' => 'Luftfahrzeugmuster',
         'component' => 'Bauteil',
@@ -96,11 +106,13 @@ return [
         'import' => 'Liste importieren',
         'supersede' => 'Als ersetzt markieren',
         'assess' => 'Beurteilen',
+        'prune' => 'Liste aufräumen',
     ],
 
     'notification' => [
         'assessed' => 'Beurteilung gespeichert.',
         'imported' => ':created neu, :updated aktualisiert, :unchanged unverändert.',
+        'pruned' => ':count Zeile(n) entfernt.',
         'refused' => 'Nicht möglich',
         'collisions' => 'Mehrfach vergebene Nummer',
         'collisions_body' => 'Der Hersteller führt :numbers mehrfach in derselben Liste. '
@@ -257,6 +269,13 @@ return [
     ],
 
     'help' => [
+        'prune' => 'Entfernt alle Zeilen, auf die kein Luftfahrzeug im Bestand passt '
+            .'— betroffen wären derzeit :count. Beurteilte Zeilen bleiben immer '
+            .'stehen: Eine Beurteilung ist ein Nachweis. Bei leerer Flotte '
+            .'passiert nichts, sonst träfe „kein Flugzeug passt" auf alles zu.',
+        'prune_restores' => 'Kommt später ein passendes Luftfahrzeug in die Flotte, '
+            .'holt der nächste Import die Zeilen von selbst zurück — entfernt heißt '
+            .'hier weggeräumt, nicht ausradiert.',
         'method' => 'Der Nachweis der Durchführung: nach welcher Vorgabe und was '
             .'getan wurde — z. B. „TM 34-5 Abschnitt 3, Bolzen getauscht, '
             .'Sichtprüfung o. B.". So, dass es ein Prüfer in drei Jahren versteht.',
@@ -297,6 +316,8 @@ return [
         'csv_columns' => 'Spalten (Semikolon oder Komma): Nummer; Titel; Datum; Frist; '
             .'Muster; Bauteil; Teilenummer; SN_von; SN_bis; Link. Ohne Kopfzeile wird '
             .'positionsweise gelesen: Nummer; Titel; Datum; Frist.',
+        'kind_fallback' => 'Nur Vorgabe: Nennt die Nummer die Art selbst („TM 300/12", '
+            .'„SB 090702", „LTA 03-1", „AD 2020-15"), gewinnt die Nummer.',
         'bindingness_from_kind' => 'aus der Art ableiten',
         'bindingness' => 'Verbindlich, empfohlen oder optional — unabhängig von der Art '
             .'des Dokuments. Eine TM wird verbindlich, sobald eine Behörde sie übernimmt, '

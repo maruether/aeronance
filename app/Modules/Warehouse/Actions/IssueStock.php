@@ -163,6 +163,46 @@ final class IssueStock
             ));
         }
 
+        /*
+         * ─────────────────────────────────────────────────────────────────────
+         * OHNE NACHWEIS KEIN EINBAU -- die Naht, die gefehlt hat.
+         *
+         * Feldtest: "Das system hat mir bei einem seriennummer geführten form 1
+         * teil erlaubt dieses ohne nummer des form 1 und ohne scan anzulegen
+         * und als verwendbar freizuschreiben. das darf nicht sein."
+         *
+         * Der Wareneingang wachte bereits (ReceiveStock::refuseWithoutCertificate),
+         * die AUSGABE nicht -- und die ist die Stelle, an der das Teil ans
+         * Luftfahrzeug geht. Jeder andere Weg ins Regal (Inventur, Rückgabe,
+         * nachträglich gesetzte Form-1-Pflicht am Bauteiltyp) führte damit an
+         * der Wache vorbei. Hier steht sie für alle Wege zugleich.
+         *
+         * ML.A.501: Ein Bauteil darf nur eingebaut werden, wenn es in
+         * zufriedenstellendem Zustand IST und das nachgewiesen ist. Ohne
+         * Nachweis ist die Lufttüchtigkeit nicht feststellbar -- und ein Teil,
+         * dessen Status niemand feststellen kann, ist nicht verwendbar,
+         * unabhängig davon, was in der Zustandsspalte steht.
+         *
+         * AUSGENOMMEN DER RÜCKBAU IN SEIN EIGENES LUFTFAHRZEUG: Ein dort
+         * ausgebautes Teil trägt die Feststellung dessen, der es ausgebaut hat
+         * -- das genügt für den Weg zurück, wo es herkam, und für nichts
+         * sonst. Genau das setzt mayBeFittedTo() unten durch. Ohne diese
+         * Ausnahme hätte die neue Sperre den Ausbau/Wiedereinbau unmöglich
+         * gemacht, für den die Funktion gebaut wurde (Review-Fund an dieser
+         * Änderung selbst).
+         * ─────────────────────────────────────────────────────────────────────
+         */
+        if (! $lot->hasRequiredDocument() && ! $lot->isRestrictedToItsAircraft()) {
+            throw new RuntimeException(sprintf(
+                'Für Los %s (%s) fehlt der Form-1-Nachweis. Ohne ihn lässt sich die '
+                .'Lufttüchtigkeit nicht feststellen, und das Teil darf nicht eingebaut '
+                .'werden -- Nummer am Los nachtragen ("Nachweis eintragen") oder das '
+                .'Los sperren.',
+                $lot->lot_number,
+                $partType->name,
+            ));
+        }
+
         if ($lot->hasExpired()) {
             throw new RuntimeException(sprintf(
                 'Lot %s expired on %s.',

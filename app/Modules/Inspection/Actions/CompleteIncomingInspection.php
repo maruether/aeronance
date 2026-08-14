@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inspection\Actions;
 
 use App\Models\User;
+use App\Modules\Inspection\Enums\CheckItem;
 use App\Modules\Inspection\Enums\CheckResult;
 use App\Modules\Inspection\Enums\InspectionState;
 use App\Modules\Inspection\Models\IncomingInspection;
@@ -162,6 +163,28 @@ final readonly class CompleteIncomingInspection
              * applies.
              */
             return;
+        }
+
+        /*
+         * ─────────────────────────────────────────────────────────────────────
+         * ANNEHMEN IST NICHT FREIGEBEN -- und beim Papier trennt sich das.
+         *
+         * Eine Annahme trotz Mangels ist erlaubt und richtig: Ein verbeulter
+         * Karton um ein heiles Teil ist genau der Fall, für den es die
+         * Begründung gibt. Ein durchgefallener ZERTIFIKATS-Punkt ist aber
+         * etwas anderes -- er sagt, dass der Nachweis nicht stimmt, und dann
+         * lässt sich die Lufttüchtigkeit nicht feststellen (ML.A.501). Die
+         * Ware wird angenommen (sie liegt ja da), das Los bleibt gesperrt.
+         *
+         * Die allgemeine Nachweis-Wache in ChangeLotState fängt nur den Fall
+         * "keine Nummer erfasst". Hier steht der andere: Nummer da, Prüfung
+         * durchgefallen.
+         * ─────────────────────────────────────────────────────────────────────
+         */
+        foreach ($inspection->checks as $check) {
+            if ($check->item === CheckItem::Certificate && $check->result === CheckResult::Fail) {
+                return;
+            }
         }
 
         $this->changeLotState->handle(

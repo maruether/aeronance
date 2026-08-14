@@ -186,11 +186,11 @@ return [
         ],
         'empty' => [
             'heading' => 'Keine offenen Befunde',
-            'description' => 'Befunde entstehen über „Befund melden" (für jeden mit '
-                .'Melderecht) oder aus einem Vorgang heraus — Aktion „Befund erfassen" '
-                .'auf der Vorgangsseite. Diese Liste ist die flottenweite Übersicht: '
-                .'Hier wird eingeplant, zurückgestellt, behoben oder verworfen. '
-                .'Erledigte Befunde blendet der Filter oben aus.',
+            'description' => 'Befunde entstehen über den Knopf „Befund melden" oben '
+                .'rechts (für jeden mit Melderecht) oder aus einem Vorgang heraus — '
+                .'Aktion „Befund erfassen" auf der Vorgangsseite. Diese Liste ist die '
+                .'flottenweite Übersicht: Hier wird eingeplant, zurückgestellt, '
+                .'behoben oder verworfen. Erledigte Befunde blendet der Filter oben aus.',
         ],
         'action' => [
             'record' => 'Befund erfassen',
@@ -245,9 +245,6 @@ return [
             .'Pilot-Owner-Berechtigung für dieses Luftfahrzeug. Ob etwas harmlos '
             .'ist, entscheidet nicht die Meldung: Bis jemand mit Qualifikation '
             .'darüber befindet, gilt jeder Punkt als blockierend.',
-        'section' => [
-            'what' => 'Was ist aufgefallen?',
-        ],
         'field' => [
             'points' => 'Punkte',
         ],
@@ -256,14 +253,8 @@ return [
             'description' => 'Wo genau, wie groß, seit wann bemerkt — „Riss" allein '
                 .'sagt der nächsten Person nichts.',
         ],
-        'submit' => 'Melden',
         'done' => ':count Befund(e) gemeldet',
         'refused' => 'Meldung nicht angenommen',
-        'mine' => [
-            'heading' => 'Meine offenen Meldungen',
-            'description' => 'Was du gemeldet hast und noch nicht erledigt ist — '
-                .'„eingeplant" heißt: steht auf einer Arbeitskarte.',
-        ],
     ],
 
     'external' => [

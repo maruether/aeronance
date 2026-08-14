@@ -10,11 +10,11 @@ use App\Models\User;
 use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\TaskCards\Actions\RecordFinding;
 use App\Modules\TaskCards\Enums\FindingState;
-use App\Modules\TaskCards\Filament\Pages\ReportFindings;
 use App\Modules\TaskCards\Filament\Resources\Findings\Pages\ListFindings;
 use App\Modules\TaskCards\Models\Finding;
 use App\Modules\TaskCards\Models\WorkOrder;
 use App\Modules\TaskCards\Permissions;
+use Filament\Forms\Components\Repeater;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
@@ -52,14 +52,21 @@ final class FindingReportScreenTest extends TestCase
     }
 
     #[Test]
-    public function the_report_form_files_every_point(): void
+    public function the_report_button_on_the_list_files_every_point(): void
     {
+        // Feldtest: keine eigene Seite -- der Knopf wohnt an der Befundliste,
+        // und das Melderecht allein oeffnet sie (canViewAny).
         $aircraft = Aircraft::create(['registration' => 'D-KABC', 'model' => 'ASK 21']);
 
         $this->actingAs($this->reporter($aircraft));
 
-        Livewire::test(ReportFindings::class)
-            ->fillForm([
+        // Repeater::fake(): ohne das verschluesselt Filament die Zeilen unter
+        // UUIDs, und die Testdaten erreichen den Repeater nie -- die leere
+        // Standardzeile bliebe stehen und fiele durch die Pflichtfelder.
+        $undoRepeaterFake = Repeater::fake();
+
+        Livewire::test(ListFindings::class)
+            ->callAction('report', data: [
                 'aircraft_id' => $aircraft->getKey(),
                 'found_on' => now()->toDateString(),
                 'points' => [
@@ -67,8 +74,9 @@ final class FindingReportScreenTest extends TestCase
                     ['title' => 'Reifen abgefahren', 'description' => 'Hauptrad, Verschleißgrenze.'],
                 ],
             ])
-            ->call('submit')
-            ->assertHasNoFormErrors();
+            ->assertHasNoActionErrors();
+
+        $undoRepeaterFake();
 
         $this->assertSame(2, Finding::query()->count());
         $this->assertTrue(Finding::query()->get()->every(

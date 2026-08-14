@@ -66,6 +66,34 @@ final readonly class ChangeLotState
             throw new InvalidArgumentException('A reason is required -- it is what the record is for.');
         }
 
+        /*
+         * ─────────────────────────────────────────────────────────────────────
+         * FREIGEBEN SETZT DEN NACHWEIS VORAUS -- sonst ist jede Sperre nur
+         * eine Schwelle.
+         *
+         * Alle bewachten Wege parken Ware ohne Nachweis in der Quarantäne
+         * (Wareneingang, Inventurfund, Reparaturrückkehr, Eingangsprüfung) und
+         * verlassen sich darauf, dass die FREIGABE hart ist. Sie war es nicht:
+         * geprüft wurden Übergang, Begründung, Recht und Qualifikation -- nie
+         * das Papier. Ein Klick in der Losliste hob damit auf, was der
+         * Wareneingang zu Recht verweigert hatte.
+         *
+         * Ausbau-Lose bleiben ausgenommen: Ihr Nachweis ist die Feststellung
+         * beim Ausbau, und sie dürfen ohnehin nur zurück in ihr eigenes
+         * Luftfahrzeug (StockLot::isRestrictedToItsAircraft).
+         * ─────────────────────────────────────────────────────────────────────
+         */
+        if ($target === LotState::Serviceable
+            && ! $lot->hasRequiredDocument()
+            && ! $lot->isRestrictedToItsAircraft()) {
+            throw new RuntimeException(sprintf(
+                'Los %s ist Form-1-pflichtig, und der Nachweis fehlt. Ohne ihn lässt '
+                .'sich die Lufttüchtigkeit nicht feststellen -- erst den Nachweis '
+                .'eintragen, dann freigeben.',
+                $lot->lot_number,
+            ));
+        }
+
         $qualification = null;
 
         if ($this->requiresQualification($from, $target)) {

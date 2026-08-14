@@ -14,6 +14,7 @@ use App\Modules\Fleet\Models\Weighing;
 use App\Modules\Fleet\Permissions;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -97,6 +98,11 @@ final class WeighingResource extends Resource
             ])
             ->recordActions([
                 EditAction::make(),
+
+                // Sichtbar nur, solange nichts unterschrieben ist -- canDelete
+                // entscheidet, das Modell hält dagegen, falls doch jemand
+                // anderes fragt.
+                DeleteAction::make(),
 
                 /*
                  * "Speichern und drucken" -- the act that closes the sheet.
@@ -188,10 +194,24 @@ final class WeighingResource extends Resource
             && (auth()->user()?->can(Permissions::REVIEWS_RECORD) ?? false);
     }
 
-    /** @param  Weighing  $record */
+    /**
+     * Eine NICHT abgezeichnete Wägung darf weg.
+     *
+     * Feldtest: "nicht abgeschlossene wägeberichte müssen löschbar sein. Eine
+     * fälschlicherweise angelegte wägung müllt sonst die liste voll." Genau
+     * dafür ist Platz: Das Modell schützt seit jeher nur die UNTERSCHRIEBENE
+     * Wägung (deleting-Wache), verboten hat es hier bloß die Oberfläche --
+     * pauschal, und damit auch den Irrtum von vor zwei Minuten.
+     *
+     * Weiches Löschen (SoftDeletes): Die Zeile verschwindet aus der Liste,
+     * nicht aus der Datenbank. Ein abgezeichnetes Blatt bleibt unantastbar.
+     *
+     * @param  Weighing  $record
+     */
     public static function canDelete($record): bool
     {
-        return false;
+        return ! $record->isSignedOff()
+            && (auth()->user()?->can(Permissions::REVIEWS_RECORD) ?? false);
     }
 
     public static function getPages(): array

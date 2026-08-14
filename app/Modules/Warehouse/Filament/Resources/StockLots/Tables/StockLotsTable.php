@@ -16,8 +16,11 @@ use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -242,6 +245,7 @@ final class StockLotsTable
             ->recordUrl(fn (StockLot $record): string => StockLotResource::getUrl('view', ['record' => $record]))
             ->recordActions([
                 ActionGroup::make([
+                    self::recordCertificateAction(),
                     self::transferAction(),
                     self::quarantineAction(),
                     self::determineAction(),
@@ -309,6 +313,66 @@ final class StockLotsTable
      * from where the lot is now, so an impossible step is never presented in
      * the first place.
      */
+    /**
+     * Den Nachweis nachtragen -- Nummer, Art und, wenn da, der Scan.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * OHNE DIESE AKTION WÄRE DIE SPERRE EINE SACKGASSE. Seit ein Form-1-Los
+     * ohne Nachweis nicht mehr ausgegeben wird (IssueStock), muss es einen Weg
+     * geben, den Nachweis nachzureichen -- sonst steht das Teil für immer
+     * unbenutzbar im Regal, und die Meldung „Nummer nachtragen" verwiese auf
+     * etwas, das es nicht gibt. Genau das hat das Review an der eigenen
+     * Änderung gefunden.
+     *
+     * Die Datei ist optional, die Nummer nicht: Die Nummer ist der Nachweis,
+     * der Scan seine Vollständigkeit fürs Audit.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    private static function recordCertificateAction(): Action
+    {
+        return Action::make('recordCertificate')
+            ->label(__('warehouse.lot.action.record_certificate'))
+            ->icon('heroicon-o-document-check')
+            ->visible(fn (StockLot $r): bool => auth()->user()?->can(Permissions::STOCK_RECEIVE) ?? false)
+            ->modalDescription(__('warehouse.lot.help.record_certificate'))
+            ->fillForm(fn (StockLot $r): array => [
+                'document_type' => $r->document_type === StockLot::DOCUMENT_NONE
+                    ? StockLot::DOCUMENT_FORM_ONE
+                    : $r->document_type,
+                'document_reference' => $r->document_reference,
+            ])
+            ->schema([
+                Select::make('document_type')
+                    ->label(__('warehouse.lot.field.document_type'))
+                    ->options(DocumentTypes::options())
+                    ->required(),
+
+                TextInput::make('document_reference')
+                    ->label(__('warehouse.lot.field.document'))
+                    ->maxLength(128)
+                    ->required(fn (Get $get): bool => $get('document_type') !== StockLot::DOCUMENT_NONE),
+
+                SpatieMediaLibraryFileUpload::make('certificate')
+                    ->label(__('warehouse.lot.field.document_file'))
+                    ->collection(StockLot::DOCUMENTS)
+                    ->disk('documents')
+                    ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
+                    ->maxSize((int) config('aeronance.documents.max_size_mb', 20) * 1024)
+                    ->helperText(__('warehouse.lot.help.document_file')),
+            ])
+            ->action(function (StockLot $record, array $data): void {
+                $record->forceFill([
+                    'document_type' => (string) $data['document_type'],
+                    'document_reference' => $data['document_reference'] ?: null,
+                ])->save();
+
+                Notification::make()
+                    ->success()
+                    ->title(__('warehouse.lot.notification.certificate_recorded'))
+                    ->send();
+            });
+    }
+
     private static function determineAction(): Action
     {
         return Action::make('determine')

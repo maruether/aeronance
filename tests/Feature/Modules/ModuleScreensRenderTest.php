@@ -18,7 +18,6 @@ use App\Modules\Fleet\Filament\Resources\MaintenanceManuals\MaintenanceManualRes
 use App\Modules\Fleet\Filament\Resources\Weighings\WeighingResource;
 use App\Modules\Inspection\Filament\Resources\IncomingInspections\IncomingInspectionResource;
 use App\Modules\Part66\Filament\Pages\ExperienceLogPage;
-use App\Modules\TaskCards\Filament\Pages\ReportFindings;
 use App\Modules\TaskCards\Filament\Resources\Findings\FindingResource;
 use App\Modules\TaskCards\Filament\Resources\WorkOrders\WorkOrderResource;
 use App\Modules\Tooling\Filament\Resources\Tools\ToolResource;
@@ -157,9 +156,7 @@ final class ModuleScreensRenderTest extends TestCase
         $this->assertScreensRespond([
             WorkOrderResource::class,
             FindingResource::class,
-        ], [
-            ReportFindings::class,
-        ]);
+        ], []);
 
         // Die leere Befundliste erklaert sich selbst -- Feldtest: "nix kann
         // angelegt werden. was soll der reiter?" Absicht braucht Worte.

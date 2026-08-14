@@ -127,6 +127,12 @@ final class StockAttention extends Page
      *
      * Enough to work with, not enough for an audit -- and much better found here
      * than by somebody else.
+     *
+     * NUR die mit Nummer: Wo gar kein Nachweis erfasst ist, ist das kein
+     * Ablagethema, sondern eine Sperre -- siehe withoutCertificate(). Die
+     * Überschrift „Nachweis erfasst, Dokument fehlt" stand vorher auch über
+     * Losen, für die nie einer erfasst wurde, und das las sich wie eine
+     * Beruhigung (Feldtest).
      */
     public static function missingDocuments()
     {
@@ -135,6 +141,38 @@ final class StockAttention extends Page
             ->whereHas('partType', fn ($q) => $q->where('requires_form_one', true))
             ->whereNotIn('state', ['disposed'])
             ->get()
-            ->filter(fn (StockLot $lot): bool => ! $lot->hasDocumentFile());
+            ->filter(fn (StockLot $lot): bool => $lot->hasRequiredDocument() && ! $lot->hasDocumentFile());
+    }
+
+    /**
+     * Form-1-Ware GANZ ohne Nachweis -- das ist keine Ablagelücke.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Feldtest: "Das system hat mir bei einem seriennummer geführten form 1
+     * teil erlaubt dieses ohne nummer des form 1 und ohne scan anzulegen und
+     * als verwendbar freizuschreiben. das darf nicht sein."
+     *
+     * Ausgeben lässt sich solche Ware seit dieser Fassung nicht mehr
+     * (IssueStock::assertIssuable). Sie muss aber auch SICHTBAR sein: Sonst
+     * steht sie als „verwendbar" im Regal, und erst beim Einbauen erfährt
+     * jemand, dass sie es nicht ist.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    public static function withoutCertificate()
+    {
+        return StockLot::query()
+            ->with('partType')
+            ->whereHas('partType', fn ($q) => $q->where('requires_form_one', true))
+            ->whereNotIn('state', ['disposed', 'unsalvageable'])
+            ->get()
+            /*
+             * Ausbau-Lose sind KEIN Nachweisproblem: Ihr Nachweis ist die
+             * Feststellung beim Ausbau, und sie duerfen nur zurueck in ihr
+             * eigenes Luftfahrzeug (StockLot::isRestrictedToItsAircraft --
+             * durchgesetzt beim Buchen). Sie hier zu listen waere ein
+             * Fehlalarm, und ein Alarm, der oft falsch ist, wird ignoriert.
+             */
+            ->filter(fn (StockLot $lot): bool => ! $lot->hasRequiredDocument()
+                && ! $lot->isRestrictedToItsAircraft());
     }
 }

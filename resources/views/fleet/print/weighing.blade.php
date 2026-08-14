@@ -77,7 +77,20 @@
 </table>
 
 @php($stuetzen = $weighing->entriesOf('support')->values())
-@if ($stuetzen->count() === 2)
+@if ($stuetzen->count() >= 3 || ($weighing->kind->value === 'powered' && $stuetzen->count() >= 2))
+    {{-- Motorflug: drei Auflagen, Momente statt Hebel -- eigene Zeichnung,
+         weil es ein anderer Rechenweg ist. --}}
+    @include('fleet.print._weighing_moment_sketch', [
+        'supports' => $stuetzen->map(fn ($e): array => [
+            'label' => (string) $e->label,
+            'mass' => (float) $e->netto(),
+            'arm' => $e->arm_mm === null ? null : (float) $e->arm_mm,
+        ])->all(),
+        'total' => (float) $stuetzen->sum(fn ($e): float => $e->netto()),
+        'x' => $result->emptyCgMm !== null ? (float) $result->emptyCgMm : null,
+        'fmt' => $fmt,
+    ])
+@elseif ($stuetzen->count() === 2)
     {{-- Zwei Auflagen, ein Hebel: die bebilderte Erklaerung dazu --
          Feldtest: "Optik ... an einem klassischen Waegeformular mit
          bebilderter Erklaerung abstuetzen." --}}

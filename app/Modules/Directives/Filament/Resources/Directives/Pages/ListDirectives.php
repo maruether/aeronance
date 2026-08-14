@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Directives\Filament\Resources\Directives\Pages;
 
 use App\Modules\Directives\Actions\ImportDirectives;
+use App\Modules\Directives\Actions\PruneDirectives;
 use App\Modules\Directives\Enums\Bindingness;
 use App\Modules\Directives\Enums\DirectiveKind;
 use App\Modules\Directives\Enums\SubjectKind;
@@ -31,6 +32,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Throwable;
 
 /**
@@ -111,9 +113,17 @@ final class ListDirectives extends ListRecords
             ->filters([
                 SelectFilter::make('kind')
                     ->label(__('directives.field.kind'))
-                    ->options(fn (): array => collect(DirectiveKind::cases())
-                        ->mapWithKeys(fn (DirectiveKind $k): array => [$k->value => $k->label()])
-                        ->all()),
+                    // Gefiltert wird die FAMILIE: "TM / SB" trifft beide
+                    // Schreibweisen -- niemand soll wissen müssen, ob eine
+                    // Quelle deutsch oder englisch beschriftet.
+                    ->options(DirectiveKind::choices())
+                    ->query(fn (Builder $query, array $data): Builder => $query->when(
+                        filled($data['value'] ?? null),
+                        fn (Builder $q): Builder => $q->whereIn(
+                            'kind',
+                            DirectiveKind::familyValues((string) $data['value']),
+                        ),
+                    )),
 
                 SelectFilter::make('bindingness')
                     ->label(__('directives.field.bindingness'))
@@ -145,10 +155,60 @@ final class ListDirectives extends ListRecords
         return [
             $this->sourceProblemsAction(),
             $this->importAction(),
+            $this->pruneAction(),
             CreateAction::make()
                 ->label(__('directives.action.assess') === '' ? 'Neu' : __('filament-actions::create.single.label'))
                 ->schema(self::formSchema()),
         ];
+    }
+
+    /**
+     * Aufräumen: weg, wozu kein Luftfahrzeug im Bestand passt.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Feldtest: "zum speicher sparen möchte ich gerne noch die LTA/TM Liste
+     * aufräumen können, also alles löschen zu dem es kein Flugzeug gibt."
+     * Herstellerquellen liefern ganze Paletten -- C.E.A.P.R. schickt alle
+     * Robin-Muster in einer Antwort, und wer eine DR 300 fliegt, bekommt die
+     * DR 220 gleich mit.
+     *
+     * MIT VORSCHAU UND ZAHL im Bestätigungsdialog: Ein Knopf, der ungefragt
+     * löscht, wird einmal gedrückt und danach nie wieder. Was der Lauf NICHT
+     * anfasst (beurteilte Zeilen) steht dort ebenfalls -- siehe
+     * PruneDirectives, wo die Regeln wohnen.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    private function pruneAction(): Action
+    {
+        return Action::make('prune')
+            ->label(__('directives.action.prune'))
+            ->icon('heroicon-o-archive-box-x-mark')
+            ->color('gray')
+            ->visible(fn (): bool => auth()->user()?->can(Permissions::DIRECTIVES_MANAGE) ?? false)
+            ->requiresConfirmation()
+            ->modalDescription(fn (): string => __('directives.help.prune', [
+                'count' => app(PruneDirectives::class)->prunable()->count(),
+            ]))
+            ->action(function (): void {
+                try {
+                    $entfernt = app(PruneDirectives::class)->handle(auth()->user());
+                } catch (Throwable $e) {
+                    Notification::make()
+                        ->danger()
+                        ->title(__('directives.notification.refused'))
+                        ->body($e->getMessage())
+                        ->persistent()
+                        ->send();
+
+                    return;
+                }
+
+                Notification::make()
+                    ->success()
+                    ->title(__('directives.notification.pruned', ['count' => $entfernt]))
+                    ->body(__('directives.help.prune_restores'))
+                    ->send();
+            });
     }
 
     /** @return list<Component> */
@@ -168,8 +228,13 @@ final class ListDirectives extends ListRecords
 
             Select::make('kind')
                 ->label(__('directives.field.kind'))
-                ->options(collect(DirectiveKind::cases())
-                    ->mapWithKeys(fn (DirectiveKind $k): array => [$k->value => $k->label()])->all())
+                /*
+                 * ZWEI Paare statt vier Werte -- "eine TM und eine SB sind
+                 * das gleiche, nur Deutsch/englisch" (Feldtest). Beim
+                 * Bearbeiten einer englischen Zeile bleibt deren Wert wählbar,
+                 * damit das Formular den Bestand nicht umetikettiert.
+                 */
+                ->options(fn (?Directive $record): array => DirectiveKind::choices($record?->kind))
                 ->default(DirectiveKind::Lta->value)
                 ->required()
                 ->helperText(__('directives.help.mandatory')),
@@ -337,27 +402,46 @@ final class ListDirectives extends ListRecords
                     ->required()
                     ->live(),
 
+                /*
+                 * Nur fuer die Einfuege-Quellen (CSV/manuell): Die
+                 * Herstelleradapter bestimmen Art, Gegenstand und
+                 * Verbindlichkeit aus ihrer Spezifikation -- ein Feld, das
+                 * dort ignoriert wird, sieht aus wie eine Wahl und ist keine
+                 * (Feldtest: "koennen wir beim import auf die 'art'
+                 * verzichten?"). Und wo die Art doch gefragt ist, sind es
+                 * ZWEI Paare: TM/SB und LTA/AD sind jeweils dasselbe Wort in
+                 * zwei Sprachen; nennt die Nummer die Art selbst, gewinnt
+                 * ohnehin die Nummer (CsvSource).
+                 */
                 Select::make('kind')
                     ->label(__('directives.field.kind'))
-                    ->options(collect(DirectiveKind::cases())
-                        ->mapWithKeys(fn (DirectiveKind $k): array => [$k->value => $k->label()])->all())
-                    ->default(DirectiveKind::Lta->value),
+                    ->options(DirectiveKind::choices())
+                    ->default(DirectiveKind::Lta->value)
+                    ->helperText(__('directives.help.kind_fallback'))
+                    ->visible(fn (Get $get): bool => ! self::sourceIsAutomatic($get('source'))),
 
                 Select::make('subject_kind')
                     ->label(__('directives.field.subject_kind'))
                     ->options(collect(SubjectKind::cases())
                         ->mapWithKeys(fn (SubjectKind $k): array => [$k->value => $k->label()])->all())
-                    ->default(SubjectKind::AircraftModel->value),
+                    ->default(SubjectKind::AircraftModel->value)
+                    ->visible(fn (Get $get): bool => ! self::sourceIsAutomatic($get('source'))),
 
                 // Left blank derives from the kind: LTA/AD binding, TM/SB not.
                 Select::make('bindingness')
                     ->label(__('directives.field.bindingness'))
                     ->options(collect(Bindingness::cases())
                         ->mapWithKeys(fn (Bindingness $b): array => [$b->value => $b->label()])->all())
-                    ->placeholder(__('directives.help.bindingness_from_kind')),
+                    ->placeholder(__('directives.help.bindingness_from_kind'))
+                    ->visible(fn (Get $get): bool => ! self::sourceIsAutomatic($get('source'))),
 
                 TextInput::make('model')->label(__('directives.field.subject_model'))->maxLength(96),
-                TextInput::make('issuer')->label(__('directives.field.issuer'))->maxLength(160),
+                // Ebenso wirkungslos bei den Adaptern: Sie stempeln den
+                // Herausgeber ihrer Spezifikation auf jede Zeile.
+                TextInput::make('issuer')
+                    ->label(__('directives.field.issuer'))
+                    ->maxLength(160)
+                    ->visible(fn (Get $get): bool => ! self::sourceIsAutomatic($get('source'))),
 
                 // Pasting is for the sources that cannot fetch; a manufacturer
                 // adapter hides it and asks for a model instead.
@@ -400,7 +484,19 @@ final class ListDirectives extends ListRecords
 
                 Notification::make()
                     ->success()
-                    ->title(__('directives.notification.imported', $result))
+                    /*
+                     * NUR die Skalare an __() -- nicht das ganze Ergebnis.
+                     * Der Übersetzer ruft auf jeden Ersetzungswert ucfirst()
+                     * auf, und $result trägt inzwischen auch Listen (rows,
+                     * collisions): TypeError, Livewire zeigt den generischen
+                     * Seitenfehler -- NACH gelungenem Import. Feldtest beim
+                     * DR300-Abruf gefunden.
+                     */
+                    ->title(__('directives.notification.imported', [
+                        'created' => $result['created'],
+                        'updated' => $result['updated'],
+                        'unchanged' => $result['unchanged'],
+                    ]))
                     ->send();
 
                 /*

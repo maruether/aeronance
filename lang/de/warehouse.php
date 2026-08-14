@@ -752,6 +752,11 @@ return [
         'blocked' => 'Gesperrter Bestand',
         'blocked_hint' => 'Wie lange etwas schon unentschieden liegt, ist meist die '
             .'interessantere Zahl als der Grund.',
+        'without_certificate' => 'Form-1-pflichtig, aber ohne Nachweis',
+        'without_certificate_hint' => 'Ohne Nachweis lässt sich die Lufttüchtigkeit '
+            .'nicht feststellen — solche Ware wird nicht mehr zur Ausgabe angeboten '
+            .'und darf nicht eingebaut werden. Entweder die Form-1-Nummer am Los '
+            .'nachtragen oder das Los sperren.',
         'missing_documents' => 'Nachweis erfasst, Dokument fehlt',
         'missing_documents_hint' => 'Für die tägliche Arbeit reicht die Nummer, für ein '
             .'Audit nicht.',
@@ -848,6 +853,7 @@ return [
             'determined_by' => 'Festgestellt von',
         ],
         'action' => [
+            'record_certificate' => 'Nachweis eintragen',
             'quarantine' => 'Sperren',
             'determine' => 'Zustand feststellen',
             'print_tag' => 'Sperrzettel drucken',
@@ -855,6 +861,11 @@ return [
             'print_labels' => 'Losaufkleber drucken',
         ],
         'help' => [
+            'record_certificate' => 'Die Nummer ist der Nachweis — ohne sie wird ein '
+                .'Form-1-pflichtiges Teil nicht mehr ausgegeben. Der Scan ist die '
+                .'Vollständigkeit fürs Audit und darf nachkommen.',
+            'document_file' => 'PDF oder Foto. Liegt auf der privaten Ablage, nicht im '
+                .'Webroot — abrufbar nur für Angemeldete.',
             'quarantine_reason' => 'Vorsorgliches Sperren, jederzeit rücknehmbar. '
                 .'Es wird ein Sperrzettel mit laufender Nummer erzeugt.',
             'determination_reason' => 'Diese Feststellung wird dauerhaft festgeschrieben, '
@@ -867,6 +878,7 @@ return [
             'in_stock' => 'Nur mit Bestand',
         ],
         'notification' => [
+            'certificate_recorded' => 'Nachweis eingetragen.',
             'quarantined' => 'Los gesperrt.',
             'tag' => 'Sperrzettel :tag — bitte ausdrucken und am Teil anbringen.',
             'state_changed' => 'Zustand festgestellt und festgeschrieben.',

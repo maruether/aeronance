@@ -221,6 +221,27 @@ final class StockLot extends Model implements HasMedia
     public function scopeIssuable(Builder $query): void
     {
         $query->where('state', LotState::Serviceable->value)
+            /*
+             * Ohne Nachweis wird gar nicht erst angeboten: Ein Form-1-Teil,
+             * dessen Nummer fehlt, ist nicht ausgebbar (ML.A.501) -- siehe
+             * IssueStock::assertIssuable, wo die Ablehnung mit Begründung
+             * steht. Hier faellt es aus der Auswahl, damit niemand es
+             * erst anklickt und dann eine Fehlermeldung liest.
+             */
+            ->where(function (Builder $q): void {
+                $q->whereDoesntHave('partType', fn (Builder $p): Builder => $p->where('requires_form_one', true))
+                    ->orWhere(function (Builder $mit): void {
+                        $mit->where('document_type', self::DOCUMENT_FORM_ONE)
+                            ->whereNotNull('document_reference')
+                            ->where('document_reference', '!=', '');
+                    })
+                    /*
+                     * Ausbau-Lose bleiben in der Auswahl: Sie duerfen zurueck
+                     * in IHR Luftfahrzeug, und nur dorthin -- das entscheidet
+                     * mayBeFittedTo() beim Buchen, nicht dieser Filter.
+                     */
+                    ->orWhereNotNull('removed_from_aircraft');
+            })
             ->where(function (Builder $q): void {
                 $q->whereNull('expires_at')
                     ->orWhereDate('expires_at', '>=', now()->toDateString());
