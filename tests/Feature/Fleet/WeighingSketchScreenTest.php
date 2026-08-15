@@ -6,6 +6,7 @@ namespace Tests\Feature\Fleet;
 
 use App\Core\Access\AccessSetup;
 use App\Models\User;
+use App\Modules\Fleet\Actions\PrepareWeighing;
 use App\Modules\Fleet\Enums\WeighingKind;
 use App\Modules\Fleet\Filament\Resources\Weighings\Pages\EditWeighing;
 use App\Modules\Fleet\Models\Aircraft;
@@ -99,6 +100,31 @@ final class WeighingSketchScreenTest extends TestCase
             ->assertOk()
             ->assertDontSee('stroke-dasharray', escape: false)
             ->assertSee(__('fleet.weighing.sketch_pending'), escape: false);
+    }
+
+    #[Test]
+    public function a_prepared_sheet_already_carries_its_supports(): void
+    {
+        /*
+         * DER GRUND, WARUM NIE EINE SKIZZE ERSCHIEN: Die Auflagen entstanden
+         * nirgends. WeighingKind::defaultSupports() gab es, aufgerufen hat es
+         * niemand -- und ohne Auflagen zeichnet weder Maske noch Druck.
+         * Feldtest, dreimal gemeldet.
+         */
+        $aircraft = Aircraft::create(['registration' => 'D-KABC', 'model' => 'ASK 21']);
+
+        $weighing = app(PrepareWeighing::class)->from($aircraft, $this->manager());
+
+        $this->assertCount(
+            2,
+            $weighing->entriesOf(WeighingEntry::SECTION_SUPPORT),
+            'Ein Segelflugzeug steht auf zwei Auflagen -- die gehören aufs Blatt.',
+        );
+
+        $motor = Aircraft::create(['registration' => 'D-EABC', 'model' => 'DR 400/180']);
+        $motorblatt = app(PrepareWeighing::class)->from($motor, $this->manager(), WeighingKind::Powered);
+
+        $this->assertCount(3, $motorblatt->entriesOf(WeighingEntry::SECTION_SUPPORT));
     }
 
     private function gliderWeighing(): Weighing

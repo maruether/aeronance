@@ -122,6 +122,15 @@ final class VereinsfliegerProvider implements DiscoversGroups, IdentityProvider
      * FOLGE, und sie ist der Grund, warum der Mailweg jetzt gebaut wird: Jedes
      * Konto braucht ein EIGENES Passwort in Aeronance. Vereinsflieger liefert,
      * wer jemand ist und was er im Verein tut -- nicht, dass er es ist.
+     *
+     * GEPRUEFT AM 14.08.2026: github.com/diginize/wp-vereinsflieger, ein
+     * WordPress-Plugin, das genau diese Anmeldung anbietet. Es hat KEINEN
+     * anderen Weg gefunden -- es nimmt denselben (App-Key, CID, auth/signin
+     * mit dem Passwort des Benutzers) und traegt damit dieselben zwei
+     * Nachteile: fremde Zugangsdaten fliessen durch die Anwendung, und jede
+     * Anmeldung kostet drei Anfragen aus dem Tageskontingent. Marvin dazu:
+     * "der beschriebene macht für uns keinen sinn." Nicht erneut recherchieren;
+     * ein Weiterleitungsverfahren gibt es bei Vereinsflieger schlicht nicht.
      * ─────────────────────────────────────────────────────────────────────────
      */
     public function supportsPassword(): bool

@@ -130,9 +130,44 @@ final class WorkOrder extends Model
      * the same reason: a card nobody has checked is what the second signature
      * exists to surface.
      */
+    /**
+     * Bereit für die Freigabe -- fertiggemeldet genügt.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Feldtest: "Eine Arbeitskarte die zum Zeitpunkt der Freigabe noch nicht
+     * abgezeichnet ist sollte durch die freigabe mit abgezeichnet werden ...
+     * Die Arbeitskarten müssen dennoch vorher alle fertiggemeldet sein."
+     *
+     * Das ist fachlich stimmig: Wer freigibt, IST der Prüfer -- seine
+     * Unterschrift unter die Freigabe ist dieselbe, die sonst einzeln unter
+     * jede Karte käme. Was sie NICHT ersetzt, ist die Meldung dessen, der
+     * gearbeitet hat: Ohne "fertig" weiß niemand, ob überhaupt etwas fertig
+     * ist -- und die Freigabe würde über offene Arbeit unterschreiben.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
     public function isReadyForRelease(): bool
     {
-        return $this->taskCards()->exists() && $this->allCardsClosed();
+        return $this->taskCards()->exists()
+            && $this->taskCards->every(
+                fn (TaskCard $card): bool => $card->state->isClosed()
+                    || $card->state === TaskCardState::Completed,
+            );
+    }
+
+    /**
+     * Die Karten, die diese Freigabe MITZEICHNEN würde.
+     *
+     * Für die Warnung vor dem Klick: Mitzeichnen darf nicht beiläufig
+     * passieren -- wer unterschreibt, soll wissen, worunter.
+     *
+     * @return list<TaskCard>
+     */
+    public function cardsAwaitingCertification(): array
+    {
+        return $this->taskCards
+            ->filter(fn (TaskCard $card): bool => $card->state === TaskCardState::Completed)
+            ->values()
+            ->all();
     }
 
     /**

@@ -25,6 +25,15 @@ final class ReleaseToService extends Model
 {
     protected $table = 'releases';
 
+    /**
+     * Der Nachweis einer Person, die NICHT hier im System steht.
+     *
+     * Kein Qualification::TYPE_*, und das mit Absicht: Diese Nummer wurde
+     * abgeschrieben, nicht geprüft. Sie unter denselben Typ zu stellen wie
+     * eine hinterlegte Lizenz hiesse zu behaupten, jemand habe sie gesehen.
+     */
+    public const CREDENTIAL_EXTERNAL = 'external_licence';
+
     protected $fillable = [
         'work_order_id',
         'aircraft_id',
@@ -36,6 +45,10 @@ final class ReleaseToService extends Model
         'released_at',
         'released_by',
         'released_by_name',
+        'is_external',
+        'recorded_by',
+        'recorded_by_name',
+        'external_organisation',
         'qualification_type',
         'qualification_reference',
         'qualification_category',
@@ -53,6 +66,7 @@ final class ReleaseToService extends Model
     {
         return [
             'released_at' => 'datetime',
+            'is_external' => 'boolean',
             'qualification_valid_until' => 'date',
             'counters_at_release' => 'array',
         ];

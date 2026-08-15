@@ -132,6 +132,11 @@ final class WeighingForm
                         ])
                         ->columns(4)
                         ->defaultItems(0)
+                        // Ohne eigene Beschriftung hiess der Knopf "Zu support
+                        // entries hinzufügen" -- maschinell aus dem Feldnamen
+                        // abgeleitet und in einem deutschen Wägeformular
+                        // schlicht falsch.
+                        ->addActionLabel(__('fleet.weighing.add_support'))
                         ->columnSpanFull(),
                 ])
                 ->columns(2),

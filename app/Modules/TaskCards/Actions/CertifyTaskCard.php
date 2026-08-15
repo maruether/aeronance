@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Modules\Fleet\Actions\RecordMaintenance;
 use App\Modules\Fleet\Models\ComponentLimit;
 use App\Modules\TaskCards\Enums\FindingState;
+use App\Modules\TaskCards\Enums\ParticipationKind;
 use App\Modules\TaskCards\Enums\TaskCardState;
 use App\Modules\TaskCards\Models\Finding;
 use App\Modules\TaskCards\Models\TaskCard;
@@ -54,8 +55,16 @@ final readonly class CertifyTaskCard
      * who knows, and demanding a licence here would mean the licence holder
      * signs for an afternoon he did not spend.
      */
-    public function complete(TaskCard $card, User $user, string $workPerformed): TaskCard
-    {
+    /**
+     * @param  int|null  $minutes  Arbeitszeit, gleich mit erfasst
+     */
+    public function complete(
+        TaskCard $card,
+        User $user,
+        string $workPerformed,
+        ?int $minutes = null,
+        ParticipationKind $as = ParticipationKind::Executed,
+    ): TaskCard {
         if ($card->state !== TaskCardState::Open) {
             throw new RuntimeException(sprintf('This card is already %s.', $card->state->label()));
         }
@@ -72,6 +81,33 @@ final readonly class CertifyTaskCard
                 'Completing a card requires the "%s" permission.',
                 Permissions::CARDS_WORK,
             ));
+        }
+
+        /*
+         * ─────────────────────────────────────────────────────────────────────
+         * DIE ZEIT GLEICH HIER, wenn sie mitgegeben wird.
+         *
+         * Feldtest: "beim fertigmelden sollte man auch eine arbeitszeit
+         * eintragen können. Der prozess erst zeit eintragen dann fertig melden
+         * nervt." Genau so war es: Die Wache unten verlangt Stunden, und wer
+         * sie nicht vorher eingetragen hatte, wurde weggeschickt, um über
+         * einen zweiten Dialog wiederzukommen.
+         *
+         * Die Zeit bleibt ein eigener Datensatz mit eigener Person und
+         * eigener Art der Beteiligung -- der Erfahrungsnachweis lebt davon.
+         * Hier wird nur der häufigste Fall abgekürzt: Wer meldet, hat es
+         * selbst gemacht.
+         * ─────────────────────────────────────────────────────────────────────
+         */
+        if ($minutes !== null && $minutes > 0) {
+            app(ManageWorkOrder::class)->recordTime(
+                card: $card,
+                person: $user,
+                minutes: $minutes,
+                as: $as,
+            );
+
+            $card->load('times');
         }
 
         if ($card->times()->doesntExist()) {

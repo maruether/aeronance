@@ -62,9 +62,26 @@ final class OutstandingFindings implements ContributesOpenItems
         $waiting = TaskCard::query()
             ->where('aircraft_registration', $aircraft->registration)
             ->awaitingCertification()
+            ->with('workOrder.taskCards')
             ->get();
 
         foreach ($waiting as $card) {
+            /*
+             * EINE MELDUNG JE SACHVERHALT. Seit die Freigabe fertiggemeldete
+             * Karten mitzeichnet, ist eine solche Karte in einem sonst
+             * fertigen Vorgang kein eigener offener Punkt mehr -- sie wartet
+             * auf dieselbe Unterschrift wie der Vorgang selbst, und der meldet
+             * sie unten. Beides zu melden hiesse, denselben Mangel zweimal zu
+             * zaehlen; eine Liste, die doppelt zaehlt, wird nicht gelesen.
+             *
+             * Wo der Vorgang NICHT freigabebereit ist -- weil eine andere
+             * Karte noch nicht fertiggemeldet ist --, bleibt die Karte
+             * stehen: Dann ist sie tatsaechlich das, was fehlt.
+             */
+            if ($card->workOrder?->isReadyForRelease() ?? false) {
+                continue;
+            }
+
             $items[] = new OpenItem(
                 source: 'workorders',
                 what: $card->label(),

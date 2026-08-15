@@ -9,6 +9,7 @@ use App\Modules\Fleet\Enums\ManualKind;
 use App\Modules\Fleet\Models\MaintenanceManual;
 use App\Modules\Fleet\Permissions;
 use Filament\Actions\Action;
+use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -211,6 +212,9 @@ final class MaintenanceManualsTable
                 self::withdraw(),
             ])
             ->emptyStateHeading(__('fleet.manual.empty.heading'))
-            ->emptyStateDescription(__('fleet.manual.empty.description'));
+            ->emptyStateDescription(__('fleet.manual.empty.description'))
+            // Auch aus der leeren Liste heraus anlegbar: Wer hier steht, will
+            // meist genau das, und der Kopfknopf ist zwei Blickrichtungen weg.
+            ->emptyStateActions([CreateAction::make()]);
     }
 }

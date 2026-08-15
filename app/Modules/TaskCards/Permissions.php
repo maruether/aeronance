@@ -66,6 +66,23 @@ final class Permissions
     public const FINDINGS_REPORT = 'workorders.findings.report';
 
     /**
+     * Die Freigabe eines VEREINSFREMDEN Prüfers dokumentieren.
+     *
+     * Feldtest: "wir brauchen noch die möglichkeit eines ‚Freigegeben durch',
+     * falls der prüfer nicht im verein ist." Der Regelfall im kleinen Verein:
+     * Ein freiberuflicher Part-66-Prüfer oder ein LTB zeichnet die
+     * Nachprüfung ab, hat hier aber kein Konto und bekommt auch keins.
+     *
+     * EIN EIGENES RECHT, weil es eine andere Handlung ist als selbst
+     * freizugeben: Wer sie ausübt, unterschreibt nicht -- er schreibt ab, was
+     * ein anderer unterschrieben hat, und steht dafür mit seinem Namen im
+     * Protokoll. Ohne Qualifikationspflicht, denn geprüft wird die Lizenz des
+     * Externen von uns gerade NICHT; die Verantwortung dafür trägt der
+     * Erfassende.
+     */
+    public const RELEASES_RECORD_EXTERNAL = 'workorders.releases.record_external';
+
+    /**
      * Defer a finding.
      *
      * Its own verb, and the one with teeth: deciding that a crack holds until

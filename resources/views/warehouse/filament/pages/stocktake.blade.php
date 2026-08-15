@@ -10,7 +10,7 @@
                 <div>
                     <label class="text-sm font-medium">{{ __('warehouse.stocktake.field.location') }}</label>
                     <select wire:model.live="location"
-                            class="mt-1 w-full rounded-lg border-gray-300 dark:bg-white/5 dark:border-white/10 text-sm">
+                            class="dark:text-white dark:[&>option]:bg-gray-900 dark:[&>option]:text-white mt-1 w-full rounded-lg border-gray-300 dark:bg-white/5 dark:border-white/10 text-sm">
                         <option value="">{{ __('warehouse.stocktake.all_locations') }}</option>
                         @foreach ($this->locations() as $location)
                             <option value="{{ $location->id }}">{{ $location->name }}</option>
@@ -159,8 +159,13 @@
             <div class="space-y-3">
                 @foreach ($this->foundRows as $i => $row)
                     <div class="grid gap-2 sm:grid-cols-12 sm:items-center">
+                        {{-- dark:text-white und dark:[&>option]:bg-gray-900: Ein
+                             natives select erbt die Schriftfarbe NICHT vom
+                             Container, und seine Optionsliste zeichnet der
+                             Browser selbst -- ohne beides stand im Dunkelmodus
+                             weiße Schrift auf weißem Grund (Feldtest). --}}
                         <select wire:model="foundRows.{{ $i }}.part_type_id"
-                                class="sm:col-span-5 rounded-lg border-gray-300 dark:bg-white/5 dark:border-white/10 text-sm">
+                                class="dark:text-white dark:[&>option]:bg-gray-900 dark:[&>option]:text-white sm:col-span-5 rounded-lg border-gray-300 text-sm dark:border-white/10 dark:bg-white/5 dark:text-white dark:[&>option]:bg-gray-900 dark:[&>option]:text-white">
                             <option value="">{{ __('warehouse.stocktake.found_pick_part') }}</option>
                             @foreach ($this->foundCandidates() as $id => $name)
                                 <option value="{{ $id }}">{{ $name }}</option>

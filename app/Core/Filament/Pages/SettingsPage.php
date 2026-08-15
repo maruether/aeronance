@@ -462,14 +462,13 @@ class SettingsPage extends Page implements HasForms
         $settings->forget($key);
         $settings->applyToConfig();
 
-        // Neu aufbauen, sonst steht der alte Wert weiter im Formular und der
-        // Knopf behauptet, es sei nichts passiert.
-        $this->mount();
-
         Notification::make()
             ->title(__('settings.reset_done'))
             ->success()
             ->send();
+
+        // Wie beim Speichern: Der Panel-Rahmen trägt den Wert ebenfalls.
+        $this->redirect(static::getUrl());
     }
 
     public function save(): void
@@ -507,6 +506,21 @@ class SettingsPage extends Page implements HasForms
             ->title(__('settings.saved'))
             ->success()
             ->send();
+
+        /*
+         * VOLLSTÄNDIG NEU LADEN, nicht nur das Formular.
+         *
+         * Feldtest: "der namen in der Kopfzeile aktualisiert sich nicht bei
+         * änderung in den einstellungen." Livewire tauscht nur den Bereich
+         * aus, den diese Komponente rendert -- Kopfzeile, Seitenleiste und
+         * Logo gehören zum Panel-Rahmen und stehen weiter mit dem alten Wert
+         * da, bis jemand die Seite neu lädt. Wer den Vereinsnamen ändert,
+         * will ihn oben stehen sehen, nicht raten, ob es geklappt hat.
+         *
+         * Die Meldung überlebt den Sprung: Filament reicht Benachrichtigungen
+         * über die Sitzung weiter.
+         */
+        $this->redirect(static::getUrl());
     }
 
     /**

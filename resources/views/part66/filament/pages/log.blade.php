@@ -4,7 +4,7 @@
             <div>
                 <label class="mb-1 block text-sm font-medium">{{ __('part66.log.person') }}</label>
                 <select wire:model.live="personId"
-                        class="fi-select-input rounded-lg border-gray-300 text-sm dark:border-white/10 dark:bg-white/5">
+                        class="dark:text-white dark:[&>option]:bg-gray-900 dark:[&>option]:text-white fi-select-input rounded-lg border-gray-300 text-sm dark:border-white/10 dark:bg-white/5">
                     @foreach ($this->peopleOptions() as $id => $name)
                         <option value="{{ $id }}">{{ $name }}</option>
                     @endforeach

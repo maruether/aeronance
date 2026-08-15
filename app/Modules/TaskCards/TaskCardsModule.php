@@ -63,6 +63,7 @@ final class TaskCardsModule implements AeronanceModule
             ],
             'taskcards.certify' => [
                 Permissions::CARDS_CERTIFY,
+                Permissions::RELEASES_RECORD_EXTERNAL,
                 Permissions::FINDINGS_RECORD,
                 Permissions::FINDINGS_DEFER,
             ],

@@ -93,7 +93,13 @@
 
     <table class="meta">
         <tr>
-            <td><b>Freigegeben von</b>{{ $release->released_by_name }}</td>
+            <td><b>Freigegeben von</b>{{ $release->released_by_name }}
+                @if ($release->is_external)
+                    {{-- Sichtbar, dass hier jemand von aussen unterschrieben
+                         hat: Die Nummer daneben wurde abgeschrieben, nicht
+                         geprueft, und wer das getan hat, steht darunter. --}}
+                    <br><small>{{ $release->external_organisation }}</small>
+                @endif</td>
             <td><b>Berechtigung</b>
                 {{-- Ueber die Sprachdatei, nicht per Literal-Vergleich: gespeichert
      wird part66_licence, und der alte Vergleich auf 'part66' erklaerte
@@ -103,6 +109,13 @@
                 {{ $release->qualification_category ? '('.$release->qualification_category.')' : '' }}</td>
             <td><b>Gültig bis</b>{{ $release->qualification_valid_until?->format('d.m.Y') ?? 'unbefristet' }}</td>
         </tr>
+        @if ($release->is_external)
+            <tr>
+                <td colspan="3"><b>Eingetragen durch</b>
+                    {{ $release->recorded_by_name }} —
+                    {{ __('taskcards.release.external.print_note') }}</td>
+            </tr>
+        @endif
     </table>
 
     <div class="sig">

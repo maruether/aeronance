@@ -747,6 +747,28 @@ return [
         'signature' => 'Unterschrift',
     ],
 
+    'overview' => [
+        'title' => 'Bestand',
+        'subheading' => 'Was tatsächlich im Lager liegt — für jede Art von Bestand, '
+            .'nicht nur für seriennummerngeführte Teile. Welche Bauteiltypen es gibt, '
+            .'steht in den Stammdaten; woraus sich ein Bestand zusammensetzt, in den Losen.',
+        'available' => 'Verfügbar',
+        'blocked' => 'Nicht verwendbar',
+        'total' => 'Gesamt',
+        'no_compartment' => 'kein Fach hinterlegt',
+        'show_lots' => 'Lose anzeigen',
+        'filter' => [
+            'location' => 'Lagerort',
+            'with_blocked' => 'Nur mit gesperrtem Bestand',
+        ],
+        'empty' => [
+            'heading' => 'Kein Bestand erfasst',
+            'description' => 'Hier steht, was im Lager liegt, sobald etwas eingebucht ist — '
+                .'und was fehlt, sobald ein Mindestbestand hinterlegt ist. Neue Bauteiltypen '
+                .'legt man unter „Bauteiltypen" an, Ware kommt über den Wareneingang herein.',
+        ],
+    ],
+
     'attention' => [
         'title' => 'Was liegt an',
         'subheading' => 'Alltagsfragen: Was ist abgelaufen, was fehlt, was liegt gesperrt '

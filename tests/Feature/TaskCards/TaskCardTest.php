@@ -289,6 +289,70 @@ final class TaskCardTest extends TestCase
     }
 
     #[Test]
+    public function completing_a_card_can_record_the_time_in_one_go(): void
+    {
+        // Feldtest: "Der prozess erst zeit eintragen dann fertig melden nervt."
+        $order = $this->workOrder();
+        $card = app(ManageWorkOrder::class)->addCard($order, 'Ölwechsel');
+        $mechaniker = $this->mechanic();
+
+        $fertig = app(CertifyTaskCard::class)->complete(
+            card: $card,
+            user: $mechaniker,
+            workPerformed: 'Öl gewechselt',
+            minutes: 90,
+        );
+
+        $this->assertSame(TaskCardState::Completed, $fertig->state);
+        $this->assertSame(90, (int) $fertig->times()->sum('minutes'));
+    }
+
+    #[Test]
+    public function the_release_co_certifies_cards_that_are_only_reported_finished(): void
+    {
+        /*
+         * Feldtest: "Eine Arbeitskarte die zum Zeitpunkt der Freigabe noch
+         * nicht abgezeichnet ist sollte durch die freigabe mit abgezeichnet
+         * werden ... Die Arbeitskarten müssen dennoch vorher alle
+         * fertiggemeldet sein."
+         */
+        $order = $this->workOrder();
+        $card = app(ManageWorkOrder::class)->addCard($order, 'Ölwechsel');
+
+        app(CertifyTaskCard::class)->complete(
+            card: $card, user: $this->mechanic(), workPerformed: 'Gemacht', minutes: 60,
+        );
+
+        // Fertiggemeldet genügt für die Freigabe -- und die Warnung weiß, welche.
+        $this->assertTrue($order->fresh()->isReadyForRelease());
+        $this->assertCount(1, $order->fresh()->cardsAwaitingCertification());
+
+        app(IssueRelease::class)->handle($order->fresh(), $this->qualifiedInspector());
+
+        $this->assertSame(TaskCardState::Certified, $card->fresh()->state);
+        $this->assertSame(
+            $this->qualifiedInspector()->name,
+            $card->fresh()->certified_by_name,
+            'Wer freigibt, hat die Karte mitgezeichnet -- und steht auch dort.',
+        );
+    }
+
+    #[Test]
+    public function but_a_card_nobody_reported_finished_still_blocks(): void
+    {
+        // Ohne Fertigmeldung wüsste die Unterschrift nicht, worüber.
+        $order = $this->workOrder();
+        app(ManageWorkOrder::class)->addCard($order, 'Ölwechsel');
+
+        $this->assertFalse($order->fresh()->isReadyForRelease());
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessageMatches('/reported finished/');
+
+        app(IssueRelease::class)->handle($order->fresh(), $this->qualifiedInspector());
+    }
+
+    #[Test]
     public function certified_work_stays_open_until_its_release(): void
     {
         /*

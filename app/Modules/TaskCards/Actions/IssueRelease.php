@@ -9,6 +9,7 @@ use App\Core\Models\Qualification;
 use App\Models\User;
 use App\Modules\Fleet\Airworthiness\AirworthinessCheck;
 use App\Modules\Fleet\Airworthiness\OpenItem;
+use App\Modules\TaskCards\Enums\TaskCardState;
 use App\Modules\TaskCards\Events\ReleaseIssued;
 use App\Modules\TaskCards\Models\Finding;
 use App\Modules\TaskCards\Models\ReleaseToService;
@@ -216,6 +217,25 @@ final readonly class IssueRelease
              * there is nothing left to happen after the third signature, so the
              * closing figures are written here in the same breath.
              */
+            /*
+             * ─────────────────────────────────────────────────────────────────
+             * DIE FREIGABE ZEICHNET MIT, was nur fertiggemeldet ist.
+             *
+             * Feldtest: "Eine Arbeitskarte die zum Zeitpunkt der Freigabe noch
+             * nicht abgezeichnet ist sollte durch die freigabe mit
+             * abgezeichnet werden." Und das ist keine Abkürzung, sondern die
+             * Wahrheit über den Vorgang: Wer freigibt, ist der Prüfer -- seine
+             * Unterschrift ist dieselbe, die sonst einzeln unter jede Karte
+             * käme. Sie zweimal zu verlangen, war Verwaltung ohne Erkenntnis.
+             *
+             * BLIND passiert es nicht: Die Oberfläche nennt die Karten vorher
+             * beim Namen (WorkOrder::cardsAwaitingCertification).
+             * ─────────────────────────────────────────────────────────────────
+             */
+            foreach ($order->cardsAwaitingCertification() as $offen) {
+                app(CertifyTaskCard::class)->certify($offen->fresh(), $user, $when->toDateString());
+            }
+
             $order->forceFill([
                 'released_at' => $when,
                 'state' => WorkOrder::STATE_CLOSED,
@@ -229,6 +249,169 @@ final readonly class IssueRelease
         $this->announce($fertig);
 
         return $fertig;
+    }
+
+    /**
+     * Die Freigabe eines VEREINSFREMDEN Prüfers eintragen.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Feldtest: "wir brauchen noch die möglichkeit eines ‚Freigegeben durch',
+     * falls der prüfer nicht im verein ist." Im kleinen Verein der Regelfall:
+     * Ein freiberuflicher Part-66-Prüfer oder ein LTB zeichnet die Nachprüfung
+     * ab. Er hat hier kein Konto -- und soll auch keins bekommen, nur um eine
+     * Unterschrift abzugeben.
+     *
+     * DIESELBEN WACHEN, EINE ANDERE UNTERSCHRIFT. Alles, was eine Freigabe
+     * unmöglich macht -- offene Karten, blockierende Befunde, unbeurteilte
+     * LTA/TM, eine bereits erteilte Freigabe --, gilt hier unverändert: Die
+     * Sache ist dieselbe, nur der Unterschreibende steht außerhalb.
+     *
+     * WAS HIER NICHT GEPRÜFT WIRD, und das ist der ganze Unterschied: die
+     * Lizenz des Externen. Wir können sie nicht prüfen, also behaupten wir es
+     * auch nicht -- die Bescheinigung wird als EXTERN gekennzeichnet, trägt
+     * den Namen und die Nummer, die der Erfassende abgeschrieben hat, und
+     * daneben seinen eigenen Namen. Wer sie in drei Jahren liest, sieht
+     * beides: wer unterschrieben hat und wer es eingetragen hat.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    public function recordExternal(
+        WorkOrder $order,
+        User $recordedBy,
+        string $signatoryName,
+        string $licenceReference,
+        ?string $organisation = null,
+        ?string $maintenanceData = null,
+        ?string $statement = null,
+        ?string $releasedAt = null,
+    ): ReleaseToService {
+        $order->load(['taskCards.times', 'aircraft']);
+
+        if (! $this->authority->permits($recordedBy, Permissions::RELEASES_RECORD_EXTERNAL)) {
+            throw new RuntimeException(sprintf(
+                'Recording an external release requires the "%s" permission.',
+                Permissions::RELEASES_RECORD_EXTERNAL,
+            ));
+        }
+
+        if (trim($signatoryName) === '' || trim($licenceReference) === '') {
+            throw new InvalidArgumentException(
+                'An external release needs the name and the licence or approval number of '
+                .'whoever signed it -- without them the certificate says nothing.'
+            );
+        }
+
+        $this->assertReleasable($order);
+
+        $when = $releasedAt !== null ? Carbon::parse($releasedAt) : now();
+
+        $fertig = DB::transaction(function () use (
+            $order, $recordedBy, $signatoryName, $licenceReference,
+            $organisation, $when, $maintenanceData, $statement
+        ): ReleaseToService {
+            // Dieselbe Sperre wie bei der eigenen Freigabe: Zwei Klicks in
+            // derselben Sekunde dürfen nicht zwei Bescheinigungen ergeben.
+            $locked = WorkOrder::query()->lockForUpdate()->findOrFail($order->id);
+
+            if ($locked->released_at !== null) {
+                throw new RuntimeException(
+                    'This visit has already been released. A correction is a new release '
+                    .'referencing the existing one.'
+                );
+            }
+
+            $release = ReleaseToService::create([
+                'work_order_id' => $order->id,
+                'aircraft_id' => $order->aircraft_id,
+                'aircraft_registration' => $order->aircraft?->registration ?? '?',
+                'aircraft_model' => $order->aircraft?->model,
+                'number' => $this->nextNumber($when),
+                'statement' => $statement !== null && trim($statement) !== ''
+                    ? trim($statement)
+                    : $this->defaultStatement($order),
+                'maintenance_data' => $maintenanceData,
+                'released_at' => $when,
+
+                /*
+                 * KEIN Konto als Unterzeichner: Der Prüfer hat keins, und ein
+                 * fremdes einzutragen hiesse zu behaupten, dieser Benutzer
+                 * habe unterschrieben.
+                 */
+                'released_by' => null,
+                'released_by_name' => trim($signatoryName),
+                'is_external' => true,
+                'external_organisation' => filled($organisation) ? trim((string) $organisation) : null,
+
+                // Wer abgeschrieben hat -- mit Namen, eingefroren wie alles
+                // andere auf der Bescheinigung (E7).
+                'recorded_by' => $recordedBy->id,
+                'recorded_by_name' => $recordedBy->name,
+
+                /*
+                 * Die Nummer steht da, wo bei einer eigenen Freigabe die
+                 * geprüfte Lizenz steht -- aber unter dem ehrlichen Typ:
+                 * abgeschrieben, nicht nachgewiesen.
+                 */
+                'qualification_type' => ReleaseToService::CREDENTIAL_EXTERNAL,
+                'qualification_reference' => trim($licenceReference),
+
+                'counters_at_release' => $order->aircraft?->currentValues() ?? [],
+            ]);
+
+            $order->forceFill([
+                'released_at' => $when,
+                'state' => WorkOrder::STATE_CLOSED,
+                'closed_at' => $order->closed_at ?? $when->toDateString(),
+                'counters_at_close' => $order->counters_at_close ?? ($order->aircraft?->currentValues() ?? []),
+            ])->saveQuietly();
+
+            return $release->fresh();
+        });
+
+        $this->announce($fertig);
+
+        return $fertig;
+    }
+
+    /**
+     * Alles, was eine Freigabe unmöglich macht -- unabhängig davon, wer sie
+     * unterschreibt.
+     */
+    private function assertReleasable(WorkOrder $order): void
+    {
+        if ($order->isReleased()) {
+            throw new RuntimeException(
+                'This visit has already been released. A correction is a new release '
+                .'referencing the existing one.'
+            );
+        }
+
+        if (! $order->isReadyForRelease()) {
+            throw new RuntimeException($this->whyNotReady($order));
+        }
+
+        $blocking = $this->blockingFindings($order);
+
+        if ($blocking !== []) {
+            throw new RuntimeException(sprintf(
+                'These findings are outstanding and not deferred: %s. A release cannot be '
+                .'issued over an unresolved defect.',
+                implode(', ', $blocking),
+            ));
+        }
+
+        if ($order->aircraft !== null) {
+            $unsound = app(AirworthinessCheck::class)->releaseBlockersFor($order->aircraft);
+
+            if ($unsound !== []) {
+                throw new RuntimeException(sprintf(
+                    'These have to be settled before a release can be signed: %s.',
+                    implode('; ', array_map(
+                        static fn ($item): string => (string) $item->label,
+                        $unsound,
+                    )),
+                ));
+            }
+        }
     }
 
     /**
@@ -406,14 +589,18 @@ final readonly class IssueRelease
                 .'certificate be about?';
         }
 
+        // Fertiggemeldete Karten stehen der Freigabe nicht mehr im Weg -- sie
+        // werden mitgezeichnet. Was fehlt, ist die MELDUNG dessen, der
+        // gearbeitet hat: Ohne sie wüsste die Unterschrift nicht, worüber.
         $waiting = $order->taskCards
-            ->filter(fn (TaskCard $c): bool => ! $c->state->isClosed())
+            ->filter(fn (TaskCard $c): bool => ! $c->state->isClosed()
+                && $c->state !== TaskCardState::Completed)
             ->map(fn (TaskCard $c): string => $c->number)
             ->implode(', ');
 
         return sprintf(
-            'These cards are not signed off yet: %s. A release over an unchecked card '
-            .'would certify the one thing nobody has checked.',
+            'These cards have not been reported finished yet: %s. A release cannot cover '
+            .'work that nobody has said is done.',
             $waiting,
         );
     }

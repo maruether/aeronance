@@ -115,15 +115,19 @@ final class ReleaseTest extends TestCase
     }
 
     #[Test]
-    public function a_visit_with_an_unchecked_card_cannot_be_released(): void
+    public function a_visit_with_a_card_nobody_reported_finished_cannot_be_released(): void
     {
-        // It would certify the one thing nobody has checked.
+        /*
+         * Die Regel hat sich verschoben, und zwar auf Ansage: Eine
+         * FERTIGGEMELDETE Karte wird von der Freigabe mitgezeichnet -- wer
+         * freigibt, ist der Prüfer. Was bleibt, ist die Meldung dessen, der
+         * gearbeitet hat: Ohne sie wüsste die Unterschrift nicht, worüber.
+         */
         $order = $this->workOrder();
-        $card = $this->cardWithTime($order);
-        app(CertifyTaskCard::class)->complete($card, $this->mechanic(), 'Gemacht');
+        $this->cardWithTime($order);
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessageMatches('/not signed off yet/');
+        $this->expectExceptionMessageMatches('/reported finished/');
 
         app(IssueRelease::class)->handle($order->fresh(), $this->inspector());
     }
@@ -366,15 +370,17 @@ final class ReleaseTest extends TestCase
         // So a button that cannot succeed is not shown, and the reason can be
         // said instead of a refusal after the click.
         $order = $this->workOrder();
+        // Nicht fertiggemeldet -- das ist seit dem Mitzeichnen der Grund, der
+        // die Freigabe noch aufhält.
         $card = $this->cardWithTime($order);
-        app(CertifyTaskCard::class)->complete($card, $this->mechanic(), 'Gemacht');
 
         $refusal = app(IssueRelease::class)->refusalFor($order->fresh(), $this->inspector());
 
         $this->assertNotNull($refusal);
-        $this->assertStringContainsString('not signed off', $refusal);
+        $this->assertStringContainsString('reported finished', $refusal);
 
-        app(CertifyTaskCard::class)->certify($card->fresh(), $this->inspector());
+        // Fertigmelden genügt: Abgezeichnet wird mit der Freigabe.
+        app(CertifyTaskCard::class)->complete($card->fresh(), $this->mechanic(), 'Gemacht');
 
         $this->assertNull(app(IssueRelease::class)->refusalFor($order->fresh(), $this->inspector()));
     }

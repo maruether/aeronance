@@ -75,6 +75,7 @@ return [
         'workorders.cards.work' => 'An Arbeitskarten arbeiten und Zeiten erfassen',
         'workorders.cards.inspect' => 'Unabhängige Kontrolle durchführen',
         'workorders.cards.certify' => 'Arbeiten freigeben (CRS)',
+        'workorders.releases.record_external' => 'Freigabe eines externen Prüfers eintragen',
         'workorders.findings.record' => 'Befunde erfassen',
         'workorders.findings.report' => 'Befunde melden (Befundbericht)',
         'workorders.findings.defer' => 'Befunde zurückstellen',

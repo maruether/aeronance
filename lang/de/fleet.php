@@ -511,6 +511,7 @@ return [
     ],
 
     'weighing' => [
+        'add_support' => 'Weitere Auflage hinzufügen',
         'sketch_pending' => 'Die Skizze zeichnet sich, sobald die Auflagen mit '
             .'Massen eingetragen sind — beim Segelflugzeug zwei, beim '
             .'Motorflugzeug drei mit ihren Hebelarmen.',

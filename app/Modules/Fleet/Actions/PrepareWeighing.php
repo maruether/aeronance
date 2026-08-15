@@ -112,6 +112,35 @@ final class PrepareWeighing
                 'kind' => $kind ?? $previous?->kind ?? WeighingKind::Glider,
             ]));
 
+            /*
+             * ─────────────────────────────────────────────────────────────────
+             * DIE AUFLAGEN ENTSTEHEN MIT DEM BLATT -- vorher tat es das nicht,
+             * und das war der Grund, warum niemand je eine Wägeskizze sah.
+             *
+             * WeighingKind::defaultSupports() gab es seit jeher (zwei beim
+             * Segelflugzeug, drei beim Motorflugzeug), aufgerufen hat es
+             * niemand. Wer ein Blatt anlegte, bekam einen leeren Auflagen-Teil
+             * und musste die Zeilen von Hand hinzufügen -- über einen Knopf,
+             * den kaum jemand fand. Und ohne Auflagen zeichnet keine der
+             * beiden Skizzen, weder in der Maske noch im Druck.
+             *
+             * Feldtest, dreimal gemeldet: "Die Wägebricht grafiken laut
+             * formular vom bwlv fehlen immer noch in eingabe und druck."
+             *
+             * Die Beschriftungen kommen aus der Wägungsart, weil das Formular
+             * sie so vorgibt; die Zahlen bleiben leer -- die trägt ein, wer
+             * wiegt.
+             * ─────────────────────────────────────────────────────────────────
+             */
+            foreach ($weighing->kind->defaultSupports() as $position => $label) {
+                WeighingEntry::create([
+                    'weighing_id' => $weighing->id,
+                    'section' => WeighingEntry::SECTION_SUPPORT,
+                    'label' => $label,
+                    'position' => $position,
+                ]);
+            }
+
             if ($previous === null) {
                 return $weighing;
             }

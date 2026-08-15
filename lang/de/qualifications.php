@@ -46,6 +46,9 @@ return [
     ],
 
     'type' => [
+        // Auf einer Bescheinigung, die ein Externer unterschrieben hat: Die
+        // Nummer wurde abgeschrieben, nicht geprüft -- und das steht dort.
+        'external_licence' => 'Lizenz/Betrieb (extern, nicht geprüft)',
         'part66_licence' => 'Part-66-Lizenz',
         'training_certificate' => 'Schulungsnachweis',
         'pilot_owner_authorisation' => 'Pilot-Owner-Berechtigung',

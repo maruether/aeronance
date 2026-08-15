@@ -1,7 +1,7 @@
 <x-filament-panels::page>
     <div class="flex items-center gap-3">
         <label class="text-sm font-medium">{{ __('fleet.due.window') }}</label>
-        <select wire:model.live="window" class="fi-select-input rounded-lg border-gray-300 text-sm dark:border-white/10 dark:bg-white/5">
+        <select wire:model.live="window" class="dark:text-white dark:[&>option]:bg-gray-900 dark:[&>option]:text-white fi-select-input rounded-lg border-gray-300 text-sm dark:border-white/10 dark:bg-white/5">
             <option value="30">30 {{ __('fleet.due.days') }}</option>
             <option value="60">60 {{ __('fleet.due.days') }}</option>
             <option value="90">90 {{ __('fleet.due.days') }}</option>

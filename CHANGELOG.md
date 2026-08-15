@@ -27,6 +27,58 @@ woran als Nächstes gearbeitet wird.
   Demomodus abschalten muss (Mails, Updates, echte Herstellerabrufe), ist
   Teil des Zuschnitts.
 
+## [0.1.8] — 2026-08-14
+
+Feldtest-Runde mit zwei unangenehmen Funden: Zwei Dinge, die in früheren
+Fassungen als „gebaut" galten, waren für einen Benutzer schlicht nicht
+erreichbar. **Beim Update beachten:** Das neue Recht **„Freigabe eines
+externen Prüfers eintragen"** (Gruppe *Werkstatt — Freigabe und Befunde*)
+den Rollen zuteilen, die das dürfen sollen; der Administrator hat es
+automatisch. Sonst genügt `deploy/update.sh` bzw.
+`deploy/docker/update.sh`; eine Migration läuft mit.
+
+### Neu
+
+- **Freigabe durch einen vereinsfremden Prüfer.** Ein freiberuflicher
+  Part-66-Prüfer oder ein LTB hat hier kein Konto — jetzt lässt sich seine
+  Freigabe eintragen: Die Bescheinigung trägt seinen Namen, seine Lizenz-
+  oder Betriebsnummer und den Betrieb, daneben steht, wer sie eingetragen
+  hat. Auf dem Ausdruck steht ausdrücklich, dass die Nummer nach der
+  Unterschrift abgeschrieben und hier nicht geprüft wurde. Alle übrigen
+  Voraussetzungen einer Freigabe gelten unverändert.
+- **Bestandsübersicht „Bestand".** Was tatsächlich im Lager liegt — für
+  jede Art von Bestand, nicht nur für seriennummerngeführte Teile, die
+  bisher als Einzige in der Lose-Liste auftauchten. Drei Zahlen je Teil
+  (verfügbar, nicht verwendbar, gesamt), Filter nach Lagerort,
+  Unterschreitung und gesperrtem Bestand.
+- **Die Freigabe zeichnet fertiggemeldete Karten mit ab.** Wer freigibt,
+  ist der Prüfer — seine Unterschrift ist dieselbe, die sonst einzeln unter
+  jede Karte käme. Vorher nennt eine Warnung die betroffenen Karten beim
+  Namen. Ohne Fertigmeldung bleibt es gesperrt: Sonst wüsste die
+  Unterschrift nicht, worüber.
+- **Arbeitszeit beim Fertigmelden.** Im selben Dialog, optional („1:30");
+  für weitere Personen weiterhin über „Zeit erfassen".
+
+### Behoben
+
+- **Wartungsunterlagen ließen sich nicht anlegen — und damit auch nichts
+  hochladen.** Die Liste hatte keinen „Neu"-Knopf; die Anlegeseite war
+  zwar vorhanden, aber unverlinkt, und jede Zeilen-Aktion braucht einen
+  Datensatz, den es so nie gab. Zusätzlich begrenzte Livewire alle Uploads
+  auf 12 MB, während die Formulare 20 versprechen — ein Handbuch liegt
+  genau dazwischen und brach ohne verständliche Meldung ab.
+- **Die Wägeskizzen erschienen nie, weil nie Auflagen entstanden.** Beide
+  Zeichnungen hängen an den Auflagen-Zeilen; angelegt hat sie niemand,
+  obwohl die Wägungsart sie seit jeher kennt (zwei beim Segelflugzeug,
+  drei beim Motorflugzeug). Jetzt entstehen sie mit dem Blatt — auf beiden
+  Anlegewegen —, und der Knopf zum Nachtragen heißt nicht mehr „Zu support
+  entries hinzufügen".
+- **Auswahllisten im Dunkelmodus** waren weiß auf weiß — alle fünf im
+  Projekt, nicht nur die im Inventurformular.
+- **Der Vereinsname in der Kopfzeile** blieb nach dem Ändern stehen: Die
+  Einstellungsseite tauschte nur ihren eigenen Bereich aus, während Name
+  und Logo zum Seitenrahmen gehören.
+
 ## [0.1.7] — 2026-08-14
 
 Direkt aus dem Feldtest der vorigen Fassung. **Beim Update beachten:**

@@ -72,6 +72,7 @@ final class ViewWorkOrder extends ViewRecord
 
             $this->linkExternalOrderAction(),
             $this->releaseAction(),
+            $this->externalReleaseAction(),
             $this->printReleaseAction(),
             $this->correctReleaseAction(),
             $this->closeAction(),
@@ -158,6 +159,102 @@ final class ViewWorkOrder extends ViewRecord
      * action that is always there and usually refuses teaches people to ignore
      * refusals.
      */
+    /**
+     * Die Freigabe eines vereinsfremden Prüfers eintragen.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Feldtest: "wir brauchen noch die möglichkeit eines ‚Freigegeben durch',
+     * falls der prüfer nicht im verein ist."
+     *
+     * Eigener Knopf statt eines Häkchens im Freigabe-Dialog: Es sind zwei
+     * verschiedene Handlungen. Bei der einen unterschreibt man, bei der
+     * anderen schreibt man ab, was ein anderer unterschrieben hat -- und wer
+     * das eine darf, darf nicht automatisch das andere. Deshalb hängt der
+     * Knopf auch an einem eigenen Recht.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    private function externalReleaseAction(): Action
+    {
+        return Action::make('externalRelease')
+            ->label(__('taskcards.release.external.action'))
+            ->icon('heroicon-o-identification')
+            ->color('gray')
+            ->modalDescription(function (WorkOrder $record): string {
+                $offen = $record->cardsAwaitingCertification();
+
+                return __('taskcards.release.external.intro').($offen === [] ? '' : ' '
+                    .__('taskcards.release.help.co_certifies', [
+                        'cards' => implode(', ', array_map(
+                            static fn ($card): string => $card->number.' — '.$card->title,
+                            $offen,
+                        )),
+                    ]));
+            })
+            ->visible(fn (WorkOrder $record): bool => ! $record->isReleased()
+                && (auth()->user()?->can(Permissions::RELEASES_RECORD_EXTERNAL) ?? false))
+            ->schema([
+                TextInput::make('signatory_name')
+                    ->label(__('taskcards.release.external.field.name'))
+                    ->required()
+                    ->maxLength(160)
+                    ->placeholder('Hans Meier'),
+
+                TextInput::make('licence_reference')
+                    ->label(__('taskcards.release.external.field.licence'))
+                    ->required()
+                    ->maxLength(128)
+                    ->placeholder('DE.66.12345 oder DE.MF.1234')
+                    ->helperText(__('taskcards.release.external.help.licence')),
+
+                TextInput::make('organisation')
+                    ->label(__('taskcards.release.external.field.organisation'))
+                    ->maxLength(160)
+                    ->placeholder('LTB Muster GmbH')
+                    ->helperText(__('taskcards.release.external.help.organisation')),
+
+                TextInput::make('maintenance_data')
+                    ->label(__('taskcards.release.field.maintenance_data'))
+                    ->maxLength(255),
+
+                Textarea::make('statement')
+                    ->label(__('taskcards.release.field.statement'))
+                    ->rows(4)
+                    ->helperText(__('taskcards.release.help.statement')),
+
+                DatePicker::make('released_at')
+                    ->label(__('taskcards.release.field.released_at'))
+                    ->default(now())
+                    ->required(),
+            ])
+            ->action(function (array $data): void {
+                try {
+                    $release = app(IssueRelease::class)->recordExternal(
+                        order: $this->record,
+                        recordedBy: auth()->user(),
+                        signatoryName: (string) $data['signatory_name'],
+                        licenceReference: (string) $data['licence_reference'],
+                        organisation: $data['organisation'] ?? null,
+                        maintenanceData: $data['maintenance_data'] ?? null,
+                        statement: $data['statement'] ?? null,
+                        releasedAt: $data['released_at'] ?? null,
+                    );
+                } catch (Throwable $e) {
+                    Notification::make()
+                        ->danger()
+                        ->title($e->getMessage())
+                        ->persistent()
+                        ->send();
+
+                    return;
+                }
+
+                Notification::make()
+                    ->success()
+                    ->title(__('taskcards.release.external.recorded', ['number' => $release->number]))
+                    ->send();
+            });
+    }
+
     private function releaseAction(): Action
     {
         return Action::make('release')
@@ -165,7 +262,27 @@ final class ViewWorkOrder extends ViewRecord
             ->icon('heroicon-o-shield-check')
             ->color('success')
             ->requiresConfirmation()
-            ->modalDescription(__('taskcards.release.help.freezes'))
+            /*
+             * Die Warnung nennt die Karten BEIM NAMEN, die diese Freigabe
+             * mitzeichnet -- Feldtest: "Damit dies nicht blind geschieht
+             * sollte eine kurze Warnung mit liste der karten erscheinen."
+             * Ohne offene Karten steht dort wie bisher nur der Hinweis auf die
+             * Unveränderlichkeit.
+             */
+            ->modalDescription(function (WorkOrder $record): string {
+                $offen = $record->cardsAwaitingCertification();
+
+                if ($offen === []) {
+                    return __('taskcards.release.help.freezes');
+                }
+
+                return __('taskcards.release.help.co_certifies', [
+                    'cards' => implode(', ', array_map(
+                        static fn ($card): string => $card->number.' — '.$card->title,
+                        $offen,
+                    )),
+                ]).' '.__('taskcards.release.help.freezes');
+            })
             ->visible(fn (WorkOrder $record): bool => ! $record->isReleased()
                 && (auth()->user()?->can(Permissions::CARDS_CERTIFY) ?? false))
             ->disabled(fn (WorkOrder $record): bool => app(IssueRelease::class)
@@ -515,6 +632,28 @@ final class ViewWorkOrder extends ViewRecord
                     ->required()
                     ->rows(3)
                     ->helperText(__('taskcards.card.help.work_performed')),
+
+                /*
+                 * Die Zeit gleich hier -- Feldtest: "Der prozess erst zeit
+                 * eintragen dann fertig melden nervt." Ohne Stunden lehnt das
+                 * Fertigmelden ohnehin ab (der Erfahrungsnachweis lebt
+                 * davon), also gehört das Feld in denselben Dialog.
+                 *
+                 * Leer bleiben darf es trotzdem: Wer seine Zeit schon
+                 * eingetragen hat -- oder mehrere Personen eintragen muss --
+                 * geht weiter über „Zeit erfassen".
+                 */
+                TextInput::make('minutes')
+                    ->label(__('taskcards.time.field.minutes'))
+                    ->placeholder('1:30')
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn (Set $set, ?string $state) => $set('minutes', WorkDuration::normalise($state)))
+                    ->rule(static fn (): \Closure => static function (string $attribute, mixed $value, \Closure $fail): void {
+                        if (filled($value) && WorkDuration::parse(is_string($value) ? $value : null) === null) {
+                            $fail(__('taskcards.time.invalid'));
+                        }
+                    })
+                    ->helperText(__('taskcards.card.help.time_here')),
             ])
             ->action(function (array $data): void {
                 $card = TaskCard::find($data['task_card_id'] ?? null);
@@ -525,7 +664,10 @@ final class ViewWorkOrder extends ViewRecord
 
                 try {
                     app(CertifyTaskCard::class)->complete(
-                        $card, auth()->user(), (string) $data['work_performed'],
+                        card: $card,
+                        user: auth()->user(),
+                        workPerformed: (string) $data['work_performed'],
+                        minutes: WorkDuration::parse($data['minutes'] ?? null),
                     );
                 } catch (Throwable $e) {
                     Notification::make()

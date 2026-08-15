@@ -3,7 +3,7 @@
         <div>
             <label class="mb-1 block text-sm font-medium">{{ __('directives.field.aircraft') }}</label>
             <select wire:model.live="aircraftId"
-                    class="fi-select-input rounded-lg border-gray-300 text-sm dark:border-white/10 dark:bg-white/5">
+                    class="dark:text-white dark:[&>option]:bg-gray-900 dark:[&>option]:text-white fi-select-input rounded-lg border-gray-300 text-sm dark:border-white/10 dark:bg-white/5">
                 @foreach ($this->aircraftOptions() as $id => $name)
                     <option value="{{ $id }}">{{ $name }}</option>
                 @endforeach

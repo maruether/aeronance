@@ -108,6 +108,7 @@ return [
             'record_time' => 'Arbeitszeit erfassen',
         ],
         'help' => [
+            'time_here' => 'Optional: Ihre Arbeitszeit gleich mit erfassen (z. B. „1:30"). Für weitere Personen weiter über „Zeit erfassen".',
             'two_signatures' => 'Zwei Unterschriften: Wer die Arbeit gemacht hat, meldet '
                 .'sie fertig. Wer qualifiziert ist, zeichnet sie danach ab. Das ist '
                 .'nicht dasselbe und soll es auch nicht sein.',
@@ -271,6 +272,31 @@ return [
     ],
 
     'release' => [
+        'external' => [
+            'action' => 'Freigabe eines externen Prüfers eintragen',
+            // 'intro' statt 'help': Ein Schlüssel kann nicht Text UND Unterbaum
+            // sein, und die Feldhilfen darunter brauchen 'help' als Array.
+            'intro' => 'Für den Fall, dass der Prüfer nicht im Verein ist — ein '
+                .'freiberuflicher Part-66-Prüfer oder ein Betrieb. Die Bescheinigung '
+                .'trägt SEINEN Namen und SEINE Nummer; daneben steht, wer sie '
+                .'eingetragen hat. Geprüft wird die Nummer hier nicht, sondern '
+                .'abgeschrieben — dafür stehen Sie mit Ihrem Namen im Protokoll.',
+            'field' => [
+                'name' => 'Freigegeben durch (Name)',
+                'licence' => 'Lizenz- oder Betriebsnummer',
+                'organisation' => 'Betrieb (optional)',
+            ],
+            'help' => [
+                'co_certifies' => 'ACHTUNG: Diese Freigabe zeichnet folgende Karten mit ab, '
+                    .'die bisher nur fertiggemeldet sind: :cards. Mit der Unterschrift '
+                    .'unter die Freigabe stehen Sie auch für deren Prüfung ein.',
+                'licence' => 'So, wie sie auf seiner Unterschrift steht.',
+                'organisation' => 'Wenn ein Betrieb zeichnet und nicht eine Person.',
+            ],
+            'recorded' => 'Externe Freigabe :number eingetragen.',
+            'print_note' => 'Die Freigabe erfolgte durch eine vereinsfremde Person; '
+                .'Name und Nummer wurden nach deren Unterschrift eingetragen.',
+        ],
         'singular' => 'Freigabe (CRS)',
         'plural' => 'Freigaben',
         'action' => 'Freigabe erteilen',
@@ -295,6 +321,9 @@ return [
             .'Instandhaltungsunterlagen durchgeführt. Das Luftfahrzeug gilt insoweit als '
             .'zum Betrieb freigegeben.',
         'help' => [
+            'co_certifies' => 'ACHTUNG: Diese Freigabe zeichnet folgende Karten mit ab, '
+                .'die bisher nur fertiggemeldet sind: :cards. Mit der Unterschrift '
+                .'unter die Freigabe stehen Sie auch für deren Prüfung ein.',
             'third_signature' => 'Die dritte und letzte Unterschrift. „Fertig gemeldet" '
                 .'heißt, die Arbeit ist getan; „abgezeichnet" heißt, sie war in Ordnung; '
                 .'das hier heißt, das Luftfahrzeug darf fliegen.',

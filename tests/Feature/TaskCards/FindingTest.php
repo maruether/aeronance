@@ -252,20 +252,32 @@ final class FindingTest extends TestCase
         app(ManageWorkOrder::class)->recordTime($card, $mechanic, 60, ParticipationKind::Executed);
         app(CertifyTaskCard::class)->complete($card, $mechanic, 'Gemacht');
 
+        /*
+         * EIN Punkt, nicht zwei: Seit die Freigabe fertiggemeldete Karten
+         * mitzeichnet, wartet die Karte auf dieselbe Unterschrift wie der
+         * Vorgang -- gemeldet wird deshalb der Vorgang. Vorher stand hier die
+         * Karte; beides zu melden hiesse, denselben Mangel zweimal zu zaehlen.
+         */
         $items = app(AirworthinessCheck::class)->openItemsFor($aircraft->fresh());
 
         $this->assertCount(1, $items);
-        $this->assertStringContainsString('nicht abgezeichnet', $items[0]->detail);
+        $this->assertStringContainsString(__('taskcards.release.awaiting'), $items[0]->detail);
     }
 
     #[Test]
     public function signing_the_card_off_replaces_one_open_item_with_the_next(): void
     {
-        // This test used to assert the list went empty here, and it was reading
-        // "no unchecked card" as "nothing outstanding". Once the release exists,
-        // a visit with every card signed and no CRS is the state that looks most
-        // finished from outside -- hangar, ticks everywhere, and nothing saying
-        // the aircraft may fly.
+        /*
+         * Dieser Test hielt einmal fest, dass die Liste hier leer wird -- das
+         * las "keine ungeprüfte Karte" als "nichts offen". Seit es die
+         * Freigabe gibt, ist ein Vorgang mit abgezeichneten Karten und ohne
+         * CRS der Zustand, der von außen am fertigsten aussieht.
+         *
+         * Und seit die Freigabe fertiggemeldete Karten MITZEICHNET, steht der
+         * Punkt schon vor dem Abzeichnen auf der Freigabe: Die Karte wartet
+         * auf dieselbe Unterschrift wie der Vorgang. Das Abzeichnen ändert
+         * daran nichts mehr -- es nimmt der Freigabe nur Arbeit ab.
+         */
         $aircraft = $this->aircraft();
         $order = $this->workOrder($aircraft);
 
@@ -275,13 +287,14 @@ final class FindingTest extends TestCase
         app(CertifyTaskCard::class)->complete($card, $mechanic, 'Gemacht');
 
         $before = app(AirworthinessCheck::class)->openItemsFor($aircraft->fresh());
-        $this->assertStringContainsString('nicht abgezeichnet', $before[0]->detail);
+        $this->assertCount(1, $before);
+        $this->assertStringContainsString(__('taskcards.release.awaiting'), $before[0]->detail);
 
         app(CertifyTaskCard::class)->certify($card->fresh(), $this->qualifiedInspector());
 
         $after = app(AirworthinessCheck::class)->openItemsFor($aircraft->fresh());
 
-        $this->assertCount(1, $after, 'The card item goes, the release item arrives.');
+        $this->assertCount(1, $after, 'Der offene Punkt bleibt die fehlende Freigabe.');
         $this->assertStringContainsString('keine Freigabe', $after[0]->detail);
     }
 
