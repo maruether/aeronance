@@ -6,8 +6,10 @@ namespace Tests\Feature\Core;
 
 use App\Core\Access\AccessSetup;
 use App\Core\Access\CoreRoles;
+use App\Core\Settings\Settings;
 use App\Core\Version;
 use App\Models\User;
+use App\Providers\ModuleServiceProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -42,6 +44,32 @@ final class BrandingTest extends TestCase
 
         $antwort->assertSee('Aeronance');
         $antwort->assertDontSee('Aeronance - ');
+    }
+
+    /**
+     * ─────────────────────────────────────────────────────────────────────────
+     * DER NAME AUS DER TABELLE, ohne dass jemand nachhilft.
+     *
+     * Feldtest: "der namen in der Kopfzeile aktualisiert sich nicht bei änderung
+     * in den einstellungen".
+     *
+     * Die beiden Tests darüber setzen die Konfiguration direkt -- und genau
+     * deshalb konnten sie grün bleiben, während der Weg von der Tabelle IN die
+     * Konfiguration kaputt war. Dieser Test geht den ganzen Weg: eintragen,
+     * Provider erneut registrieren (das ist der Schritt, den der nächste
+     * Seitenaufruf ohnehin macht), Seite ansehen.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    #[Test]
+    public function a_name_stored_in_the_settings_reaches_the_header(): void
+    {
+        app(Settings::class)->set('organisation.name', 'Akaflieg Freiburg e.V.');
+
+        // Was beim nächsten Seitenaufruf passiert.
+        $this->app->register(new ModuleServiceProvider($this->app), force: true);
+
+        $this->assertSame('Akaflieg Freiburg e.V.', config('aeronance.organisation.name'));
+        $this->dashboard()->assertSee('Aeronance - Akaflieg Freiburg e.V.');
     }
 
     #[Test]

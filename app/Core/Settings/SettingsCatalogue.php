@@ -383,23 +383,68 @@ final class SettingsCatalogue
                 type: 'int',
                 default: 30,
             ),
+            /*
+             * ─────────────────────────────────────────────────────────────────
+             * DIE VIER PFADE HIER STANDEN AUF „aeronance.clamav.*", GELESEN WIRD
+             * ABER „aeronance.documents.clamav.*".
+             *
+             * Damit taten diese Felder nichts. Wer den Virenscanner in der
+             * Oberfläche einschaltete, sah ihn danach eingeschaltet -- und
+             * hochgeladen wurde weiter ungeprüft. Die stille Sorte, gegen die
+             * dieses ganze Konzept gebaut ist, und ausgerechnet an einer
+             * Sicherheitsfunktion.
+             *
+             * Aufgefallen ist es erst, als die Einstellungen ueberhaupt in der
+             * Konfiguration ankamen (0.1.9) -- vorher wirkte KEINE, also fiel
+             * auch die falsche nicht auf. Der Test darunter prueft seitdem den
+             * ganzen Pfad und nicht mehr nur dessen erstes Glied.
+             * ─────────────────────────────────────────────────────────────────
+             */
             new SettingDefinition(
                 key: 'virus_scanner',
-                configPath: 'aeronance.virus_scanner',
+                configPath: 'aeronance.documents.scanner',
                 envVar: 'AERONANCE_VIRUS_SCANNER',
                 group: self::GROUP_OPERATION,
                 type: 'select',
                 default: 'none',
             ),
+            /*
+             * Der Weg zum Scanner -- eine Entscheidung, kein Nebeneffekt.
+             *
+             * „Socket" heisst: ein clamd auf demselben Rechner. „tcp" heisst:
+             * ein eigener Dienst, im Docker-Kanal der mitgelieferte Container
+             * namens `clamav`. Ohne dieses Feld ergab sich der Weg daraus, ob
+             * zufaellig ein Host eingetragen war.
+             */
+            new SettingDefinition(
+                key: 'clamav.transport',
+                configPath: 'aeronance.documents.clamav.transport',
+                envVar: 'AERONANCE_CLAMAV_TRANSPORT',
+                group: self::GROUP_OPERATION,
+                type: 'select',
+                default: 'socket',
+            ),
+            /*
+             * Der Socket-Pfad. Ohne dieses Feld war der haeufigste Fall im
+             * Verein gar nicht ueber die Oberflaeche einstellbar: ein clamd,
+             * der auf demselben Rechner laeuft.
+             */
+            new SettingDefinition(
+                key: 'clamav.socket',
+                configPath: 'aeronance.documents.clamav.socket',
+                envVar: 'AERONANCE_CLAMAV_SOCKET',
+                group: self::GROUP_OPERATION,
+                default: '/var/run/clamav/clamd.ctl',
+            ),
             new SettingDefinition(
                 key: 'clamav.host',
-                configPath: 'aeronance.clamav.host',
+                configPath: 'aeronance.documents.clamav.host',
                 envVar: 'AERONANCE_CLAMAV_HOST',
                 group: self::GROUP_OPERATION,
             ),
             new SettingDefinition(
                 key: 'clamav.port',
-                configPath: 'aeronance.clamav.port',
+                configPath: 'aeronance.documents.clamav.port',
                 envVar: 'AERONANCE_CLAMAV_PORT',
                 group: self::GROUP_OPERATION,
                 type: 'int',
@@ -407,7 +452,7 @@ final class SettingsCatalogue
             ),
             new SettingDefinition(
                 key: 'clamav.fail_closed',
-                configPath: 'aeronance.clamav.fail_closed',
+                configPath: 'aeronance.documents.clamav.fail_closed',
                 envVar: 'AERONANCE_CLAMAV_FAIL_CLOSED',
                 group: self::GROUP_OPERATION,
                 type: 'bool',

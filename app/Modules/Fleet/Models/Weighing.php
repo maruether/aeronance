@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Fleet\Models;
 
 use App\Models\User;
+use App\Modules\Fleet\Enums\SheetVariant;
+use App\Modules\Fleet\Enums\Undercarriage;
 use App\Modules\Fleet\Enums\WeighingKind;
 use App\Modules\Fleet\Support\LoadingPlan;
 use App\Modules\Fleet\Support\LoadingPlanCalculator;
@@ -38,6 +40,8 @@ final class Weighing extends Model
     protected $fillable = [
         'aircraft_id',
         'kind',
+        'sheet_variant',
+        'undercarriage',
         'weighed_at',
         'place',
         'order_reference',
@@ -52,6 +56,7 @@ final class Weighing extends Model
         'useful_load_kg',
         'cg_range_from_mm',
         'cg_range_to_mm',
+        'cg_range_at_mass_kg',
         'flight_cg_from_mm',
         'flight_cg_to_mm',
         'max_mass_kg',
@@ -73,6 +78,8 @@ final class Weighing extends Model
     {
         return [
             'kind' => WeighingKind::class,
+            'sheet_variant' => SheetVariant::class,
+            'undercarriage' => Undercarriage::class,
             'weighed_at' => 'date',
             'valid_until' => 'date',
             'equipment_list_dated' => 'date',
@@ -85,6 +92,7 @@ final class Weighing extends Model
             'useful_load_kg' => 'decimal:2',
             'cg_range_from_mm' => 'decimal:2',
             'cg_range_to_mm' => 'decimal:2',
+            'cg_range_at_mass_kg' => 'decimal:2',
             'flight_cg_from_mm' => 'decimal:2',
             'flight_cg_to_mm' => 'decimal:2',
             'max_mass_kg' => 'decimal:2',

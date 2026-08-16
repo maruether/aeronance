@@ -22,6 +22,24 @@ final readonly class WeighingResult
         public ?float $nonLiftingMassKg,
         public ?float $usefulLoadKg,
         public array $findings = [],
+
+        /**
+         * Was die Grenze der nicht tragenden Teile noch hergibt.
+         *
+         * ─────────────────────────────────────────────────────────────────────
+         * Auf dem Blatt steht „Zuladung" als eigene Zeile in der M.N.T.-Spalte,
+         * und die Kennblattgrenze heisst „Hoechstmasse der N.T. EINSCHLIESSLICH
+         * Zuladung". Fachlich: „Die Zuladung ist im Flug Teil der M.N.T. Bei
+         * der Waegung ist der Flieger natuerlich leer (bis auf evtl. Sprit).
+         * Die zulaessige Zuladung berechnet sich dann daraus."
+         *
+         * Also ist das kein Eingabewert, sondern ein Rest: Grenze minus
+         * gewogene M.N.T. Und er ist der Grund, warum usefulLoadKg zwei
+         * Grenzen kennt statt einer -- die Hoechstmasse ist oft nicht die
+         * kleinere.
+         * ─────────────────────────────────────────────────────────────────────
+         */
+        public ?float $nonLiftingHeadroomKg = null,
     ) {}
 
     public function isAcceptable(): bool

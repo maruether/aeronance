@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Fleet\Actions;
 
 use App\Models\User;
+use App\Modules\Fleet\Enums\SheetVariant;
 use App\Modules\Fleet\Enums\WeighingKind;
 use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\Fleet\Models\Weighing;
@@ -110,6 +111,14 @@ final class PrepareWeighing
                 // glider form -- which is what a club fleet mostly is, and the
                 // form asks anyway before anybody fills anything in.
                 'kind' => $kind ?? $previous?->kind ?? WeighingKind::Glider,
+
+                // Blattart und Fahrwerk wandern mit -- dasselbe Flugzeug wird
+                // beim naechsten Mal auf denselben Punkten stehen.
+                'sheet_variant' => $previous?->sheet_variant
+                    ?? (($kind ?? $previous?->kind ?? WeighingKind::Glider) === WeighingKind::Glider
+                        ? SheetVariant::Glider
+                        : SheetVariant::Aeroplane),
+                'undercarriage' => $previous?->undercarriage,
             ]));
 
             /*
@@ -117,32 +126,23 @@ final class PrepareWeighing
              * DIE AUFLAGEN ENTSTEHEN MIT DEM BLATT -- vorher tat es das nicht,
              * und das war der Grund, warum niemand je eine Wägeskizze sah.
              *
-             * WeighingKind::defaultSupports() gab es seit jeher (zwei beim
-             * Segelflugzeug, drei beim Motorflugzeug), aufgerufen hat es
-             * niemand. Wer ein Blatt anlegte, bekam einen leeren Auflagen-Teil
-             * und musste die Zeilen von Hand hinzufügen -- über einen Knopf,
-             * den kaum jemand fand. Und ohne Auflagen zeichnet keine der
-             * beiden Skizzen, weder in der Maske noch im Druck.
+             * Die Vorlagen gab es seit jeher, aufgerufen hat sie niemand. Wer
+             * ein Blatt anlegte, bekam leere Wiederholfelder und musste die
+             * Zeilen von Hand hinzufuegen -- ueber einen Knopf, den kaum
+             * jemand fand. Und ohne Auflagen zeichnet keine der beiden
+             * Skizzen, weder in der Maske noch im Druck.
              *
              * Feldtest, dreimal gemeldet: "Die Wägebricht grafiken laut
              * formular vom bwlv fehlen immer noch in eingabe und druck."
              *
-             * Die Beschriftungen kommen aus der Wägungsart, weil das Formular
-             * sie so vorgibt; die Zahlen bleiben leer -- die trägt ein, wer
-             * wiegt.
+             * Seit 0.1.9 an EINER Stelle, weil es zwei Anlegewege gibt und
+             * getrennte Kopien genau hier auseinandergelaufen sind. Die
+             * Beschriftungen gibt das Blatt vor; die Zahlen bleiben leer --
+             * die traegt ein, wer wiegt.
              * ─────────────────────────────────────────────────────────────────
              */
-            foreach ($weighing->kind->defaultSupports() as $position => $label) {
-                WeighingEntry::create([
-                    'weighing_id' => $weighing->id,
-                    'section' => WeighingEntry::SECTION_SUPPORT,
-                    'label' => $label,
-                    'position' => $position,
-                ]);
-            }
-
             if ($previous === null) {
-                return $weighing;
+                return app(SeedWeighingSheet::class)->handle($weighing);
             }
 
             // Seat arms come from the manual too, so they travel with the rest.
@@ -168,7 +168,15 @@ final class PrepareWeighing
                 ]);
             }
 
-            return $weighing->fresh();
+            /*
+             * ZULETZT, und die Reihenfolge ist der Punkt: Was vom letzten Blatt
+             * kommt, IST die Vorlage. Liefe die Vorbelegung davor, stuenden die
+             * vorgedruckten Zeilen und die uebernommenen doppelt untereinander
+             * -- die Aktion fuellt nur, was leer geblieben ist. Fuer das
+             * Segelflugzeug heisst das in der Praxis: Auflagen ja (die kopiert
+             * niemand), Bauteile nein (die kamen gerade).
+             */
+            return app(SeedWeighingSheet::class)->handle($weighing->fresh());
         });
     }
 

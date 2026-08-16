@@ -19,7 +19,7 @@
 
 services:
   app:
-    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.1.8}
+    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.1.9}
     restart: unless-stopped
     env_file: .env
     volumes:
@@ -73,7 +73,7 @@ services:
       retries: 20
 
   worker:
-    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.1.8}
+    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.1.9}
     restart: unless-stopped
     env_file: .env
     volumes:
@@ -86,7 +86,7 @@ services:
         condition: service_healthy
 
   scheduler:
-    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.1.8}
+    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.1.9}
     restart: unless-stopped
     env_file: .env
     volumes:
@@ -97,7 +97,46 @@ services:
       db:
         condition: service_healthy
 
+  # ───────────────────────────────────────────────────────────────────────────
+  # VIRENPRUEFUNG -- mitgeliefert, aber nur auf Anforderung.
+  #
+  # `profiles` heisst: Dieser Dienst laeuft NICHT mit, solange ihn niemand
+  # anfordert. Angefordert wird er ueber eine Zeile in der .env --
+  #
+  #     COMPOSE_PROFILES=clamav
+  #
+  # -- und startet dann beim naechsten `docker compose up -d`, also beim
+  # naechsten update.sh. Kein YAML anfassen, kein zweites Compose-Kommando.
+  #
+  # WARUM NICHT EINFACH IMMER AN: clamd haelt seine Signaturen im
+  # Arbeitsspeicher, rund ein Gigabyte, dauerhaft. Auf dem kleinen Container
+  # eines Vereins ist das die Haelfte. Wer schon einen clamd auf dem Wirt
+  # betreibt, reicht besser dessen Socket herein (Einstellungen, Anschluss
+  # „clamd auf diesem Rechner") und spart sich diesen Dienst ganz.
+  #
+  # WARUM NICHT AUS DER OBERFLAECHE HERAUS STARTBAR: Dafuer braeuchte der
+  # App-Container den Docker-Socket -- und wer den hat, ist root auf dem Wirt.
+  # Eine Weboberflaeche, die ins Internet schaut, bekommt ihn nicht.
+  # ───────────────────────────────────────────────────────────────────────────
+  clamav:
+    image: clamav/clamav:1.4
+    profiles: [clamav]
+    restart: unless-stopped
+    volumes:
+      # Die Signaturen ueberleben den Neustart. Ohne dieses Volume laedt
+      # freshclam bei jedem Start mehrere hundert Megabyte neu.
+      - clamav:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      # Der erste Start laedt die Signaturen und dauert Minuten. Ohne diese
+      # Frist gilt der Dienst in der Zwischenzeit als krank.
+      start_period: 300s
+
 volumes:
   db:
   storage:
   static:
+  clamav:

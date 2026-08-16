@@ -11,6 +11,7 @@ use App\Core\Documents\Exceptions\DocumentRejected;
 use App\Core\Documents\NullScanner;
 use App\Core\Documents\VirusScanner;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -153,6 +154,73 @@ final class VirusScanTest extends TestCase
 
         $this->assertInstanceOf(ClamAvScanner::class, app(VirusScanner::class));
         $this->assertTrue(app(VirusScanner::class)->isEnabled());
+    }
+
+    /**
+     * ─────────────────────────────────────────────────────────────────────────
+     * DIE VERBINDUNGSPRUEFUNG, und warum es sie gibt.
+     *
+     * „Eingeschaltet" sieht von aussen genauso aus wie „eingeschaltet und
+     * erreichbar". Der Unterschied faellt sonst erst beim ersten Upload auf --
+     * und mit fail_closed heisst das: Der Upload steht, und niemand weiss
+     * warum. Der haeufigste Fall im Docker-Kanal ist ein Socket, der nie in den
+     * Container gereicht wurde.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    #[Test]
+    public function the_connection_can_be_tested_before_anything_is_uploaded(): void
+    {
+        $socket = $this->startFakeClamd('clean');
+
+        // Die Fassung UND der Signaturstand -- ein clamd mit monatealten
+        // Signaturen antwortet auf ein blosses PING genauso freundlich.
+        $this->assertStringContainsString('ClamAV', $this->scanner($socket)->ping());
+    }
+
+    #[Test]
+    public function a_test_against_nobody_says_where_it_knocked(): void
+    {
+        /*
+         * Die Adresse gehoert in die Meldung: Daran erkennt man den falschen
+         * Pfad oder den fehlenden Socket-Durchreicher, und ohne sie bleibt nur
+         * Raten.
+         */
+        $scanner = $this->scanner($this->dir.'/gibt-es-nicht.sock');
+
+        $this->assertStringContainsString('gibt-es-nicht.sock', $scanner->endpoint());
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessageMatches('/not reachable/');
+
+        $scanner->ping();
+    }
+
+    /**
+     * Ein stehengebliebener Servereintrag darf den Socket nicht überstimmen.
+     *
+     * Genau das tat er: Der Scanner nimmt TCP, sobald ein Host gesetzt ist. Wer
+     * einmal einen Server eingetragen und später auf den Socket umgestellt
+     * hatte, fragte weiter den Server -- die Einstellung sagte das eine,
+     * gefragt wurde das andere.
+     */
+    #[Test]
+    public function the_chosen_transport_decides_and_not_a_leftover_host(): void
+    {
+        config()->set('aeronance.documents.scanner', 'clamav');
+        config()->set('aeronance.documents.clamav.transport', 'socket');
+        config()->set('aeronance.documents.clamav.socket', '/var/run/clamav/clamd.ctl');
+        config()->set('aeronance.documents.clamav.host', 'ein-alter-eintrag');
+        app()->forgetInstance(VirusScanner::class);
+
+        $scanner = app(VirusScanner::class);
+        $this->assertInstanceOf(ClamAvScanner::class, $scanner);
+        $this->assertSame('unix:///var/run/clamav/clamd.ctl', $scanner->endpoint());
+
+        // Und andersherum gilt der Server.
+        config()->set('aeronance.documents.clamav.transport', 'tcp');
+        app()->forgetInstance(VirusScanner::class);
+
+        $this->assertSame('tcp://ein-alter-eintrag:3310', app(VirusScanner::class)->endpoint());
     }
 
     private function scanner(string $socket, bool $failClosed = true): ClamAvScanner

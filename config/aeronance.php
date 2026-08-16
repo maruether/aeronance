@@ -393,9 +393,16 @@ return [
 
         'clamav' => [
             /*
-             * Entweder Unix-Socket (gleicher Host) oder Host/Port (Docker).
-             * Ist host gesetzt, gewinnt TCP.
+             * WIE geredet wird: 'socket' oder 'tcp'.
+             *
+             * Stand frueher nirgends und ergab sich daraus, OB ein Host gesetzt
+             * war -- mit dem Ergebnis, dass ein alter Hosteintrag den Socket
+             * still ueberstimmte. Jetzt ist es eine Entscheidung, und der
+             * Provider gibt bei 'socket' keinen Host mehr weiter.
              */
+            'transport' => env('AERONANCE_CLAMAV_TRANSPORT', 'socket'),
+
+            // Unix-Socket (gleicher Rechner) oder Host/Port (eigener Dienst).
             'socket' => env('AERONANCE_CLAMAV_SOCKET', '/var/run/clamav/clamd.ctl'),
             'host' => env('AERONANCE_CLAMAV_HOST'),
             'port' => (int) env('AERONANCE_CLAMAV_PORT', 3310),

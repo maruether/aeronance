@@ -123,8 +123,18 @@ final class ModuleServiceProvider extends ServiceProvider
          * .env galt und nicht der eingetragene SMTP-Zugang. Das betraf JEDE
          * Panel-Entscheidung, die von einer Einstellung abhaengt, nicht nur
          * diese eine.
+         * DIE BINDUNG STEHT HIER OBEN, und das war der zweite Teil des Fehlers:
+         * Sie stand frueher weiter unten in dieser Methode, also NACH diesem
+         * Aufruf. make() baute damit eine Wegwerf-Instanz, deren Lesevorgang
+         * niemand je wiedersah -- das Singleton weiter unten fing bei Null an.
+         * Wer eine Klasse im register() benutzt, muss sie vorher binden.
+         *
+         * Gelesen wird ohne Eloquent (siehe Settings): In dieser Phase gibt es
+         * noch keine Model-Verbindung, und der Versuch endete still im Nichts.
          * ─────────────────────────────────────────────────────────────────────
          */
+        $this->app->singleton(Settings::class);
+
         $this->app->make(Settings::class)->applyToConfig();
 
         $this->app->singleton(ModuleRegistry::class, static fn (Application $app): ModuleRegistry => new ModuleRegistry(
@@ -157,9 +167,18 @@ final class ModuleServiceProvider extends ServiceProvider
                 return new NullScanner;
             }
 
+            /*
+             * Bei „Socket" wird KEIN Host durchgereicht, auch wenn einer
+             * gespeichert ist: Im Scanner gewinnt ein gesetzter Host, und ein
+             * stehengebliebener Eintrag aus einem frueheren Versuch wuerde den
+             * Socket sonst still ueberstimmen -- die Einstellung sagte das eine,
+             * gefragt wuerde das andere.
+             */
+            $ueberNetzwerk = config('aeronance.documents.clamav.transport') === 'tcp';
+
             return new ClamAvScanner(
                 socket: config('aeronance.documents.clamav.socket'),
-                host: config('aeronance.documents.clamav.host'),
+                host: $ueberNetzwerk ? config('aeronance.documents.clamav.host') : null,
                 port: (int) config('aeronance.documents.clamav.port', 3310),
                 timeout: (int) config('aeronance.documents.clamav.timeout', 30),
                 failClosed: (bool) config('aeronance.documents.clamav.fail_closed', true),
@@ -295,7 +314,7 @@ final class ModuleServiceProvider extends ServiceProvider
          */
         $this->app->singleton(IdentityProviderRegistry::class);
 
-        $this->app->singleton(Settings::class);
+        // Settings ist weiter oben gebunden -- vor seiner ersten Benutzung.
 
         $this->app->singleton(SourceCredentials::class);
 

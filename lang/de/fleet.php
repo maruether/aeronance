@@ -510,16 +510,130 @@ return [
         'warning' => 'Hinweis',
     ],
 
+    /*
+     * ─────────────────────────────────────────────────────────────────────────
+     * DAS WÄGEBLATT, wie es gedruckt und ausgefüllt wird.
+     *
+     * Eigener Zweig neben „weighing", weil hier BLATTTEXTE stehen -- die
+     * Beschriftungen des Formulars in genau der Reihenfolge und Schreibweise,
+     * in der jemand sie abschreibt. Sie folgen der Gliederung klassischer
+     * Wägeformulare: Wer vom Papier überträgt, soll Zeile für Zeile
+     * wiederfinden, was er sucht, statt zu übersetzen.
+     *
+     * Was hier bewusst NICHT steht: der Name eines Verbandes, ein Briefkopf,
+     * eine fremde Ausgabebezeichnung. Die Felder gehören keinem Verband -- sie
+     * stehen im Kennblatt und folgen aus der Physik.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    'sheet' => [
+        // Mit :variant, weil die Ueberschrift die Blattart traegt -- drei
+        // Blaetter, wie auf dem Papier.
+        'title' => 'Massenübersicht :variant',
+        'registration' => 'Kennzeichen',
+        'model' => 'Muster',
+        'serial_number' => 'Werk-Nr.',
+        'order_reference' => 'Auftr.-Nr.',
+        'datum' => 'Bezugspunkt B.P.',
+        'reference_line' => 'Bezugslinie horizontal B.L.',
+        'reference_plane' => 'Bezugsebene B.E.',
+
+        'weighing' => 'WÄGUNG',
+        'empty_masses' => 'Leermassen',
+        'non_lifting' => 'M.N.T.',
+        'result' => 'ERGEBNIS',
+        'useful_load' => 'Zuladung',
+        // Warum in der M.N.T.-Spalte zwei verschiedene Zahlen stehen: die
+        // gewogene Summe unten, die abgeleitete Zuladung darueber.
+        'non_lifting_note' => 'Die M.N.T. im Ergebnis ist die gewogene Summe der '
+            .'Bauteile. Die Zuladung darüber ist abgeleitet: Im Flug gehört sie zu '
+            .'den nichttragenden Teilen, deshalb ist sie das, was die Höchstmasse '
+            .'der N.T. laut Kennblatt über den gewogenen Bauteilen noch frei lässt.',
+
+        'limits' => 'MASSENGRENZEN',
+        'empty_mass' => 'Leermasse',
+        'max_mass' => 'Höchstmasse ohne Wasserballast',
+        'max_mass_water' => 'Höchstmasse mit Wasserballast',
+        'max_non_lifting' => 'Höchstmasse der N.T. einschließlich Zuladung laut Kennblatt',
+        'load_distribution' => 'Aufteilung der Zuladung siehe Anweisung im Flughandbuch!',
+        'cockpit_load' => 'Zuladung im Cockpit',
+        'min' => 'min',
+        'max' => 'max',
+        'remarks' => 'Bemerkungen',
+
+        'cg_determination' => 'SCHWERPUNKTERMITTLUNG',
+        'gross' => 'Brutto',
+        'tare' => 'Tara',
+        'netto' => 'Netto',
+        'arm' => 'Hebelarm',
+        'moment' => 'Moment',
+        'sum_one' => 'Summe I',
+        'sum_two' => 'Summe II',
+        'deductions' => 'ABZÜGE (ausfliegbar)',
+        'volume' => 'Menge',
+        'density' => 'Dichte',
+        'mass' => 'Masse',
+        'type_data' => 'KENNBLATTDATEN',
+        'at_empty_mass' => 'bei Leermasse',
+
+        'empty_cg_bar' => 'LEERGEWICHTS-SCHWERPUNKTLAGE',
+        'empty_mass_and_cg' => 'Leermasse und Schwerpunktlage',
+        'behind_datum' => 'mm hinter B.P.',
+        'cg_not_computable' => 'Noch nicht berechenbar — es fehlen Auflagen, Massen oder Hebelarme.',
+        'cg_range' => 'Schwerpunktbereich laut Flughandbuch',
+        'cg_range_line' => 'Schwerpunktbereich laut Flughandbuch von :from mm bis :to mm '
+            .'bei Leermasse :mass kg.',
+
+        'confirm' => [
+            'cg_in_range' => 'Die ermittelte Leermassen-Schwerpunktlage liegt im zulässigen Bereich.',
+            'cg_out_of_range' => 'Die ermittelte Leermassen-Schwerpunktlage liegt NICHT im '
+                .'zulässigen Bereich:',
+            'equipment' => 'Die Ausrüstung bei der Wägung siehe Ausrüstungsliste vom :date.',
+            'loading_plan' => 'Der Beladeplan im Luftfahrzeug und im Flughandbuch wurde '
+                .'berichtigt bzw. stimmt mit diesem Ergebnis überein.',
+        ],
+
+        'equipment_list_dated' => 'Ausrüstungsliste vom',
+
+        'sign' => [
+            'place_date' => 'Ort und Datum',
+            'stamp' => 'Stempel',
+            'certifying_staff' => 'Freigabeberechtigter',
+        ],
+
+        /*
+         * Eigene Blattbezeichnung und eigener Stand -- nicht die Ausgabe eines
+         * fremden Formulars. Die Gliederung ist übernommen, das Blatt ist es
+         * nicht.
+         */
+        'foot' => [
+            'glider' => 'Massenübersicht Segelflugzeug',
+            'powered' => 'Massenübersicht Motorflugzeug',
+            'revision' => 'Aeronance — Ausgabe 1',
+        ],
+    ],
+
     'weighing' => [
         'add_support' => 'Weitere Auflage hinzufügen',
+        'add_component' => 'Weitere Zeile hinzufügen',
+        'add_deduction' => 'Weiteren Behälter hinzufügen',
         'sketch_pending' => 'Die Skizze zeichnet sich, sobald die Auflagen mit '
-            .'Massen eingetragen sind — beim Segelflugzeug zwei, beim '
-            .'Motorflugzeug drei mit ihren Hebelarmen.',
+            .'ihren Hebelarmen eingetragen sind.',
         'singular' => 'Wägung',
         'plural' => 'Wägungen',
         'kind' => [
             'glider' => 'Segelflugzeug',
             'powered' => 'Flugzeug / Motorsegler',
+        ],
+        // Die Überschrift des Blatts — drei, wie auf dem Papier.
+        'variant' => [
+            'glider' => 'Segelflugzeug',
+            'motorglider' => 'Motorsegler',
+            'aeroplane' => 'Flugzeug',
+        ],
+        'undercarriage' => [
+            'tailwheel_one_main' => 'Spornrad mit einem Hauptrad',
+            'tailwheel_two_mains' => 'Spornrad mit zwei Haupträdern',
+            'tricycle' => 'Bugrad (Dreibein)',
         ],
         'section' => [
             'component' => 'Wägung (Bauteile)',
@@ -542,6 +656,12 @@ return [
             'non_lifting' => 'Masse der nichttragenden Teile',
             'useful_load' => 'Zuladung',
             'cg_range' => 'Schwerpunktbereich laut Flughandbuch',
+            'cg_range_at_mass' => 'gilt bei Leermasse',
+            'sheet_variant' => 'Blattart',
+            'undercarriage' => 'Fahrwerk',
+            'component' => 'Bauteil',
+            'support' => 'Auflage',
+            'tank' => 'Behälter',
             'max_mass' => 'Höchstmasse ohne Wasserballast',
             'max_mass_water' => 'Höchstmasse mit Wasserballast',
             'max_non_lifting' => 'Höchstmasse der N.T.',
@@ -556,10 +676,13 @@ return [
             'density' => 'Dichte [kg/l]',
         ],
         'help' => [
-            'arm_sign' => 'Mit Vorzeichen. Die beiden Formeln auf dem BWLV-Blatt '
-                .'(„− a" und „+ a") sind dieselbe Gleichung — sie unterscheiden sich '
-                .'nur darin, ob der Bezugspunkt vor oder hinter der vorderen Auflage '
-                .'liegt. Mit vorzeichenbehaftetem a entscheidet das Vorzeichen.',
+            // Verbandsneutral formuliert: Aeronance bildet die Gliederung
+            // klassischer Wägeformulare ab und ist keines Verbandes Blatt.
+            'arm_sign' => 'Mit Vorzeichen. Die beiden Formeln auf den üblichen '
+                .'Wägeformularen („− a" und „+ a") sind dieselbe Gleichung — sie '
+                .'unterscheiden sich nur darin, ob der Bezugspunkt vor oder hinter '
+                .'der vorderen Auflage liegt. Mit vorzeichenbehaftetem a entscheidet '
+                .'das Vorzeichen.',
             'non_lifting' => 'Zweite Spalte je Bauteil. Die Masse der nichttragenden '
                 .'Teile hat eine eigene Grenze im Kennblatt — eine Fläche trägt, ein '
                 .'Rumpf nicht, und das lässt sich aus keiner Summe herauslesen.',

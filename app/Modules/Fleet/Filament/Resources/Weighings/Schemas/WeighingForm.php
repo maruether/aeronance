@@ -4,19 +4,24 @@ declare(strict_types=1);
 
 namespace App\Modules\Fleet\Filament\Resources\Weighings\Schemas;
 
+use App\Modules\Fleet\Enums\SheetVariant;
+use App\Modules\Fleet\Enums\Undercarriage;
 use App\Modules\Fleet\Enums\WeighingKind;
 use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\Fleet\Models\Weighing;
 use App\Modules\Fleet\Models\WeighingEntry;
 use App\Modules\Fleet\Support\WeighingCalculator;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Support\HtmlString;
 
@@ -46,12 +51,39 @@ final class WeighingForm
                         ->searchable()
                         ->required(),
 
-                    Select::make('kind')
-                        ->label(__('fleet.weighing.kind.glider').' / '.__('fleet.weighing.kind.powered'))
-                        ->options(collect(WeighingKind::cases())
-                            ->mapWithKeys(fn (WeighingKind $k): array => [$k->value => $k->label()])
-                            ->all())
-                        ->default(WeighingKind::Glider->value)
+                    /*
+                     * DIE BLATTART, nicht der Rechenweg -- „drei, wie auf dem
+                     * papier". Gerechnet wird auf zwei Arten, ueberschrieben
+                     * sind die Blaetter mit drei Namen, und danach sucht
+                     * derjenige, der abschreibt. `kind` faellt daraus ab und
+                     * steht unsichtbar daneben.
+                     */
+                    Select::make('sheet_variant')
+                        ->label(__('fleet.weighing.field.sheet_variant'))
+                        ->options(SheetVariant::options())
+                        ->default(SheetVariant::Glider->value)
+                        ->selectablePlaceholder(false)
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(function (Set $set, ?string $state): void {
+                            $variante = SheetVariant::tryFrom((string) $state) ?? SheetVariant::Glider;
+
+                            $set('kind', $variante->kind()->value);
+                            $set('undercarriage', Undercarriage::defaultFor($variante)->value);
+                        }),
+
+                    Hidden::make('kind')->default(WeighingKind::Glider->value),
+
+                    /*
+                     * WORAUF ES BEIM WIEGEN STEHT. Bestimmt die Zahl der
+                     * Waegepunkte und die Zeichnung -- vorher hing beides an
+                     * der Blattart, was beim einraedrigen Segelflugzeug
+                     * zufaellig stimmte und beim Motorsegler mit Bugrad nicht.
+                     */
+                    Select::make('undercarriage')
+                        ->label(__('fleet.weighing.field.undercarriage'))
+                        ->options(Undercarriage::options())
+                        ->default(Undercarriage::TailwheelOneMain->value)
                         ->selectablePlaceholder(false)
                         ->required()
                         ->live(),
@@ -90,19 +122,29 @@ final class WeighingForm
                         ->hiddenLabel()
                         ->relationship('entries', fn ($query) => $query->where('section', WeighingEntry::SECTION_COMPONENT))
                         ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => $data + ['section' => WeighingEntry::SECTION_COMPONENT])
-                        ->schema([
-                            TextInput::make('label')->hiddenLabel()->required()->columnSpan(2),
-                            TextInput::make('mass_kg')->label(__('fleet.weighing.field.empty_mass'))->numeric()->live(onBlur: true)->suffix('kg'),
-                            TextInput::make('non_lifting_kg')
-                                ->label('M.N.T.')
-                                ->numeric()
-                                ->live(onBlur: true)
-                                ->suffix('kg')
-                                ->helperText(__('fleet.weighing.help.non_lifting')),
+                        /*
+                         * ALS TABELLE, NICHT ALS KACHELN. Feldtest: „immer noch
+                         * beim anlegen der wägung die kacheln zum werte
+                         * eintragen ... Ich will das Formular quasi 1:1 haben
+                         * zum digital ausfüllen." Ein Wiederholfeld rendert ab
+                         * Werk je Zeile eine umrandete Karte; auf einem
+                         * Waegeblatt mit dreizehn vorgedruckten Zeilen ist das
+                         * dreizehnmal derselbe Rahmen um zwei Zahlen.
+                         */
+                        ->table([
+                            TableColumn::make(__('fleet.weighing.field.component'))->markAsRequired(),
+                            TableColumn::make(__('fleet.weighing.field.empty_mass').' [kg]'),
+                            TableColumn::make('M.N.T. [kg]'),
                         ])
-                        ->columns(5)
+                        ->schema([
+                            TextInput::make('label')->hiddenLabel()->required(),
+                            TextInput::make('mass_kg')->hiddenLabel()->numeric()->live(onBlur: true),
+                            TextInput::make('non_lifting_kg')->hiddenLabel()->numeric()->live(onBlur: true),
+                        ])
                         ->defaultItems(0)
-                        ->addActionLabel(__('fleet.weighing.section.component')),
+                        // Die Reihenfolge traegt: Sie ist die des Papierblatts.
+                        ->orderColumn('position')
+                        ->addActionLabel(__('fleet.weighing.add_component')),
                 ]),
 
             Section::make(__('fleet.weighing.section.support'))
@@ -124,14 +166,20 @@ final class WeighingForm
                         ->hiddenLabel()
                         ->relationship('entries', fn ($query) => $query->where('section', WeighingEntry::SECTION_SUPPORT))
                         ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => $data + ['section' => WeighingEntry::SECTION_SUPPORT])
+                        ->table([
+                            TableColumn::make(__('fleet.weighing.field.support'))->markAsRequired(),
+                            TableColumn::make(__('fleet.weighing.field.gross').' [kg]'),
+                            TableColumn::make(__('fleet.weighing.field.tare').' [kg]'),
+                            TableColumn::make(__('fleet.weighing.field.arm').' [mm]'),
+                        ])
                         ->schema([
                             TextInput::make('label')->hiddenLabel()->required(),
-                            TextInput::make('gross_kg')->label(__('fleet.weighing.field.gross'))->numeric()->live(onBlur: true)->suffix('kg'),
-                            TextInput::make('tare_kg')->label(__('fleet.weighing.field.tare'))->numeric()->live(onBlur: true)->suffix('kg'),
-                            TextInput::make('arm_mm')->label(__('fleet.weighing.field.arm'))->numeric()->live(onBlur: true)->suffix('mm'),
+                            TextInput::make('gross_kg')->hiddenLabel()->numeric()->live(onBlur: true),
+                            TextInput::make('tare_kg')->hiddenLabel()->numeric()->live(onBlur: true),
+                            TextInput::make('arm_mm')->hiddenLabel()->numeric()->live(onBlur: true),
                         ])
-                        ->columns(4)
                         ->defaultItems(0)
+                        ->orderColumn('position')
                         // Ohne eigene Beschriftung hiess der Knopf "Zu support
                         // entries hinzufügen" -- maschinell aus dem Feldnamen
                         // abgeleitet und in einem deutschen Wägeformular
@@ -149,18 +197,21 @@ final class WeighingForm
                         ->hiddenLabel()
                         ->relationship('entries', fn ($query) => $query->where('section', WeighingEntry::SECTION_DEDUCTION))
                         ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => $data + ['section' => WeighingEntry::SECTION_DEDUCTION])
+                        ->table([
+                            TableColumn::make(__('fleet.weighing.field.tank'))->markAsRequired(),
+                            TableColumn::make(__('fleet.weighing.field.volume').' [l]'),
+                            TableColumn::make(__('fleet.weighing.field.density').' [kg/l]'),
+                            TableColumn::make(__('fleet.weighing.field.arm').' [mm]'),
+                        ])
                         ->schema([
                             TextInput::make('label')->hiddenLabel()->required(),
-                            TextInput::make('volume_litres')->label(__('fleet.weighing.field.volume'))->numeric()->live(onBlur: true),
-                            TextInput::make('density_kg_per_litre')
-                                ->label(__('fleet.weighing.field.density'))
-                                ->numeric()
-                                ->default(0.72)
-                                ->live(onBlur: true),
-                            TextInput::make('arm_mm')->label(__('fleet.weighing.field.arm'))->numeric()->live(onBlur: true)->suffix('mm'),
+                            TextInput::make('volume_litres')->hiddenLabel()->numeric()->live(onBlur: true),
+                            TextInput::make('density_kg_per_litre')->hiddenLabel()->numeric()->default(0.72)->live(onBlur: true),
+                            TextInput::make('arm_mm')->hiddenLabel()->numeric()->live(onBlur: true),
                         ])
-                        ->columns(4)
-                        ->defaultItems(0),
+                        ->defaultItems(0)
+                        ->orderColumn('position')
+                        ->addActionLabel(__('fleet.weighing.add_deduction')),
                 ]),
 
             /*
@@ -184,14 +235,16 @@ final class WeighingForm
                         ->label(__('fleet.loading.seat'))
                         ->relationship('entries', fn ($query) => $query->where('section', WeighingEntry::SECTION_SEAT))
                         ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => $data + ['section' => WeighingEntry::SECTION_SEAT])
+                        ->table([
+                            TableColumn::make(__('fleet.loading.seat'))->markAsRequired(),
+                            TableColumn::make(__('fleet.loading.arm').' [mm]'),
+                        ])
                         ->schema([
                             TextInput::make('label')->hiddenLabel()->required(),
-                            TextInput::make('arm_mm')
-                                ->label(__('fleet.loading.arm'))
-                                ->numeric()->live(onBlur: true)->suffix('mm'),
+                            TextInput::make('arm_mm')->hiddenLabel()->numeric()->live(onBlur: true),
                         ])
-                        ->columns(2)
                         ->defaultItems(0)
+                        ->orderColumn('position')
                         ->columnSpanFull()
                         ->addActionLabel(__('fleet.loading.seat')),
 
@@ -209,11 +262,14 @@ final class WeighingForm
                     TextInput::make('max_non_lifting_kg')->label(__('fleet.weighing.field.max_non_lifting'))->numeric()->live(onBlur: true)->suffix('kg'),
                     TextInput::make('cg_range_from_mm')->label(__('fleet.weighing.field.cg_range').' von')->numeric()->live(onBlur: true)->suffix('mm'),
                     TextInput::make('cg_range_to_mm')->label(__('fleet.weighing.field.cg_range').' bis')->numeric()->live(onBlur: true)->suffix('mm'),
+                    // „... bei Leermasse __ kg" -- die Bezugsmasse stand auf
+                    // dem Blatt und nirgends im Schema. Ohne sie ist der
+                    // Bereich nur die halbe Aussage.
+                    TextInput::make('cg_range_at_mass_kg')->label(__('fleet.weighing.field.cg_range_at_mass'))->numeric()->suffix('kg'),
                     TextInput::make('cockpit_load_min_kg')->label(__('fleet.weighing.field.cockpit_load').' min')->numeric()->suffix('kg'),
                     TextInput::make('cockpit_load_max_kg')->label(__('fleet.weighing.field.cockpit_load').' max')->numeric()->suffix('kg'),
                 ])
-                ->columns(3)
-                ->collapsed(),
+                ->columns(3),
 
             /*
              * The answer, recalculated as the rows change. The reason for doing
@@ -270,65 +326,99 @@ final class WeighingForm
      */
     private static function sketchPanel(Get $get, ?Weighing $record): HtmlString
     {
-        $fmt = fn (?float $v, int $d = 2): string => $v === null ? '' : number_format($v, $d, ',', '.');
-        $supports = self::supportsFromForm($get, $record);
-        $kind = WeighingKind::tryFrom((string) $get('kind')) ?? $record?->kind ?? WeighingKind::Glider;
+        $entwurf = self::sheetFromForm($get, $record);
 
-        $total = array_sum(array_map(static fn (array $s): float => $s['mass'], $supports));
-
-        // Zwei Auflagen: der Hebel des Segelflugblattes.
-        if (count($supports) === 2 && $kind !== WeighingKind::Powered) {
-            $a = (float) ($get('front_support_arm_mm') ?? $record?->front_support_arm_mm ?? 0);
-            $b = $get('support_distance_mm') ?? $record?->support_distance_mm;
-            $b = $b === null || $b === '' ? null : (float) $b;
-
-            $x = ($b !== null && $total > 0)
-                ? round(($supports[1]['mass'] * $b) / $total + $a, 2)
-                : null;
-
-            return new HtmlString(view('fleet.print._weighing_sketch', [
-                'a' => $a,
-                'b' => $b,
-                'g1' => $supports[0]['mass'],
-                'g2' => $supports[1]['mass'],
-                'g' => $total,
-                'x' => $x,
-                'fmt' => $fmt,
-            ])->render());
-        }
-
-        // Drei und mehr: Momente, jede Auflage mit ihrem Arm.
-        if (count($supports) >= 3 || ($kind === WeighingKind::Powered && count($supports) >= 2)) {
-            $moment = 0.0;
-            $vollstaendig = true;
-
-            foreach ($supports as $s) {
-                if ($s['arm'] === null) {
-                    $vollstaendig = false;
-
-                    continue;
-                }
-
-                $moment += $s['mass'] * $s['arm'];
-            }
-
-            return new HtmlString(view('fleet.print._weighing_moment_sketch', [
-                'supports' => $supports,
-                'total' => $total,
-                'x' => ($vollstaendig && $total > 0) ? round($moment / $total, 2) : null,
-                'fmt' => $fmt,
-            ])->render());
-        }
+        $auflagen = $entwurf->entriesOf(WeighingEntry::SECTION_SUPPORT);
 
         /*
          * Nichts zu zeichnen -- aber NICHT schweigen: Eine leere Stelle sieht
          * aus wie ein Fehler, und genau so wurde sie auch gemeldet.
          */
-        return new HtmlString(
-            '<p class="text-sm text-gray-500 dark:text-gray-400">'
-            .e(__('fleet.weighing.sketch_pending'))
-            .'</p>',
-        );
+        if ($auflagen->isEmpty()) {
+            return new HtmlString(
+                '<p class="text-sm text-gray-500 dark:text-gray-400">'
+                .e(__('fleet.weighing.sketch_pending'))
+                .'</p>',
+            );
+        }
+
+        /*
+         * DAS BILD FOLGT DER BLATTART, nicht der Zahl der Auflagen.
+         *
+         * Vorher entschied `count($supports) >= 3` -- und lag damit falsch,
+         * sobald ein Motorsegler auf zwei Punkten stand oder jemand beim
+         * Segelflugzeug eine dritte Zeile anlegte: Gezeichnet wurde das
+         * Momentenbild, gerechnet der Hebel. Ein Bild, das der danebenstehenden
+         * Zahl widerspricht, ist schlechter als gar keines -- geglaubt wird das
+         * Bild.
+         */
+        $partial = $entwurf->kind === WeighingKind::Glider
+            ? 'fleet.sheet._sketch_lever'
+            : 'fleet.sheet._sketch_moments';
+
+        return new HtmlString(view($partial, ['weighing' => $entwurf])->render());
+    }
+
+    /**
+     * Der Formularstand als Blatt -- ungespeichert.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Zeichnung und Druck teilen sich EIN Partial, und das erwartet ein
+     * Weighing. Die Maske hat aber noch keins: Wer gerade eintippt, hat nichts
+     * gespeichert -- und genau da soll die Skizze mitwachsen („bei den wägungen
+     * will ich die grafik nicht nur beim drucken, sondern auch in der maske
+     * haben", und später: „hab ich immer noch das alte Formular").
+     *
+     * Also wird eins gebaut, das nie in die Datenbank geht, und seine
+     * Beziehung von Hand gesetzt. Der Umweg ist der Preis dafür, dass Bild und
+     * Ausdruck von derselben Vorlage kommen -- zwei Vorlagen waren zwei Orte,
+     * an denen dieselbe Zeichnung auseinanderlief, und das ist genau passiert.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    private static function sheetFromForm(Get $get, ?Weighing $record): Weighing
+    {
+        $wert = function (string $feld) use ($get, $record) {
+            $eingabe = $get($feld);
+
+            if ($eingabe !== null && $eingabe !== '') {
+                return $eingabe;
+            }
+
+            return $record?->{$feld};
+        };
+
+        $entwurf = new Weighing;
+
+        $entwurf->kind = WeighingKind::tryFrom((string) $get('kind'))
+            ?? $record?->kind
+            ?? WeighingKind::Glider;
+
+        $entwurf->undercarriage = Undercarriage::tryFrom((string) $get('undercarriage'))
+            ?? $record?->undercarriage;
+
+        $entwurf->front_support_arm_mm = $wert('front_support_arm_mm');
+        $entwurf->support_distance_mm = $wert('support_distance_mm');
+        $entwurf->datum_reference = $wert('datum_reference');
+        $entwurf->reference_line = $wert('reference_line');
+
+        $zeilen = [];
+
+        foreach (self::supportsFromForm($get, $record) as $position => $auflage) {
+            $zeile = new WeighingEntry;
+            $zeile->section = WeighingEntry::SECTION_SUPPORT;
+            $zeile->label = $auflage['label'];
+            $zeile->position = $position;
+            // netto() rechnet Brutto minus Tara; hier ist die Netto-Masse schon
+            // ermittelt, also steht sie als Brutto ohne Tara.
+            $zeile->gross_kg = $auflage['mass'];
+            $zeile->arm_mm = $auflage['arm'];
+
+            $zeilen[] = $zeile;
+        }
+
+        $entwurf->setRelation('entries', collect($zeilen));
+
+        return $entwurf;
     }
 
     /**

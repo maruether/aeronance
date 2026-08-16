@@ -27,6 +27,13 @@ return [
         'failed' => 'Der Versand ist fehlgeschlagen. Der Mailserver sagt:',
     ],
 
+    'scanner_test' => [
+        'action' => 'Verbindung prüfen',
+        'switched_off' => 'Es ist kein Virenscanner ausgewählt — es gibt nichts zu prüfen.',
+        'reachable' => 'ClamAV antwortet.',
+        'failed' => 'ClamAV antwortet nicht (:ziel).',
+    ],
+
     'saved' => 'Einstellungen gespeichert.',
     'reset' => 'zurücksetzen',
     'reset_confirm' => 'Der gespeicherte Wert wird entfernt. Danach gilt wieder die '
@@ -316,11 +323,31 @@ return [
         ],
         'virus_scanner' => [
             'label' => 'Virenscanner',
+            'help' => 'Prüft jeden Upload — Form 1, Wägebericht, Handbuch, Foto —, '
+                .'bevor er in der Ablage landet. Aeronance bringt keinen Scanner mit; '
+                .'er läuft daneben. Mit „Verbindung prüfen" unten sofort nachsehen, '
+                .'ob er antwortet.',
             'options' => ['none' => 'keiner', 'clamav' => 'ClamAV'],
         ],
         'clamav' => [
+            'transport' => [
+                'label' => 'Anschluss an ClamAV',
+                'help' => 'Im Docker-Kanal ist der mitgelieferte Dienst gemeint: '
+                    .'In der .env COMPOSE_PROFILES=clamav setzen, dann als Server '
+                    .'clamav eintragen.',
+                'options' => [
+                    'socket' => 'clamd auf diesem Rechner (Socket)',
+                    'tcp' => 'Server im Netz oder Docker-Dienst',
+                ],
+            ],
+            'socket' => [
+                'label' => 'ClamAV-Socket',
+                'help' => 'Gilt nur beim Anschluss „auf diesem Rechner".',
+            ],
             'host' => [
                 'label' => 'ClamAV-Server',
+                'help' => 'Gilt nur beim Anschluss „Server im Netz". Für den '
+                    .'mitgelieferten Docker-Dienst: clamav',
             ],
             'port' => [
                 'label' => 'ClamAV-Port',

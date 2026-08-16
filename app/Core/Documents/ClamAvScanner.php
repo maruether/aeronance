@@ -42,6 +42,61 @@ final class ClamAvScanner implements VirusScanner
         return true;
     }
 
+    /**
+     * Anfragen, ob da wirklich einer ist -- und wer.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Der Knopf „Verbindung pruefen" in den Einstellungen haengt hier dran, aus
+     * demselben Grund wie der Testversand beim Mailzugang: Eine Einstellung,
+     * deren Wirkung man erst beim naechsten Upload bemerkt, wird falsch
+     * eingetragen und bleibt es. Der haeufigste Fall im Docker-Kanal ist ein
+     * Socket, der nicht in den Container gereicht wurde -- von aussen sieht das
+     * aus wie „eingeschaltet".
+     *
+     * VERSION statt PING, weil die Antwort mehr sagt als „da": Sie nennt die
+     * Fassung UND den Signaturstand. Ein clamd mit monatealten Signaturen
+     * antwortet auf PING genauso freundlich wie einer mit frischen.
+     * ─────────────────────────────────────────────────────────────────────────
+     *
+     * @throws RuntimeException wenn niemand antwortet
+     */
+    public function ping(): string
+    {
+        $socket = $this->connect();
+
+        try {
+            $this->write($socket, "zVERSION\0");
+
+            $antwort = '';
+
+            while (! feof($socket)) {
+                $teil = fread($socket, 256);
+
+                if ($teil === false || $teil === '') {
+                    break;
+                }
+
+                $antwort .= $teil;
+            }
+        } finally {
+            fclose($socket);
+        }
+
+        $antwort = trim(str_replace("\0", '', $antwort));
+
+        if ($antwort === '') {
+            throw new RuntimeException('clamd answered, but said nothing.');
+        }
+
+        return $antwort;
+    }
+
+    /** Wohin gefragt wird -- fuer die Rueckmeldung an den Betreiber. */
+    public function endpoint(): string
+    {
+        return $this->address();
+    }
+
     public function scan(string $path): ScanResult
     {
         try {
@@ -123,9 +178,7 @@ final class ClamAvScanner implements VirusScanner
      */
     private function connect()
     {
-        $address = $this->host !== null && $this->host !== ''
-            ? sprintf('tcp://%s:%d', $this->host, $this->port)
-            : sprintf('unix://%s', (string) $this->socket);
+        $address = $this->address();
 
         $socket = @stream_socket_client($address, $code, $message, $this->timeout);
 
@@ -140,6 +193,22 @@ final class ClamAvScanner implements VirusScanner
         stream_set_timeout($socket, $this->timeout);
 
         return $socket;
+    }
+
+    /**
+     * Socket oder TCP -- und der Vorrang ist eine Falle, die benannt gehoert.
+     *
+     * Ein gesetzter Host gewinnt. Wer einmal einen Server eingetragen und
+     * spaeter auf den Socket umgestellt hat, laesst sonst einen Wert stehen,
+     * der still weiterwirkt. Deshalb entscheidet in den Einstellungen seit
+     * 0.1.9 ein eigenes Feld „Anschluss", und der Provider gibt bei „Socket"
+     * gar keinen Host mehr her.
+     */
+    private function address(): string
+    {
+        return $this->host !== null && $this->host !== ''
+            ? sprintf('tcp://%s:%d', $this->host, $this->port)
+            : sprintf('unix://%s', (string) $this->socket);
     }
 
     /**

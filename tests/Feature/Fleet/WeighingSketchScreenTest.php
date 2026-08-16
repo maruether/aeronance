@@ -60,18 +60,22 @@ final class WeighingSketchScreenTest extends TestCase
         Livewire::test(EditWeighing::class, ['record' => $weighing->getKey()])
             ->assertOk()
             ->assertSee('stroke-dasharray', escape: false)
-            ->assertSee('Hebelarme hinter dem Bezugspunkt', escape: false);
+            ->assertSee('Hebelverfahren:', escape: false);
     }
 
     #[Test]
     public function a_powered_aircraft_gets_the_moment_sketch_not_the_lever(): void
     {
         /*
-         * DER FELDTEST-FEHLER: Motorflugzeuge stehen auf DREI Auflagen
-         * (WeighingKind::defaultSupports), und die alte Fassung zeichnete nur
-         * bei exakt zwei -- an einer Robin erschien nie eine Skizze. Und die
-         * Hebelzeichnung waere dort auch das falsche Bild: Das Motorflugblatt
-         * rechnet ueber Momente, jede Auflage mit eigenem Arm.
+         * DER FELDTEST-FEHLER: Motorflugzeuge stehen meist auf DREI Auflagen,
+         * und die alte Fassung zeichnete nur bei exakt zwei -- an einer Robin
+         * erschien nie eine Skizze.
+         *
+         * Seit 0.1.9 entscheidet die BLATTART und nicht mehr die Zahl der
+         * Auflagen. Das ist der wichtigere Teil: Ein Motorsegler auf zwei
+         * Punkten bekam sonst die Hebelzeichnung zur Momentenrechnung -- ein
+         * Bild, das der danebenstehenden Zahl widerspricht, und geglaubt wird
+         * das Bild.
          */
         $weighing = $this->poweredWeighing();
         $this->support($weighing, 'Auflage links G1l', 210.0, 0.0, 1200.0);
@@ -83,8 +87,8 @@ final class WeighingSketchScreenTest extends TestCase
         Livewire::test(EditWeighing::class, ['record' => $weighing->getKey()])
             ->assertOk()
             ->assertSee('stroke-dasharray', escape: false)
-            ->assertSee('Drei Auflagen, drei Hebelarme', escape: false)
-            ->assertDontSee('Hebelarme hinter dem Bezugspunkt', escape: false);
+            ->assertSee('Momentenverfahren:', escape: false)
+            ->assertDontSee('Hebelverfahren:', escape: false);
     }
 
     #[Test]

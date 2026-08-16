@@ -58,9 +58,20 @@ while (! feof($client)) {
     if (str_ends_with($received, "\0\0\0\0")) {
         break;
     }
+
+    /*
+     * VERSION endet nicht mit dem Nullblock einer INSTREAM, sondern ist mit
+     * seinem einen Nullbyte schon vollstaendig. Ohne diesen Ausgang wartet der
+     * Stellvertreter auf Daten, die nie kommen -- die Verbindungspruefung liefe
+     * dann in den Zeitablauf und der Test dauerte Sekunden fuer nichts.
+     */
+    if (str_starts_with($received, 'zVERSION')) {
+        break;
+    }
 }
 
 $response = match (true) {
+    str_starts_with($received, 'zVERSION') => "ClamAV 1.4.3/27000/Fri Aug 15 09:12:00 2026\0",
     $mode === 'garbage' => "something went sideways\0",
     str_contains($received, 'EICAR-STANDARD-ANTIVIRUS-TEST-FILE') => "stream: Eicar-Test-Signature FOUND\0",
     default => "stream: OK\0",

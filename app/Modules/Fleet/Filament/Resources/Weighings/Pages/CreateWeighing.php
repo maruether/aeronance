@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Fleet\Filament\Resources\Weighings\Pages;
 
+use App\Modules\Fleet\Actions\SeedWeighingSheet;
 use App\Modules\Fleet\Filament\Resources\Weighings\WeighingResource;
-use App\Modules\Fleet\Models\WeighingEntry;
 use Filament\Resources\Pages\CreateRecord;
 
 final class CreateWeighing extends CreateRecord
@@ -22,31 +22,14 @@ final class CreateWeighing extends CreateRecord
     protected function afterCreate(): void
     {
         /*
-         * Die Auflagen gehören zum Blatt, nicht zur Fleißarbeit.
-         *
-         * Der zweite Anlegeweg neben „Aus der letzten Wägung" -- und er lief
-         * an PrepareWeighing vorbei, also entstand hier ein Blatt ganz ohne
-         * Auflagen. Ohne die zeichnet keine Skizze, und genau das war zu
-         * sehen (Feldtest, dreimal: "grafiken ... fehlen immer noch").
-         *
-         * Nur wenn noch keine da sind: Wer sie im Anlegeformular schon
-         * eingetragen hat, bekommt sie nicht doppelt.
+         * Das Blatt kommt mit seinen Zeilen -- Auflagen, Bauteile, Abzüge.
+         * Beide Anlegewege gehen dafür durch dieselbe Aktion; getrennte
+         * Kopien davon waren der Grund, warum hier angelegte Blätter gar
+         * keine Auflagen hatten und deshalb nie eine Skizze zeigten.
          */
+        app(SeedWeighingSheet::class)->handle($this->record);
+
         $this->record->load('entries');
-
-        if ($this->record->entriesOf(WeighingEntry::SECTION_SUPPORT)->isEmpty()) {
-            foreach ($this->record->kind->defaultSupports() as $position => $label) {
-                WeighingEntry::create([
-                    'weighing_id' => $this->record->id,
-                    'section' => WeighingEntry::SECTION_SUPPORT,
-                    'label' => $label,
-                    'position' => $position,
-                ]);
-            }
-
-            $this->record->load('entries');
-        }
-
         $this->record->recalculate();
     }
 }

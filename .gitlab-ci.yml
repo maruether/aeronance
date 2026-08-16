@@ -66,6 +66,13 @@ cache:
 test:
   stage: test
   <<: *php_setup
+  # Zwei Stunden statt der GitLab-Vorgabe von einer, aus demselben Grund wie
+  # beim render-Job darunter: Der Lauf braucht auf dem Runner knapp 40 Minuten,
+  # und eine Stunde ist kein Sicherheitsabstand, sondern eine Falle. Genau
+  # hineingelaufen beim zweiten Anlauf auf v0.1.9 -- der Job wurde bei Test 231
+  # abgeschnitten, was wie ein Testfehler aussieht und keiner war. Ein Timeout,
+  # das den Normalfall knapp verfehlt, meldet Unsinn statt Ursachen.
+  timeout: 2h
   services:
     - name: mariadb:10.11
       alias: mariadb

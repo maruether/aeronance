@@ -12,6 +12,7 @@ use App\Modules\TaskCards\Enums\FindingState;
 use App\Modules\TaskCards\Enums\ParticipationKind;
 use App\Modules\TaskCards\Enums\TaskCardState;
 use App\Modules\TaskCards\Models\Finding;
+use App\Modules\TaskCards\Models\ReleaseToService;
 use App\Modules\TaskCards\Models\TaskCard;
 use App\Modules\TaskCards\Permissions;
 use App\Modules\TaskCards\Support\CertifyingScope;
@@ -147,33 +148,7 @@ final readonly class CertifyTaskCard
      */
     public function certify(TaskCard $card, User $user, ?string $certifiedAt = null): TaskCard
     {
-        if ($card->state === TaskCardState::Open) {
-            throw new RuntimeException(
-                'This card has not been completed yet. Somebody has to finish the work '
-                .'before anybody can say it was done properly.'
-            );
-        }
-
-        if ($card->state !== TaskCardState::Completed) {
-            throw new RuntimeException(sprintf('This card is already %s.', $card->state->label()));
-        }
-
-        /*
-         * ─────────────────────────────────────────────────────────────────────
-         * KRITISCHE ARBEIT OHNE UNABHAENGIGE KONTROLLE WIRD NICHT FREIGEGEBEN.
-         *
-         * Hier bekommt die Kontrolle ihre Zaehne. Ohne diese Zeile waere die
-         * Markierung "kritisch" eine Notiz, die man ueberliest -- und der
-         * Nachweis entstuende genau dann nicht, wenn es eilig ist, also im
-         * einzigen Fall, der zaehlt.
-         *
-         * Die Reihenfolge ist damit: fertiggemeldet -> kontrolliert ->
-         * freigegeben. Siehe InspectCriticalTask.
-         * ─────────────────────────────────────────────────────────────────────
-         */
-        if ($card->critical && $card->inspected_at === null) {
-            throw new RuntimeException(__('taskcards.inspection.refused.certify_without_inspection'));
-        }
+        $this->assertSignable($card);
 
         // Two refusals with two messages: lacking the permission is
         // administrative, lacking the licence is about the person.
@@ -231,46 +206,159 @@ final readonly class CertifyTaskCard
             throw new RuntimeException($refusal);
         }
 
-        return DB::transaction(function () use ($card, $user, $qualification, $certifiedAt): TaskCard {
-            $card->update([
-                'state' => TaskCardState::Certified,
-                'certified_at' => $certifiedAt !== null ? $certifiedAt : now(),
-                'certified_by' => $user->id,
+        return DB::transaction(fn (): TaskCard => $this->sign($card, [
+            'certified_at' => $certifiedAt ?? now(),
+            'certified_by' => $user->id,
 
-                // Certificate content, copied at the moment of the act (E7).
-                'certified_by_name' => $user->name,
-                'qualification_type' => $qualification->type,
-                'qualification_reference' => $qualification->reference,
-                'qualification_category' => $qualification->category,
-            ]);
+            // Certificate content, copied at the moment of the act (E7).
+            'certified_by_name' => $user->name,
+            'qualification_type' => $qualification->type,
+            'qualification_reference' => $qualification->reference,
+            'qualification_category' => $qualification->category,
+        ], $user->name));
+    }
 
-            $this->dischargeLimit($card);
+    /**
+     * Abzeichnen mit der Unterschrift eines VEREINSFREMDEN Pruefers.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Feldtest: "wie gesagt, die gesamtfreigabe zeichnet die karten mit ab. Das
+     * gilt natuerlich auch fuer den pruefer."
+     *
+     * Das ist keine Ausnahme von der Regel, sondern dieselbe Regel: Wer den
+     * Vorgang freigibt, hat die Arbeit beurteilt -- ob er ein Konto in diesem
+     * System hat, aendert daran nichts. Ohne diesen Weg blieben ausgerechnet
+     * bei der Fremdfreigabe Karten fertiggemeldet-aber-unabgezeichnet zurueck,
+     * also in dem Zustand, den die Lufttuechtigkeitsliste als offen meldet: Der
+     * Vorgang waere geschlossen und das Flugzeug trotzdem auffaellig.
+     *
+     * ZWEI UNTERSCHIEDE zur eigenen Abzeichnung, beide unvermeidlich:
+     *
+     *  - Kein Konto als Unterzeichner (certified_by bleibt leer). Ein fremdes
+     *    einzutragen hiesse zu behaupten, dieser Benutzer habe unterschrieben.
+     *  - Keine Lizenzpruefung des Unterzeichners. Die Nummer ist abgeschrieben,
+     *    nicht nachgewiesen -- und sagt das auch, ueber qualification_type
+     *    "external_licence". Gepruefft wird stattdessen die Berechtigung des
+     *    ERFASSERS, und zwar dieselbe wie fuer die Fremdfreigabe: Wer die
+     *    Bescheinigung eines Fremden eintragen darf, traegt auch die Karten
+     *    darunter ein.
+     *
+     * Was NICHT anders ist: der Zustand der Karte und die unabhaengige
+     * Kontrolle kritischer Arbeiten. Beides steckt in assertSignable().
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    public function certifyExternally(
+        TaskCard $card,
+        User $recordedBy,
+        string $signatoryName,
+        string $licenceReference,
+        ?string $certifiedAt = null,
+    ): TaskCard {
+        if (! $this->authority->permits($recordedBy, Permissions::RELEASES_RECORD_EXTERNAL)) {
+            throw new RuntimeException(sprintf(
+                'Recording an outside signature requires the "%s" permission.',
+                Permissions::RELEASES_RECORD_EXTERNAL,
+            ));
+        }
 
-            /*
-             * The card that was raised FOR a finding resolves it at this
-             * signature -- not when the card was raised, not when the work was
-             * reported done. Three places in the module promised this and none
-             * delivered it; the finding sat in "scheduled" forever, which the
-             * release gate now reads as blocking.
-             */
-            Finding::query()
-                ->where('resolving_task_card_id', $card->id)
-                ->where('state', FindingState::Scheduled->value)
-                ->get()
-                ->each(function (Finding $finding) use ($card, $user): void {
-                    $finding->update([
-                        'state' => FindingState::Resolved,
-                        'resolved_on' => now()->toDateString(),
-                        'resolution' => sprintf(
-                            'Behoben mit Karte %s, abgezeichnet von %s.',
-                            $card->number,
-                            $user->name,
-                        ),
-                    ]);
-                });
+        if (trim($signatoryName) === '' || trim($licenceReference) === '') {
+            throw new InvalidArgumentException(
+                'An outside signature needs the name and the licence number of whoever '
+                .'signed -- without them the card says nothing about who judged the work.'
+            );
+        }
 
-            return $card->fresh();
-        });
+        $this->assertSignable($card);
+
+        return DB::transaction(fn (): TaskCard => $this->sign($card, [
+            'certified_at' => $certifiedAt ?? now(),
+            'certified_by' => null,
+            'certified_by_name' => trim($signatoryName),
+            'qualification_type' => ReleaseToService::CREDENTIAL_EXTERNAL,
+            'qualification_reference' => trim($licenceReference),
+            'qualification_category' => null,
+        ], trim($signatoryName)));
+    }
+
+    /**
+     * Was jede Abzeichnung unmoeglich macht -- gleich, wer unterschreibt.
+     */
+    private function assertSignable(TaskCard $card): void
+    {
+        if ($card->state === TaskCardState::Open) {
+            throw new RuntimeException(
+                'This card has not been completed yet. Somebody has to finish the work '
+                .'before anybody can say it was done properly.'
+            );
+        }
+
+        if ($card->state !== TaskCardState::Completed) {
+            throw new RuntimeException(sprintf('This card is already %s.', $card->state->label()));
+        }
+
+        /*
+         * ─────────────────────────────────────────────────────────────────────
+         * KRITISCHE ARBEIT OHNE UNABHAENGIGE KONTROLLE WIRD NICHT FREIGEGEBEN.
+         *
+         * Hier bekommt die Kontrolle ihre Zaehne. Ohne diese Zeile waere die
+         * Markierung "kritisch" eine Notiz, die man ueberliest -- und der
+         * Nachweis entstuende genau dann nicht, wenn es eilig ist, also im
+         * einzigen Fall, der zaehlt.
+         *
+         * Die Reihenfolge ist damit: fertiggemeldet -> kontrolliert ->
+         * freigegeben. Siehe InspectCriticalTask.
+         *
+         * Auch fuer den fremden Pruefer: Die Kontrolle ist eine Aussage ueber
+         * die Arbeit, nicht ueber den Unterzeichner.
+         * ─────────────────────────────────────────────────────────────────────
+         */
+        if ($card->critical && $card->inspected_at === null) {
+            throw new RuntimeException(__('taskcards.inspection.refused.certify_without_inspection'));
+        }
+    }
+
+    /**
+     * Der Teil, der bei jeder Unterschrift derselbe ist.
+     *
+     * Er steht EINMAL hier, weil die Nebenwirkungen die eigentliche Substanz
+     * sind: Eine abgezeichnete Karte setzt die Frist fort, gegen die sie
+     * angelegt wurde, und schliesst den Befund, den sie beheben sollte. Zwei
+     * Unterschriftswege mit je eigener Abschrift davon waeren zwei Wege, die
+     * innerhalb eines Jahres auseinanderlaufen.
+     *
+     * @param  array<string, mixed>  $signature  Wer unterschrieben hat, eingefroren (E7)
+     * @param  string  $signatoryName  Fuer den Text am geschlossenen Befund
+     */
+    private function sign(TaskCard $card, array $signature, string $signatoryName): TaskCard
+    {
+        $card->update([...$signature, 'state' => TaskCardState::Certified]);
+
+        $this->dischargeLimit($card);
+
+        /*
+         * The card that was raised FOR a finding resolves it at this
+         * signature -- not when the card was raised, not when the work was
+         * reported done. Three places in the module promised this and none
+         * delivered it; the finding sat in "scheduled" forever, which the
+         * release gate now reads as blocking.
+         */
+        Finding::query()
+            ->where('resolving_task_card_id', $card->id)
+            ->where('state', FindingState::Scheduled->value)
+            ->get()
+            ->each(function (Finding $finding) use ($card, $signatoryName): void {
+                $finding->update([
+                    'state' => FindingState::Resolved,
+                    'resolved_on' => now()->toDateString(),
+                    'resolution' => sprintf(
+                        'Behoben mit Karte %s, abgezeichnet von %s.',
+                        $card->number,
+                        $signatoryName,
+                    ),
+                ]);
+            });
+
+        return $card->fresh();
     }
 
     /**

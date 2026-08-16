@@ -6,6 +6,8 @@ namespace Tests\Feature\Core;
 
 use App\Core\Access\AccessSetup;
 use App\Core\Access\CorePermissions;
+use App\Core\Documents\ClamAvScanner;
+use App\Core\Documents\VirusScanner;
 use App\Core\Filament\Pages\SettingsPage;
 use App\Core\Settings\SettingOptions;
 use App\Core\Settings\Settings;
@@ -166,6 +168,46 @@ final class SettingsPageTest extends TestCase
         $this->assertSame('Akaflieg Freiburg', app(Settings::class)->get('organisation.name'));
         $this->assertSame('Akaflieg Freiburg', config('aeronance.organisation.name'));
         $this->assertTrue(config('aeronance.retention.activity_log.enabled'));
+    }
+
+    /**
+     * ─────────────────────────────────────────────────────────────────────────
+     * DER VIRENSCANNER LIESS SICH EINSCHALTEN, OHNE ANZUSPRINGEN.
+     *
+     * Die vier ClamAV-Felder zeigten auf „aeronance.clamav.*", gelesen wird
+     * „aeronance.documents.clamav.*". Gespeichert wurde brav, gewirkt hat
+     * nichts -- ausgerechnet an einer Sicherheitsfunktion, und niemandem
+     * gefallen, weil vor 0.1.9 überhaupt keine Einstellung in der Konfiguration
+     * ankam.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    #[Test]
+    public function switching_the_scanner_on_here_actually_switches_it_on(): void
+    {
+        Livewire::actingAs($this->userWith())
+            ->test(SettingsPage::class)
+            ->set('data.virus_scanner', 'clamav')
+            ->set('data.clamav__transport', 'socket')
+            ->set('data.clamav__socket', '/var/run/clamav/clamd.ctl')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('clamav', config('aeronance.documents.scanner'));
+        $this->assertSame('/var/run/clamav/clamd.ctl', config('aeronance.documents.clamav.socket'));
+
+        // Und der Container baut daraufhin wirklich den richtigen Scanner.
+        app()->forgetInstance(VirusScanner::class);
+        $this->assertInstanceOf(ClamAvScanner::class, app(VirusScanner::class));
+    }
+
+    #[Test]
+    public function testing_the_connection_without_a_scanner_says_so_instead_of_knocking(): void
+    {
+        Livewire::actingAs($this->userWith())
+            ->test(SettingsPage::class)
+            ->set('data.virus_scanner', 'none')
+            ->callAction('testScanner')
+            ->assertNotified(__('settings.scanner_test.switched_off'));
     }
 
     #[Test]

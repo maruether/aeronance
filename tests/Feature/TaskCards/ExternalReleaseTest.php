@@ -12,7 +12,10 @@ use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\TaskCards\Actions\CertifyTaskCard;
 use App\Modules\TaskCards\Actions\IssueRelease;
 use App\Modules\TaskCards\Actions\ManageWorkOrder;
+use App\Modules\TaskCards\Enums\FindingState;
 use App\Modules\TaskCards\Enums\ParticipationKind;
+use App\Modules\TaskCards\Enums\TaskCardState;
+use App\Modules\TaskCards\Models\Finding;
 use App\Modules\TaskCards\Models\ReleaseToService;
 use App\Modules\TaskCards\Models\WorkOrder;
 use App\Modules\TaskCards\Permissions;
@@ -162,6 +165,136 @@ final class ExternalReleaseTest extends TestCase
             ->assertSee(__('taskcards.release.external.print_note'), escape: false);
     }
 
+    /**
+     * ─────────────────────────────────────────────────────────────────────────
+     * "wie gesagt, die gesamtfreigabe zeichnet die karten mit ab. Das gilt
+     * natürlich auch für den prüfer."
+     *
+     * Der Kern dieses Tests ist nicht, DASS die Karte abgezeichnet wird,
+     * sondern MIT WESSEN Unterschrift: der des Prüfers, nicht der des
+     * Erfassers. Wer abschreibt, hat die Arbeit nicht beurteilt.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    #[Test]
+    public function the_outside_signature_carries_down_to_the_open_cards(): void
+    {
+        $order = $this->orderWithCardOnlyReportedDone();
+        $karte = $order->taskCards()->first();
+
+        $this->assertSame(TaskCardState::Completed, $karte->state);
+
+        app(IssueRelease::class)->recordExternal(
+            order: $order->fresh(),
+            recordedBy: $this->recorder(),
+            signatoryName: 'Hans Meier',
+            licenceReference: 'DE.66.98765',
+        );
+
+        $karte->refresh();
+
+        $this->assertSame(TaskCardState::Certified, $karte->state);
+        $this->assertSame('Hans Meier', $karte->certified_by_name);
+        $this->assertSame('DE.66.98765', $karte->qualification_reference);
+        $this->assertSame(ReleaseToService::CREDENTIAL_EXTERNAL, $karte->qualification_type);
+
+        // KEIN Konto als Unterzeichner: Der Prüfer hat hier keins, und das
+        // des Erfassers einzutragen wäre eine Behauptung über ihn.
+        $this->assertNull($karte->certified_by);
+    }
+
+    /**
+     * Mehrere Karten, und der Befund, der an einer davon hängt.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Der Befund ist hier der eigentliche Prüfstein, und zwar wegen einer
+     * Schleife, die sich sonst schliesst: Sein Zustand „eingeplant" sperrt die
+     * Freigabe, aufgelöst wird er aber erst durch das Abzeichnen der Karte --
+     * das ohne Freigabe nie kommt. Für den fremden Prüfer gäbe es keinen
+     * Umweg: Ein Verein, der ihn holt, hat niemanden, der den Befund
+     * stattdessen beurteilen dürfte.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    #[Test]
+    public function every_open_card_is_signed_and_its_finding_closed_in_the_signatory_name(): void
+    {
+        $order = $this->orderWithCardOnlyReportedDone();
+        $mechaniker = $this->userWith(Permissions::CARDS_WORK, Permissions::WORK_ORDERS_MANAGE);
+
+        $zweite = app(ManageWorkOrder::class)->addCard($order->fresh(), 'Bowdenzug prüfen');
+        app(CertifyTaskCard::class)->complete($zweite->fresh(), $mechaniker, 'Gemacht', minutes: 30);
+
+        // Ein blockierender Befund, den genau diese Karte beheben soll.
+        $befund = Finding::create([
+            'aircraft_id' => $order->aircraft_id,
+            'number' => 'B-2026-001',
+            'title' => 'Spiel im Bowdenzug',
+            'description' => 'Spürbares Spiel an der Höhenruderanlenkung.',
+            'state' => FindingState::Scheduled,
+            'is_blocking' => true,
+            'found_on' => now()->toDateString(),
+            'resolving_task_card_id' => $zweite->id,
+        ]);
+
+        app(IssueRelease::class)->recordExternal(
+            order: $order->fresh(),
+            recordedBy: $this->recorder(),
+            signatoryName: 'Hans Meier',
+            licenceReference: 'DE.66.98765',
+        );
+
+        foreach ($order->fresh()->taskCards as $karte) {
+            $this->assertSame(TaskCardState::Certified, $karte->state, $karte->title);
+            $this->assertSame('Hans Meier', $karte->certified_by_name);
+        }
+
+        $befund->refresh();
+
+        $this->assertSame(FindingState::Resolved, $befund->state);
+        $this->assertStringContainsString('Hans Meier', (string) $befund->resolution);
+    }
+
+    #[Test]
+    public function a_critical_card_without_the_second_pair_of_eyes_stops_the_outside_release_too(): void
+    {
+        $order = $this->orderWithCardOnlyReportedDone(critical: true);
+
+        $this->expectException(RuntimeException::class);
+
+        try {
+            app(IssueRelease::class)->recordExternal(
+                order: $order->fresh(),
+                recordedBy: $this->recorder(),
+                signatoryName: 'Hans Meier',
+                licenceReference: 'DE.66.98765',
+            );
+        } finally {
+            // Die Bescheinigung darf auch nicht halb entstanden sein.
+            $this->assertNull($order->fresh()->released_at);
+            $this->assertSame(0, ReleaseToService::query()->count());
+        }
+    }
+
+    /** Ein Vorgang, dessen Karte fertiggemeldet, aber nicht abgezeichnet ist. */
+    private function orderWithCardOnlyReportedDone(bool $critical = false): WorkOrder
+    {
+        $aircraft = Aircraft::create(['registration' => 'D-KXYZ', 'model' => 'ASK 21']);
+        $mechaniker = $this->userWith(Permissions::CARDS_WORK, Permissions::WORK_ORDERS_MANAGE);
+
+        $order = app(ManageWorkOrder::class)->open(
+            aircraft: $aircraft, title: 'Jahresnachprüfung', user: $mechaniker,
+        );
+        $card = app(ManageWorkOrder::class)->addCard(
+            order: $order,
+            title: 'Ölwechsel',
+            critical: $critical,
+            criticalReason: $critical ? 'Steuerungsarbeit' : null,
+        );
+
+        app(CertifyTaskCard::class)->complete($card->fresh(), $mechaniker, 'Gemacht', minutes: 60);
+
+        return $order->fresh();
+    }
+
     private function readyOrder(): WorkOrder
     {
         $aircraft = Aircraft::create(['registration' => 'D-KABC', 'model' => 'ASK 21']);
@@ -181,12 +314,11 @@ final class ExternalReleaseTest extends TestCase
     }
 
     /**
-     * Der Vereinsprüfer, der die KARTEN abzeichnet.
+     * Der Vereinsprüfer, der die KARTEN einzeln abzeichnet.
      *
-     * Wichtig fürs Verständnis dieses Tests: Die zweite Unterschrift auf der
-     * Karte verlangt weiterhin eine hinterlegte Qualifikation. Der externe
-     * Weg betrifft die FREIGABE, nicht die Karten -- wo auch die Karten von
-     * außen kommen, fehlt der Weg noch.
+     * Die eigene Unterschrift unter eine Karte verlangt weiterhin eine
+     * hinterlegte Qualifikation -- geprüft, nicht abgeschrieben. Was von außen
+     * kommt, geht den Weg in certifyExternally() und sagt das auch.
      */
     private function qualifiedInspector(): User
     {

@@ -8,11 +8,15 @@ tun muss, bevor er sie einspielt. Steht dort nichts, reicht `deploy/update.sh`.
 
 ## [Unveröffentlicht]
 
-### Geplant für 0.2.0
+### Vorgemerkt
 
-Vorgemerkt, noch nicht gebaut — ein Eintrag wandert nach „Neu", sobald er es
-ist. Ein Changelog beschreibt, was passiert ist; dieser Abschnitt sagt nur,
-woran als Nächstes gearbeitet wird.
+Noch nicht gebaut — ein Eintrag wandert nach „Neu", sobald er es ist. Ein
+Changelog beschreibt, was passiert ist; dieser Abschnitt sagt nur, woran als
+Nächstes gearbeitet wird.
+
+Ohne Versionsmarke, und das ist Absicht: Es bleibt bei 0.1.x, bis Marvin den
+Sprung ausdrücklich freigibt. Was hier steht, kann in jeder kommenden 0.1.x
+erscheinen.
 
 - **Ultraleichtflugzeuge.** Die Flotte soll ULs führen können. Sie leben
   regulatorisch in einer anderen Welt als EASA-Luftfahrzeuge — Nachprüfung,
@@ -26,6 +30,154 @@ woran als Nächstes gearbeitet wird.
   folgenlos — der Bestand setzt sich regelmäßig selbst zurück. Was genau ein
   Demomodus abschalten muss (Mails, Updates, echte Herstellerabrufe), ist
   Teil des Zuschnitts.
+
+## [0.1.9] — 2026-08-15
+
+Die Fassung, in der das Wägeblatt ein Blatt geworden ist. Dazu zwei Funde
+aus derselben Feldtest-Runde, die beide mehr nach sich zogen als gedacht:
+Der eine legte eine Sackgasse im Freigabetor frei, der andere ging tiefer
+als die Kopfzeile, in der er auffiel — und förderte nebenbei zutage, dass
+sich der Virenscanner einschalten ließ, ohne anzuspringen. Deshalb ist auch
+die Virenprüfung hier gleich mit ausgebaut worden.
+
+**Beim Update beachten:** `deploy/update.sh` bzw.
+`deploy/docker/update.sh` genügt; eine Migration läuft mit und trägt
+bestehenden Wägeblättern ihre Auflagenzeilen nach. Wer den Virenscanner
+nutzt, sollte danach in den Einstellungen einmal „Verbindung prüfen"
+drücken: Die Felder wirkten vorher nicht, der eingetragene Zustand war also
+womöglich nie der tatsächliche. Und wer Wägeblätter führt, prüft dort die
+neue Angabe **Fahrwerk** — bestehende Blätter bekommen den für ihre
+Blattart üblichen Wert und dürfen abweichen.
+
+### Geändert
+
+- **Auch die Freigabe eines vereinsfremden Prüfers zeichnet die
+  fertiggemeldeten Karten mit ab** — mit seiner Unterschrift, nicht mit der
+  dessen, der sie einträgt: Wer abschreibt, hat die Arbeit nicht beurteilt.
+  Auf der Karte steht deshalb derselbe ehrliche Vermerk wie auf der
+  Bescheinigung, dass die Nummer abgeschrieben und hier nicht geprüft
+  wurde. Ohne das blieben ausgerechnet bei der Fremdfreigabe Karten offen
+  zurück: Der Vorgang wäre geschlossen und das Flugzeug trotzdem als
+  auffällig gemeldet. Unverändert gilt: ohne Fertigmeldung keine Freigabe,
+  und eine kritische Arbeit ohne unabhängige Kontrolle hält weiterhin alles
+  an.
+- **Die Arbeitskarte zeigt jetzt, wenn ihre Unterschrift von außen kam.**
+  Gespeichert war es längst, sichtbar war es nur auf der Bescheinigung —
+  in der Vorgangsansicht sah eine abgeschriebene Unterschrift aus wie eine
+  geprüfte. Wer die Karte in drei Jahren liest, muss den Unterschied sehen.
+
+### Neu
+
+- **Virenprüfung ohne Konsole: Dienst mitgeliefert, Anschluss wählbar,
+  Verbindung prüfbar.** Aeronance bringt jetzt im Docker-Kanal einen
+  ClamAV-Dienst mit — er läuft aber nur, wenn er angefordert wird: eine
+  Zeile `COMPOSE_PROFILES=clamav` in der `.env`, und er startet beim
+  nächsten Update. Nicht ab Werk an, weil clamd rund ein Gigabyte
+  Arbeitsspeicher für seine Signaturen belegt; wer schon einen clamd auf
+  dem Wirt betreibt, reicht besser dessen Socket herein und spart sich den
+  zweiten Dienst.
+
+  In den Einstellungen ist der **Anschluss** jetzt eine eigene Entscheidung
+  („clamd auf diesem Rechner" oder „Server im Netz oder Docker-Dienst")
+  statt ein Nebeneffekt davon, ob zufällig ein Server eingetragen ist — ein
+  stehengebliebener Eintrag überstimmt den Socket nicht mehr still. Dazu
+  ein Knopf **„Verbindung prüfen"**, der wirklich anfragt und die
+  ClamAV-Fassung samt Signaturstand zurückmeldet; im Fehlerfall nennt er
+  die Adresse, an die geklopft wurde. „Eingeschaltet" und „eingeschaltet
+  und erreichbar" sehen sonst gleich aus — und mit der Vorgabe, ohne
+  Scanner keine Uploads anzunehmen, merkt man den Unterschied erst am
+  ersten stehenden Upload.
+
+  Den Dienst aus der Oberfläche heraus zu starten wäre bequemer und ist
+  ausgeschlossen: Dafür bräuchte der App-Container den Docker-Socket, und
+  wer den hat, ist root auf dem Wirt. Im LXC-Kanal, wo das Skript ohnehin
+  als root läuft, kann die Installation das später mit erledigen.
+
+### Neu
+
+- **Das Wägeblatt ist ein Blatt.** Vorher war es eine Reihe von Kacheln zum
+  Ausfüllen und eine Tabellenwüste im Druck — Feldtest: „der jetztige
+  istzustand ist für den täglichen betrieb nicht brauchbar". Jetzt folgt es
+  der Gliederung klassischer Wägeformulare, in Eingabe wie im Ausdruck:
+  Wägung und Massengrenzen nebeneinander, darunter die
+  Schwerpunktermittlung, die Zeichnung, der Ergebnisblock mit
+  ausgeschriebener Rechenzeile und die Unterschriftenzeile.
+
+  Konkret:
+  - **Zeilen statt Kacheln.** Alle vier Eingabelisten sind echte
+    Tabellenzeilen unter einer Kopfzeile.
+  - **Das Blatt kommt mit seinen Zeilen.** Bauteile, Auflagen und
+    Kraftstoffbehälter sind vorgedruckt, wie auf Papier — wer wiegt, trägt
+    Zahlen ein und schreibt nicht erst „Tragwerk rechts innen" ab. Die
+    Vorlagen dafür lagen seit jeher im Code und wurden von niemandem
+    aufgerufen.
+  - **Drei Blattarten** (Segelflugzeug, Motorsegler, Flugzeug), weil das
+    Blatt unter dem Namen vorgelegt wird, den der Prüfer kennt. Gerechnet
+    wird weiterhin auf zwei Arten.
+  - **Fahrwerksauswahl** (Spornrad mit einem oder zwei Haupträdern,
+    Bugrad). Sie bestimmt Anzahl und Lage der Wägepunkte und die
+    Zeichnung — vorher hing beides an der Blattart und war beim
+    Motorsegler mit Bugrad schlicht falsch.
+  - **Die Zeichnungen sind maßstäblich** statt fest verdrahtet. Vorher
+    konnte das Bild einen Schwerpunkt vor der hinteren Auflage zeigen, wo
+    er in Wahrheit dahinter lag; geglaubt wird das Bild. Welche Zeichnung
+    erscheint, entscheidet jetzt die Blattart und nicht die Zahl der
+    Zeilen.
+  - **Bestandsblätter bekommen ihre Auflagen nachgereicht.** Wer sein
+    Blatt vor 0.1.8 angelegt hat, sah nie eine Zeichnung, weil die Zeilen
+    fehlten, an denen sie hängt. Eine Reparatur nur für neue Datensätze
+    ist für den, der es meldet, keine.
+
+- **Die zulässige Zuladung wird abgeleitet, nicht abgetippt.** Die
+  Kennblattgrenze der nichttragenden Teile gilt *einschließlich* Zuladung —
+  im Flug sitzt der Pilot im Rumpf, nicht im Flügel. Geprüft wurde bisher
+  nur die Höchstmasse, und die ist nicht immer die kleinere: Das Blatt
+  konnte eine Zuladung bestätigen, die das Flugzeug nach seiner
+  N.T.-Grenze gar nicht tragen darf. Es gilt jetzt die kleinere der beiden
+  Reserven. **Folge beim Update:** Bestehende Blätter können danach einen
+  Befund zeigen, den sie vorher nicht hatten. Die festgeschriebenen Zahlen
+  ändern sich nicht — unterschrieben ist unterschrieben.
+
+### Behoben
+
+- **Ein Befund, den erst die Freigabe auflöst, verhinderte sie.** Seine
+  Karte war fertiggemeldet, der Befund stand auf „eingeplant", und das
+  Freigabetor lässt „eingeplant" nicht durch — die Karte wurde also nie
+  abgezeichnet, und der Befund blieb eingeplant. Eine Schleife ohne
+  Ausgang: für den vereinsfremden Prüfer ohne jeden Umweg, denn ein
+  Verein, der ihn holt, hat niemanden, der den Befund stattdessen
+  beurteilen dürfte. Ausgenommen sind ausschließlich Karten desselben
+  Vorgangs, die in derselben Handlung mitgezeichnet werden; wer nur
+  „einplanen" klickt, kommt damit keinen Schritt weiter.
+- **Verweigerte die Fremdfreigabe wegen einer offenen Herstellermitteilung,
+  erschien statt der Liste ein interner Fehlertext.**
+- **Der Virenscanner ließ sich einschalten, ohne anzuspringen.** Die vier
+  ClamAV-Felder in den Einstellungen zeigten auf einen Konfigurationspfad,
+  den niemand liest — der Scanner sah eingeschaltet aus, und hochgeladen
+  wurde weiter ungeprüft. Aufgefallen ist es erst dadurch, dass
+  Einstellungen jetzt überhaupt ankommen (siehe oben); vorher wirkte keine,
+  also fiel die falsche nicht auf. Der Prüfschritt, der das hätte finden
+  müssen, sah nur das erste Glied des Pfades an und prüft jetzt den ganzen.
+  Dazu kommt ein **Feld für den ClamAV-Socket**: Der häufigste Fall im
+  Verein — ein clamd auf demselben Rechner — war über die Oberfläche
+  bislang gar nicht einstellbar.
+- **Eingetragene Einstellungen wirkten nicht — keine einzige.** Sichtbar
+  wurde es am Vereinsnamen in der Kopfzeile, der auf der Vorgabe stehen
+  blieb; betroffen war aber jede Einstellung, die schon beim Seitenaufbau
+  gilt. Die Werte werden in einer sehr frühen Startphase gebraucht, in der
+  Laravel die Datenbank noch nicht mit den Models verbunden hat. Der
+  Lesezugriff scheiterte dort verlässlich, wurde stillschweigend
+  aufgefangen und als „keine Einstellungen vorhanden" für den Rest der
+  Anfrage gemerkt — nichts im Protokoll, kein Fehler, und die
+  Einstellungsseite zeigte den gespeicherten Wert brav an. In 0.1.8 war nur
+  die zweite Hälfte behoben, nämlich dass die Seite nach dem Speichern den
+  Seitenrahmen nicht neu aufbaute.
+
+  Gelesen wird jetzt auf einem Weg, der in jeder Startphase trägt. Ein
+  Fehlschlag wird nicht mehr als Leere gemerkt, sondern protokolliert und
+  beim nächsten Zugriff erneut versucht; ein einzelner unlesbarer Wert
+  nimmt nicht mehr alle anderen mit. Vor der ersten Migration bleibt alles
+  wie gehabt: Umgebung und Vorgabe gelten, der Einrichtungsassistent läuft.
 
 ## [0.1.8] — 2026-08-14
 

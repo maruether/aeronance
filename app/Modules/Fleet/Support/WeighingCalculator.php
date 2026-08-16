@@ -66,8 +66,9 @@ final class WeighingCalculator
             emptyMassKg: round($emptyMass, 2),
             emptyCgMm: $cg,
             nonLiftingMassKg: $nonLifting !== null ? round($nonLifting, 2) : null,
-            usefulLoadKg: $this->usefulLoad($weighing, $emptyMass),
+            usefulLoadKg: $this->usefulLoad($weighing, $emptyMass, $nonLifting),
             findings: $this->findings($weighing, $emptyMass, $cg, $nonLifting),
+            nonLiftingHeadroomKg: $this->nonLiftingHeadroom($weighing, $nonLifting),
         );
     }
 
@@ -146,13 +147,58 @@ final class WeighingCalculator
         return round($moment / $emptyMass, 2);
     }
 
-    private function usefulLoad(Weighing $weighing, float $emptyMass): ?float
+    /**
+     * Was zugeladen werden darf -- und zwar nach BEIDEN Grenzen.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Bis hierher zaehlte nur die Hoechstmasse. Das ist die haeufigere Grenze
+     * und nicht immer die kleinere: Die Kennblattgrenze der nicht tragenden
+     * Teile gilt EINSCHLIESSLICH Zuladung, denn im Flug sitzt der Pilot im
+     * Rumpf und nicht im Fluegel.
+     *
+     * Fachliche Vorgabe woertlich: „Die Zuladung ist im Flug Teil der M.N.T.
+     * Bei der Waegung ist der Flieger natuerlich leer (bis auf evtl. Sprit).
+     * Die zulaessige Zuladung berechnet sich dann daraus."
+     *
+     * Es gewinnt also die kleinere der beiden Reserven. Vorher konnte hier eine
+     * Zuladung stehen, die das Flugzeug nach seiner N.T.-Grenze gar nicht
+     * tragen darf -- und das Blatt haette sie bestaetigt.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    private function usefulLoad(Weighing $weighing, float $emptyMass, ?float $nonLifting = null): ?float
     {
-        if ($weighing->max_mass_kg === null) {
+        $reserven = [];
+
+        if ($weighing->max_mass_kg !== null) {
+            $reserven[] = (float) $weighing->max_mass_kg - $emptyMass;
+        }
+
+        $ausNichtTragend = $this->nonLiftingHeadroom($weighing, $nonLifting);
+
+        if ($ausNichtTragend !== null) {
+            $reserven[] = $ausNichtTragend;
+        }
+
+        if ($reserven === []) {
             return null;
         }
 
-        return round((float) $weighing->max_mass_kg - $emptyMass, 2);
+        // Nicht auf 0 gekappt: Ein negativer Wert sagt, um wie viel zu schwer
+        // -- und der zugehoerige Befund sagt, woran es liegt.
+        return round(min($reserven), 2);
+    }
+
+    /**
+     * Die Zeile „Zuladung" in der M.N.T.-Spalte des Blatts: der Rest, den die
+     * Grenze der nicht tragenden Teile noch laesst.
+     */
+    private function nonLiftingHeadroom(Weighing $weighing, ?float $nonLifting): ?float
+    {
+        if ($nonLifting === null || $weighing->max_non_lifting_kg === null) {
+            return null;
+        }
+
+        return round((float) $weighing->max_non_lifting_kg - $nonLifting, 2);
     }
 
     /**
@@ -179,16 +225,25 @@ final class WeighingCalculator
             }
         }
 
-        if ($weighing->max_mass_kg !== null && $emptyMass >= (float) $weighing->max_mass_kg) {
-            $findings[] = __('fleet.weighing.finding.no_useful_load');
-        }
-
         if ($nonLifting !== null && $weighing->max_non_lifting_kg !== null
             && $nonLifting > (float) $weighing->max_non_lifting_kg) {
             $findings[] = __('fleet.weighing.finding.non_lifting_exceeded', [
                 'value' => number_format($nonLifting, 1, ',', '.'),
                 'max' => number_format((float) $weighing->max_non_lifting_kg, 1, ',', '.'),
             ]);
+        }
+
+        /*
+         * „Nichts mehr zuzuladen" hing bisher allein an der Hoechstmasse und
+         * uebersah damit den Fall, den das Kennblatt ausdruecklich kennt: Die
+         * Grenze der nicht tragenden Teile gilt einschliesslich Zuladung, und
+         * sie ist oft die kleinere. Geprueft wird jetzt die Zahl, die auch auf
+         * dem Blatt steht -- die kleinere der beiden Reserven.
+         */
+        $zuladung = $this->usefulLoad($weighing, $emptyMass, $nonLifting);
+
+        if ($zuladung !== null && $zuladung <= 0.0) {
+            $findings[] = __('fleet.weighing.finding.no_useful_load');
         }
 
         return $findings;

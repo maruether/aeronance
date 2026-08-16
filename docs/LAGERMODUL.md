@@ -243,7 +243,30 @@ ausführt. Kein Form-1-Scan war je ein SVG.
 ### Virenprüfung
 
 Aus, solange nichts eingerichtet ist — ein Vereins-LXC hat in der Regel keinen
-clamd. Eingeschaltet über `AERONANCE_VIRUS_SCANNER=clamav`.
+clamd. Eingeschaltet in den Einstellungen oder über
+`AERONANCE_VIRUS_SCANNER=clamav`.
+
+**Woher der clamd kommt, entscheidet der Betreiber**, und beide Wege stehen in
+den Einstellungen unter „Anschluss an ClamAV":
+
+- *clamd auf diesem Rechner (Socket)* — der günstigere Weg überall, wo ohnehin
+  einer läuft. Im Docker-Kanal heißt das, seinen Socket in die Container `app`
+  und `worker` zu reichen (`docker-compose.override.yml`).
+- *Server im Netz oder Docker-Dienst* — im Docker-Kanal ist ein Dienst dafür
+  **mitgeliefert**, läuft aber nur auf Anforderung: `COMPOSE_PROFILES=clamav`
+  in der `.env`, dann startet er beim nächsten `update.sh`. Der Preis ist rund
+  ein Gigabyte Arbeitsspeicher für die Signaturen, dauerhaft.
+
+Nicht möglich — und zwar bewusst nicht — ist, den Dienst **aus der Oberfläche
+heraus** zu starten. Dafür bräuchte der App-Container den Docker-Socket, und wer
+den hat, ist root auf dem Wirt. Stattdessen sagt der Knopf **„Verbindung
+prüfen"** sofort, ob jemand antwortet, und nennt im Fehlerfall die Adresse, an
+die geklopft wurde. Damit steht die häufigste Ursache gleich mit da: ein Socket,
+der nie in den Container gereicht wurde.
+
+Welcher Weg gilt, entscheidet `AERONANCE_CLAMAV_TRANSPORT` — nicht mehr die
+Frage, ob zufällig ein Host eingetragen ist. Ein stehengebliebener Servereintrag
+überstimmt den Socket damit nicht mehr still.
 
 Gesprochen wird clamds **INSTREAM-Protokoll über einen Socket**, nicht
 `clamscan` auf der Kommandozeile. Drei Gründe: `clamscan` lädt bei jedem Aufruf

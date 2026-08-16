@@ -357,6 +357,24 @@ final readonly class IssueRelease
                 'counters_at_release' => $order->aircraft?->currentValues() ?? [],
             ]);
 
+            /*
+             * DIE FREMDFREIGABE ZEICHNET GENAUSO MIT.
+             *
+             * "wie gesagt, die gesamtfreigabe zeichnet die karten mit ab. Das
+             * gilt natürlich auch für den prüfer." -- mit der Unterschrift des
+             * Prüfers, nicht mit der des Erfassers: Der Erfasser hat die Arbeit
+             * nicht beurteilt, er hat ein Blatt Papier abgeschrieben.
+             */
+            foreach ($order->cardsAwaitingCertification() as $offen) {
+                app(CertifyTaskCard::class)->certifyExternally(
+                    card: $offen->fresh(),
+                    recordedBy: $recordedBy,
+                    signatoryName: $signatoryName,
+                    licenceReference: $licenceReference,
+                    certifiedAt: $when->toDateString(),
+                );
+            }
+
             $order->forceFill([
                 'released_at' => $when,
                 'state' => WorkOrder::STATE_CLOSED,
@@ -405,8 +423,11 @@ final readonly class IssueRelease
             if ($unsound !== []) {
                 throw new RuntimeException(sprintf(
                     'These have to be settled before a release can be signed: %s.',
+                    // Dieselben zwei Felder wie im eigenen Weg. Hier stand
+                    // "->label", das OpenItem nicht hat: Der Nutzer bekam
+                    // statt der Liste einen internen Fehlertext zu sehen.
                     implode('; ', array_map(
-                        static fn ($item): string => (string) $item->label,
+                        static fn (OpenItem $i): string => $i->what.' ('.$i->detail.')',
                         $unsound,
                     )),
                 ));
@@ -616,10 +637,34 @@ final readonly class IssueRelease
      */
     private function blockingFindings(WorkOrder $order): array
     {
+        /*
+         * ─────────────────────────────────────────────────────────────────────
+         * WAS DIESE FREIGABE SELBST AUFLOEST, DARF SIE NICHT VERHINDERN.
+         *
+         * Seit die Freigabe fertiggemeldete Karten mitzeichnet, loest sie auch
+         * deren Befunde auf -- und ohne diese Ausnahme sperrte sie sich dabei
+         * selbst aus: Der Befund steht auf „eingeplant", das Tor unten laesst
+         * „eingeplant" nicht durch, die Karte wird also nie abgezeichnet, und
+         * der Befund bleibt eingeplant. Eine Schleife ohne Ausgang, und fuer
+         * den fremden Pruefer ohne jeden Umweg: Ein Verein, der ihn holt, hat
+         * per Definition niemanden, der den Befund stattdessen beurteilen
+         * koennte.
+         *
+         * Das Tor wird dadurch nicht weicher. Es geht ausschliesslich um Karten
+         * DIESES Vorgangs, die FERTIGGEMELDET sind und in derselben Handlung
+         * abgezeichnet werden -- die Unterschrift steht also dahinter. Wer nur
+         * „einplanen" klickt, kommt damit keinen Schritt weiter.
+         * ─────────────────────────────────────────────────────────────────────
+         */
+        $gleichMitgezeichnet = array_map(
+            static fn (TaskCard $card): int => $card->id,
+            $order->cardsAwaitingCertification(),
+        );
+
         return Finding::query()
             ->where('aircraft_id', $order->aircraft_id)
             ->where('is_blocking', true)
-            ->where(function ($q): void {
+            ->where(function ($q) use ($gleichMitgezeichnet): void {
                 $q->where('state', 'open')
 
                     /*
@@ -630,7 +675,22 @@ final readonly class IssueRelease
                      * CERTIFIED (which resolves it), or when somebody qualified
                      * defers it -- both acts a person answers for.
                      */
-                    ->orWhere('state', 'scheduled')
+                    ->orWhere(function ($q) use ($gleichMitgezeichnet): void {
+                        $q->where('state', 'scheduled')
+                            ->when(
+                                $gleichMitgezeichnet !== [],
+                                /*
+                                 * Der Null-Fall ausdruecklich: „NULL NOT IN
+                                 * (...)" ist in SQL nicht wahr, sondern
+                                 * unbekannt -- ein eingeplanter Befund ohne
+                                 * Karte waere sonst still aus dem Tor
+                                 * gefallen, und das waere ein Loch.
+                                 */
+                                fn ($q) => $q->where(fn ($q) => $q
+                                    ->whereNull('resolving_task_card_id')
+                                    ->orWhereNotIn('resolving_task_card_id', $gleichMitgezeichnet)),
+                            );
+                    })
 
                     /*
                      * A deferral that has run out has run out. The airworthiness

@@ -6,6 +6,9 @@ namespace App\Core\Settings;
 
 use App\Core\Mail\Postman;
 use App\Core\Models\Setting;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 use SensitiveParameter;
@@ -38,12 +41,37 @@ use Throwable;
  * -- das Ergebnis ist dann genau das Verhalten von vorher, nämlich Umgebung
  * und Vorgabe. Ein Startfehler an dieser Stelle würde eine frische Installation
  * unbedienbar machen, bevor sie eingerichtet ist.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * GELESEN WIRD OHNE ELOQUENT, und das ist kein Geschmack.
+ *
+ * Die Werte werden gebraucht, BEVOR Laravel Eloquent mit der Datenbank
+ * verbunden hat: Filament baut sein Panel im register() seines Providers, und
+ * die Verbindung setzt der Datenbank-Provider erst in seinem boot(). Ein
+ * Model-Zugriff dort endet in „Call to a member function connection() on null"
+ * -- gefangen, verschluckt, und die Einstellungen wirkten still nicht.
+ *
+ * Der Query Builder kann das, weil er den Verbindungsverwalter direkt nimmt.
+ * Preis ist das Entschlüsseln von Hand statt über den Cast des Models; es steht
+ * genau einmal weiter unten und ist derselbe Algorithmus.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 final class Settings
 {
     /** @var array<string, string|null>|null */
     private ?array $gespeichert = null;
+
+    /**
+     * Das Lesen ist in DIESER Anfrage gescheitert.
+     *
+     * Getrennt von $gespeichert, und darin liegt die ganze Korrektur: Der
+     * Fehlschlag wird gemerkt (sonst kostet er bei jedem der 44 Katalogschlüssel
+     * einen neuen Verbindungsversuch -- ohne gesetzten Verbindungs-Zeitablauf
+     * haengt damit eine frische Installation ohne Datenbank), aber er ist eben
+     * NICHT dasselbe wie „es gibt keine Einstellungen". Frueher war beides
+     * derselbe leere Array, und genau daran ist der Vereinsname gestorben.
+     */
+    private bool $fehlgeschlagen = false;
 
     /**
      * Der wirksame Wert eines Schlüssels.
@@ -194,25 +222,98 @@ final class Settings
             return $this->gespeichert;
         }
 
+        if ($this->fehlgeschlagen) {
+            return [];
+        }
+
         try {
             if (! Schema::hasTable('settings')) {
+                /*
+                 * Der Normalfall vor der ersten Migration -- und das EINZIGE
+                 * Leer, das gemerkt werden darf: Es ist eine Antwort, kein
+                 * Fehlschlag.
+                 */
                 return $this->gespeichert = [];
             }
 
-            $this->gespeichert = Setting::query()
-                ->get(['key', 'value', 'is_secret'])
-                ->mapWithKeys(static fn (Setting $s): array => [$s->key => $s->value])
-                ->all();
-        } catch (Throwable) {
+            $werte = [];
+
+            foreach (DB::table('settings')->get(['key', 'value']) as $zeile) {
+                $werte[$zeile->key] = $this->entschluesselt($zeile->value);
+            }
+
+            return $this->gespeichert = $werte;
+        } catch (Throwable $e) {
             /*
-             * Keine Datenbank, keine Tabelle, kaputter APP_KEY -- in allen drei
-             * Fällen ist die richtige Antwort dieselbe: so tun, als gäbe es
-             * keine gespeicherten Werte. Die Anwendung läuft dann mit Umgebung
-             * und Vorgabe weiter, statt beim Start zu sterben.
+             * ─────────────────────────────────────────────────────────────────
+             * KEINE DATENBANK, KAPUTTER APP_KEY -- weiterlaufen mit Umgebung und
+             * Vorgabe, statt beim Start zu sterben. Ein Fehler hier machte eine
+             * frische Installation unbedienbar, bevor sie eingerichtet ist.
+             *
+             * GEMERKT WIRD ER, ABER NICHT ALS ERGEBNIS. Das ist die Korrektur,
+             * und sie kostete einen Feldtest: Frueher landete der Fehlschlag im
+             * selben leeren Array wie die Antwort „es gibt nichts". Wer danach
+             * fragte, bekam „keine Einstellungen" -- fuer den Rest der Anfrage,
+             * ohne Fehler, ohne Zeile im Protokoll. Der Vereinsname stand
+             * deshalb auf der Vorgabe, obwohl er in der Tabelle stand.
+             *
+             * Und deshalb steht er jetzt im Protokoll: „nicht lesbar" ist nie
+             * normal, sobald die Tabelle da ist. Genau einmal je Anfrage --
+             * applyToConfig fragt 44 Schluessel einzeln ab, und 44 gleiche
+             * Meldungen verstecken die eine, die zaehlt.
+             *
+             * UEBER DEN LOGGER STATT UEBER report(): report() sammelt Kontext
+             * ein, fragt dabei den angemeldeten Benutzer ab -- also die
+             * Datenbank, die hier gerade nicht antwortet -- und kann selbst
+             * werfen. Ein Fehler beim Melden eines Fehlers darf den Start nicht
+             * kosten; genau davor schuetzt dieser catch ja.
+             * ─────────────────────────────────────────────────────────────────
              */
-            $this->gespeichert = [];
+            $this->fehlgeschlagen = true;
+
+            try {
+                Log::warning('Die Einstellungen sind nicht lesbar; es gelten Umgebung und Vorgabe.', [
+                    'exception' => $e::class,
+                    'message' => $e->getMessage(),
+                ]);
+            } catch (Throwable) {
+                // Kein Protokoll erreichbar. Dann eben ohne -- die Anwendung
+                // laeuft weiter, und das ist hier das Wichtigere.
+            }
+
+            return [];
+        }
+    }
+
+    /**
+     * Der Wert aus der Zeile -- entschlüsselt wie der Cast des Models.
+     *
+     * EINZELN gefangen: Ein unlesbarer Wert (nachträglich von Hand eingetragen,
+     * mit altem Schlüssel verschlüsselt) darf nicht alle anderen Einstellungen
+     * mitnehmen. Er verhält sich dann wie „nicht gesetzt", also greifen
+     * Umgebung und Vorgabe.
+     */
+    private function entschluesselt(?string $roh): ?string
+    {
+        if ($roh === null || $roh === '') {
+            return null;
         }
 
-        return $this->gespeichert;
+        try {
+            return Crypt::decryptString($roh);
+        } catch (Throwable $e) {
+            try {
+                // Ohne den Wert: Was hier nicht aufgeht, ist immer noch ein
+                // Geheimnis. Die Meldung des Entschluesselers nennt ihn nicht.
+                Log::warning('Eine Einstellung ist nicht entschluesselbar.', [
+                    'exception' => $e::class,
+                    'message' => $e->getMessage(),
+                ]);
+            } catch (Throwable) {
+                // siehe oben
+            }
+
+            return null;
+        }
     }
 }

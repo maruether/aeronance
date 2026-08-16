@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Filament\Pages;
 
 use App\Core\Access\CorePermissions;
+use App\Core\Documents\ClamAvScanner;
 use App\Core\Mail\Postman;
 use App\Core\Mail\TestMail;
 use App\Core\Settings\SettingDefinition;
@@ -209,6 +210,82 @@ class SettingsPage extends Page implements HasForms
     }
 
     /**
+     * Antwortet der Virenscanner? -- geprüft mit dem, was gerade im Formular
+     * steht, nicht mit dem, was gespeichert ist.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Derselbe Gedanke wie beim Testversand: Eine Einstellung, deren Wirkung
+     * man erst beim nächsten Upload bemerkt, wird falsch eingetragen und bleibt
+     * es. Beim Scanner ist das besonders unangenehm, weil „eingeschaltet" von
+     * außen genauso aussieht wie „eingeschaltet und erreichbar" — und mit
+     * fail_closed steht danach der erste Upload.
+     *
+     * Vor dem Speichern geprüft, weil genau dann die Frage aufkommt: Man tippt
+     * einen Socket-Pfad ein und will wissen, ob er stimmt.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    public function testScannerAction(): Action
+    {
+        return Action::make('testScanner')
+            ->label(__('settings.scanner_test.action'))
+            ->icon('heroicon-o-shield-check')
+            ->color('gray')
+            ->action(function (): void {
+                abort_unless(
+                    auth()->user()?->can(CorePermissions::SETTINGS_MANAGE) ?? false,
+                    403,
+                );
+
+                $eingaben = $this->form->getState();
+                $wert = fn (string $key): mixed => $eingaben[$this->fieldName($key)] ?? null;
+
+                if ($wert('virus_scanner') !== 'clamav') {
+                    Notification::make()
+                        ->warning()
+                        ->title(__('settings.scanner_test.switched_off'))
+                        ->send();
+
+                    return;
+                }
+
+                $ueberNetzwerk = $wert('clamav.transport') === 'tcp';
+
+                $scanner = new ClamAvScanner(
+                    socket: (string) $wert('clamav.socket'),
+                    host: $ueberNetzwerk ? (string) $wert('clamav.host') : null,
+                    port: (int) ($wert('clamav.port') ?: 3310),
+                    timeout: (int) config('aeronance.documents.clamav.timeout', 30),
+                    failClosed: true,
+                );
+
+                try {
+                    $antwort = $scanner->ping();
+                } catch (Throwable $e) {
+                    /*
+                     * Die Begruendung wird DURCHGEREICHT, samt Adresse. „Nicht
+                     * erreichbar" allein zwingt zum Raten -- und der haeufigste
+                     * Fehler ist ein Socket, der nicht in den Container gereicht
+                     * wurde, was man genau an der Adresse erkennt.
+                     */
+                    Notification::make()
+                        ->danger()
+                        ->title(__('settings.scanner_test.failed', ['ziel' => $scanner->endpoint()]))
+                        ->body($e->getMessage())
+                        ->persistent()
+                        ->send();
+
+                    return;
+                }
+
+                Notification::make()
+                    ->success()
+                    ->title(__('settings.scanner_test.reachable'))
+                    ->body($antwort)
+                    ->send();
+            });
+    }
+
+    /**
      * Die Mail-Einstellungen aus dem Formular in die Konfiguration legen.
      *
      * Nur für diesen Aufruf. Der Katalog kennt die Zuordnung Schlüssel →
@@ -337,6 +414,11 @@ class SettingsPage extends Page implements HasForms
              */
             if ($gruppe === SettingsCatalogue::GROUP_MAIL) {
                 $abschnitt = $abschnitt->footerActions([$this->testMailAction()]);
+            }
+
+            // Und aus demselben Grund die Scannerpruefung im Betriebsabschnitt.
+            if ($gruppe === SettingsCatalogue::GROUP_OPERATION) {
+                $abschnitt = $abschnitt->footerActions([$this->testScannerAction()]);
             }
 
             $abschnitte[] = $abschnitt;

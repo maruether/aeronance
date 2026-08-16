@@ -7,10 +7,14 @@ namespace Tests\Feature\Core;
 use App\Core\Settings\Settings;
 use App\Core\Settings\SettingsCatalogue;
 use App\Core\Setup\SetupWizard;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Env;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -126,6 +130,101 @@ final class SettingsTest extends TestCase
         $this->assertSame('offsite_sftp', config('aeronance.backup.offsite.disk'));
     }
 
+    /**
+     * ─────────────────────────────────────────────────────────────────────────
+     * LESBAR, BEVOR ELOQUENT EINE VERBINDUNG HAT.
+     *
+     * Der Feldtest sagte nur: „der namen in der Kopfzeile aktualisiert sich
+     * nicht bei änderung in den einstellungen". Dahinter steckte das hier: Die
+     * Einstellungen werden im register() der Provider gebraucht -- Filament
+     * baut dort sein Panel -- und in dieser Phase ist Eloquent noch nicht mit
+     * der Datenbank verbunden. Jeder Model-Zugriff endete in „Call to a member
+     * function connection() on null", wurde gefangen, und die Einstellungen
+     * galten still nicht.
+     *
+     * Dieser Test stellt genau diesen Zustand her. Er ist der Grund, warum
+     * unten der Query Builder steht und nicht das Model -- ohne ihn baut das
+     * jemand in einem Jahr aus Ordnungsliebe zurück.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    #[Test]
+    public function the_values_are_readable_before_eloquent_is_connected(): void
+    {
+        $this->settings()->set('organisation.name', 'Akaflieg Freiburg');
+
+        $resolver = Model::getConnectionResolver();
+        Model::unsetConnectionResolver();
+
+        try {
+            $frisch = new Settings;
+
+            $this->assertSame('Akaflieg Freiburg', $frisch->get('organisation.name'));
+
+            $frisch->applyToConfig();
+            $this->assertSame('Akaflieg Freiburg', config('aeronance.organisation.name'));
+        } finally {
+            Model::setConnectionResolver($resolver);
+        }
+    }
+
+    /**
+     * ─────────────────────────────────────────────────────────────────────────
+     * WENN DIE DATENBANK WEG IST: einmal versuchen, einmal melden, weiterlaufen.
+     *
+     * Drei Anforderungen in einem Test, weil sie zusammengehören:
+     *
+     *  - Die Anwendung stirbt nicht, sondern fällt auf Umgebung und Vorgabe
+     *    zurück. Sonst wäre eine frische Installation unbedienbar, bevor sie
+     *    eingerichtet ist.
+     *  - Es steht im Protokoll. „Keine Einstellungen lesbar" ist nie normal,
+     *    und vorher stand darüber nirgends etwas.
+     *  - Es wird EINMAL versucht, nicht 44-mal. applyToConfig fragt jeden
+     *    Katalogschlüssel einzeln ab; ohne dieses Merken kostet ein
+     *    unerreichbarer Datenbankhost 44 Verbindungsversuche nacheinander --
+     *    also genau in dem Zustand, für den der Rückfall gebaut ist.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    #[Test]
+    public function an_unreachable_database_is_tried_once_reported_once_and_survived(): void
+    {
+        Log::spy();
+
+        /*
+         * DIE UMGEBUNG DIESER MASCHINE DARF NICHT MITENTSCHEIDEN.
+         *
+         * Die Rangfolge ist Datenbank → Umgebung → Vorgabe. Faellt das Lesen
+         * aus, greift also zuerst die Umgebung -- und die .env.example, gegen
+         * die die CI laeuft, setzt ORGANISATION_NAME. Ohne dieses Loeschen
+         * prueft der Test, was auf dem ausfuehrenden Rechner in der .env steht:
+         * lokal gruen, in der CI rot. Genau davor warnt der Kopf dieser Datei
+         * schon einmal, und ich bin trotzdem hineingelaufen.
+         */
+        Env::getRepository()->clear('ORGANISATION_NAME');
+
+        $frisch = new Settings;
+        $versuche = 0;
+
+        /*
+         * Am ERSTEN Anfassen der Datenbank gemessen, nicht am Query Builder:
+         * Ist der Host unerreichbar, scheitert schon die Frage, ob es die
+         * Tabelle gibt -- und genau die kostet den Verbindungsversuch.
+         */
+        Schema::shouldReceive('hasTable')->andReturnUsing(function () use (&$versuche): never {
+            $versuche++;
+
+            throw new RuntimeException('Verbindung weg');
+        });
+
+        // Mehrere Abfragen, wie sie applyToConfig nacheinander stellt.
+        $this->assertSame('Aeronance', $frisch->get('organisation.name'));
+        $this->assertSame(28, $frisch->get('retention.pseudonymise_former_members.days'));
+        $this->assertSame('Aeronance', $frisch->get('organisation.name'));
+
+        $this->assertSame(1, $versuche, 'Die Datenbank darf nur einmal je Anfrage befragt werden.');
+
+        Log::shouldHaveReceived('warning')->once();
+    }
+
     #[Test]
     public function secrets_are_encrypted_at_rest(): void
     {
@@ -161,12 +260,27 @@ final class SettingsTest extends TestCase
          * würde gespeichert, in der Oberfläche erscheinen -- und nirgends
          * wirken. Genau die stille Sorte, die dieses Konzept abschaffen soll.
          */
+        /*
+         * ─────────────────────────────────────────────────────────────────────
+         * DER GANZE PFAD, nicht nur sein erstes Glied -- und das ist die
+         * Korrektur an diesem Test selbst.
+         *
+         * Vorher stand hier `explode('.', $pfad)[0]`, geprüft wurde also nur,
+         * ob es eine Datei config/aeronance.php gibt. Vier Einstellungen zeigten
+         * jahrelang auf „aeronance.clamav.*", gelesen wurde „aeronance.
+         * documents.clamav.*" -- der Test war grün, und der Virenscanner ließ
+         * sich einschalten, ohne dass er ansprang.
+         *
+         * has() statt Vergleich mit null: Ein Pfad darf ausdrücklich null sein
+         * (clamav.host ist es ab Werk). „Nicht gesetzt" und „nicht vorhanden"
+         * sind zwei verschiedene Dinge, und nur das zweite ist der Tippfehler,
+         * den dieser Test sucht.
+         * ─────────────────────────────────────────────────────────────────────
+         */
         $unbekannt = [];
 
         foreach (SettingsCatalogue::all() as $definition) {
-            $wurzel = explode('.', $definition->configPath)[0];
-
-            if (config($wurzel) === null) {
+            if (! config()->has($definition->configPath)) {
                 $unbekannt[] = $definition->configPath;
             }
         }

@@ -80,11 +80,10 @@ enum WeighingKind: string
         ];
     }
 
-    /** @return list<string> */
-    public function defaultSupports(): array
-    {
-        return $this === self::Glider
-            ? ['Auflage vorn G1', 'Auflage hinten G2']
-            : ['Auflage links G1l', 'Auflage rechts G1r', 'Auflage vorn/hinten G2'];
-    }
+    /*
+     * defaultSupports() stand hier und ist nach Undercarriage gewandert: Wie
+     * viele Waegepunkte es gibt, haengt am Fahrwerk und nicht an der Blattart.
+     * Beim einraedrigen Segelflugzeug stimmte die alte Zuordnung zufaellig,
+     * beim Motorsegler mit Bugrad nicht.
+     */
 }

@@ -330,11 +330,26 @@ final class WorkOrderInfolist
     private static function signatures(TaskCard $card): string
     {
         if ($card->isCertified()) {
-            return sprintf(
-                '%s → %s',
-                $card->completed_by_name ?? '?',
-                $card->certified_by_name ?? '?',
-            );
+            /*
+             * ─────────────────────────────────────────────────────────────────
+             * WESSEN UNTERSCHRIFT DA STEHT -- und ob sie geprueft wurde.
+             *
+             * Seit die Freigabe eines vereinsfremden Pruefers die Karten
+             * mitzeichnet, steht hier auch ein Name, hinter dem KEINE geprüfte
+             * Lizenz liegt, sondern eine abgeschriebene Nummer. Die
+             * Bescheinigung sagt das ausdruecklich; die Karte speicherte es
+             * zwar, zeigte es aber nicht -- sie sah aus wie jede andere. Wer sie
+             * in drei Jahren liest, saehe eine geprüfte Unterschrift, die keine
+             * war.
+             * ─────────────────────────────────────────────────────────────────
+             */
+            $unterschrift = $card->certified_by_name ?? '?';
+
+            if ($card->qualification_type === ReleaseToService::CREDENTIAL_EXTERNAL) {
+                $unterschrift .= ' ('.__('qualifications.type.external_licence').')';
+            }
+
+            return sprintf('%s → %s', $card->completed_by_name ?? '?', $unterschrift);
         }
 
         if ($card->awaitsCertification()) {
