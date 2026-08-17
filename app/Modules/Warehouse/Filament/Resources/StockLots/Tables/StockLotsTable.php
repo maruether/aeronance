@@ -235,12 +235,28 @@ final class StockLotsTable
                         ->whereNotNull('expires_at')
                         ->whereDate('expires_at', '<', now()->toDateString())),
 
+                /*
+                 * ─────────────────────────────────────────────────────────────
+                 * „NUR MIT BESTAND" HEISST SUMME > 0, NICHT „HAT BUCHUNGEN".
+                 *
+                 * Feldtest: „unter lose funktioniert der filter ‚nur mit
+                 * bestand' nicht. es werden lose mit menge 0 angezeigt."
+                 *
+                 * Und genau das stand hier: eine Prüfung auf mindestens EINE
+                 * Buchung. Ein Los, das eingebucht und wieder vollständig
+                 * entnommen wurde, hat zwei Buchungen und nichts mehr im
+                 * Regal -- es erfüllte die Bedingung also am zuverlässigsten,
+                 * sobald es leer war.
+                 *
+                 * Die Regel steht im Modell (StockLot::scopeInStock) und nicht
+                 * hier: Sie ist eine Aussage über den Bestand, keine über diese
+                 * Liste, und wird anderswo wieder gebraucht.
+                 * ─────────────────────────────────────────────────────────────
+                 */
                 Filter::make('in_stock')
                     ->label(__('warehouse.lot.filter.in_stock'))
                     ->default()
-                    ->query(fn (Builder $query): Builder => $query->whereHas(
-                        'movements', fn ($q) => $q, '>=', 1,
-                    )),
+                    ->query(fn (Builder $query): Builder => $query->inStock()),
             ])
             ->recordUrl(fn (StockLot $record): string => StockLotResource::getUrl('view', ['record' => $record]))
             ->recordActions([

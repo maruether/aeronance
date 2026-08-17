@@ -48,6 +48,8 @@ final class Weighing extends Model
         'valid_until',
         'datum_reference',
         'reference_line',
+        'datum_plane',
+        'fuselage_reference_plane',
         'front_support_arm_mm',
         'support_distance_mm',
         'empty_mass_kg',

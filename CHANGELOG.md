@@ -31,6 +31,80 @@ erscheinen.
   Demomodus abschalten muss (Mails, Updates, echte Herstellerabrufe), ist
   Teil des Zuschnitts.
 
+## [0.1.10] — 2026-08-16
+
+Das Wägeblatt ist ein Blatt geworden — in der Eingabe wie im Ausdruck.
+**Beim Update beachten:** `deploy/update.sh` bzw. `deploy/docker/update.sh`
+genügt; eine Migration läuft mit und ergänzt die Felder des
+Motorflugblatts. Wer Wägungen führt, findet die Eingabe an derselben
+Stelle, aber in neuer Gestalt.
+
+### Geändert
+
+- **Das Wägeblatt wird als Blatt ausgefüllt, nicht als Kachelsammlung.**
+  Feldtest, mehrfach: „Ich will das BWLV Formular quasi 1:1 haben zum
+  digital ausfüllen", „der jetztige istzustand ist für den täglichen
+  betrieb nicht brauchbar", und schließlich: „Wichtig ist das ich sowohl
+  in der eingabe als auch im druck ein solches formular sehen will, mit
+  den tabellen etc."
+
+  Die Eingabemaske ist deshalb kein Formularschema mehr. Ein solches
+  rendert jeden Abschnitt als eigene Karte, und selbst mit Tabellenzeilen
+  *innerhalb* der Karten bleibt die Seite eine Spalte aus Kacheln — das
+  Kachelraster **ist** das Formularsystem, daran ändert keine
+  Feineinstellung etwas. Stattdessen rendert die Seite jetzt den
+  Blattkörper direkt: die Tabellen des Papierblatts, die Zellen als
+  rahmenlose Eingabefelder, sichtbar erst beim Hineinklicken.
+
+  **Es ist dieselbe Vorlage wie im Ausdruck.** Bildschirm und Papier
+  können damit nicht auseinanderlaufen — nicht, weil jemand aufpasst,
+  sondern weil es eine Datei ist.
+
+  Am Bildschirm folgt das Blatt dem Dunkelmodus, im Druck nicht: Ein
+  weißes A4 mitten in einer dunklen Seite blendet genau abends in der
+  Werkstatt; auf Papier ist es Papier.
+
+- **Das Motorflugblatt hat seinen eigenen Aufbau bekommen.**
+  Kennblattdaten und Zeichnung nebeneinander, darunter Wägung, Abzüge und
+  Ergebnis in *einer* durchlaufenden Rechnung mit Momentenspalte, Summe I
+  und Summe II. Dafür kennt das Datenmodell jetzt **Bezugsebene** und
+  **Rumpfbezugsebene** — die Bezugsebene ist nicht die Bezugslinie: B.L.
+  ist waagerecht und sagt, wie das Flugzeug beim Wiegen steht, B.E. ist
+  senkrecht und der Nullpunkt der Hebelarme — sowie die **zugelassenen
+  Konfigurationen** (einsitzig, zweisitzig, …) mit je eigener Zuladung,
+  Höchstmasse und Schwerpunktbereich.
+
+- **Eingetipptes wird deutsch gelesen.** „62,4" wird 62,4 und nicht 62.
+  Ein Blatt, das stillschweigend Nachkommastellen verliert, wäre die
+  schlimmste Sorte Fehler.
+
+- **Der Losaufkleber lässt sich direkt beim Einbuchen drucken.** Bisher
+  führte der Weg über den Bestand: einbuchen, Liste öffnen, das eben
+  angelegte Los wiederfinden, drucken. Jetzt steht der Knopf in der
+  Erfolgsmeldung — in einem neuen Tab, damit die Einbuchungsmaske stehen
+  bleibt. Wer eine Lieferung annimmt, bucht selten genau ein Los ein.
+  Sammelbestand bekommt keinen angeboten: Schrauben tragen keine
+  Losnummer.
+
+### Behoben
+
+- **Der Filter „nur mit Bestand" in der Loseliste zeigte leere Lose.** Er
+  prüfte, ob ein Los *überhaupt Buchungen* hat — und ein eingebuchtes und
+  wieder vollständig entnommenes Los hat deren zwei. Der Filter zeigte
+  damit am zuverlässigsten genau das, was er ausblenden sollte. Jetzt
+  entscheidet die Summe. Ohne Filter bleibt das leere Los sichtbar: Es ist
+  nicht verschwunden, und seine Lebenslaufakte bleibt lesbar.
+
+- **Der Rendering-Job der CI läuft nur noch bei Tags und Merge Requests.**
+  Er ist der längste Job der Pipeline; bei einem Zwischenstand auf master
+  will man wissen, ob die Suite hält, nicht ob jede Seite rendert. Wer ihn
+  zwischendurch braucht, startet ihn von Hand.
+
+- **Der Test-Job hat dasselbe Zeitlimit wie der Rendering-Job.** Die
+  GitLab-Vorgabe von einer Stunde liegt zu nah an der tatsächlichen
+  Laufzeit; ein abgeschnittener Lauf meldet „fehlgeschlagen" und sieht aus
+  wie ein Testfehler.
+
 ## [0.1.9] — 2026-08-15
 
 Die Fassung, in der das Wägeblatt ein Blatt geworden ist. Dazu zwei Funde

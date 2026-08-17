@@ -536,6 +536,12 @@ return [
         'datum' => 'Bezugspunkt B.P.',
         'reference_line' => 'Bezugslinie horizontal B.L.',
         'reference_plane' => 'Bezugsebene B.E.',
+        'fuselage_plane' => 'Rumpfbezugsebene RBE',
+        'empty_cg_from_plane' => 'Leermassen-Schwerpunkt von B.E. [mm]',
+        'airworthiness' => 'Lufttüchtigkeit',
+        'max_flight_mass' => 'Höchstzul. Fluggewicht',
+        'add_configuration' => 'Weitere Konfiguration hinzufügen',
+        'support' => 'Auflage',
 
         'weighing' => 'WÄGUNG',
         'empty_masses' => 'Leermassen',
@@ -596,6 +602,7 @@ return [
 
         'sign' => [
             'place_date' => 'Ort und Datum',
+            'printed_name' => 'Name in Druckbuchstaben',
             'stamp' => 'Stempel',
             'certifying_staff' => 'Freigabeberechtigter',
         ],
@@ -614,6 +621,12 @@ return [
 
     'weighing' => [
         'add_support' => 'Weitere Auflage hinzufügen',
+        'print' => 'Drucken',
+        'locked' => 'Das Blatt ist abgezeichnet und damit eingefroren.',
+        'save_failed' => 'Das Blatt konnte nicht gespeichert werden.',
+        'signed_off_note' => 'Dieses Blatt ist abgezeichnet. Es lässt sich '
+            .'ansehen und drucken, aber nicht mehr ändern — eine Korrektur ist '
+            .'eine neue Wägung.',
         'add_component' => 'Weitere Zeile hinzufügen',
         'add_deduction' => 'Weiteren Behälter hinzufügen',
         'sketch_pending' => 'Die Skizze zeichnet sich, sobald die Auflagen mit '

@@ -222,15 +222,19 @@ final class WeighingTest extends TestCase
             ->assertSuccessful()
             ->assertSee('Massenübersicht', false)
             ->assertSee('142,0 mm hinter B.P.', false)
+            // Die Tabellen des Blattes, nicht irgendeine Auflistung.
+            ->assertSee(__('fleet.sheet.weighing'), false)
+            ->assertSee(__('fleet.sheet.limits'), false)
+            ->assertSee(__('fleet.sheet.cg_determination'), false)
             /*
-             * Die bebilderte Erklaerung (Feldtest: klassisches Waegeformular):
-             * Skizze und VORGERECHNETE Formel stehen auf dem Blatt -- mit den
-             * Zahlen dieser Waegung und dem richtigen Vorzeichen (a = -250:
-             * Auflage VOR dem Bezugspunkt, also "−").
+             * Die bebilderte Erklaerung. Sie ist seit 0.1.10 die Zeichnung des
+             * Blattes selbst und damit SYMBOLISCH -- so, wie sie auf Papier
+             * steht. Vorher stand hier eine vorgerechnete Formel mit den Zahlen
+             * dieser Waegung; die Zahl steht jetzt im Ergebnisbalken darueber,
+             * und das Bild erklaert nur noch die Konvention.
              */
-            ->assertSee('<svg', false)
-            ->assertSee('−&nbsp;250', false)
-            ->assertSee(__('fleet.weighing.in_range'), false);
+            ->assertSee('sheet/lever.png', false)
+            ->assertSee(__('fleet.sheet.confirm.cg_in_range'), false);
     }
 
     #[Test]
@@ -252,7 +256,7 @@ final class WeighingTest extends TestCase
         $this->actingAs($user->fresh())
             ->get(route('fleet.weighing', ['weighing' => $weighing]))
             ->assertSuccessful()
-            ->assertDontSee(__('fleet.weighing.in_range'), false)
+            ->assertDontSee(__('fleet.sheet.confirm.cg_in_range'), false)
             ->assertSee('außerhalb', false);
     }
 

@@ -59,8 +59,11 @@ final class WeighingSketchScreenTest extends TestCase
         // es nur in der Zeichnung -- "B.P." steht auch in Feldbeschriftungen.
         Livewire::test(EditWeighing::class, ['record' => $weighing->getKey()])
             ->assertOk()
-            ->assertSee('stroke-dasharray', escape: false)
-            ->assertSee('Hebelverfahren:', escape: false);
+            // Seit 0.1.10 ist die Zeichnung die des Blattes selbst -- ein
+            // Bild, kein datengetriebenes SVG. Geprueft wird deshalb, dass die
+            // RICHTIGE erscheint.
+            ->assertSee('sheet/lever.png', escape: false)
+            ->assertDontSee('sheet/moments.png', escape: false);
     }
 
     #[Test]
@@ -86,24 +89,27 @@ final class WeighingSketchScreenTest extends TestCase
 
         Livewire::test(EditWeighing::class, ['record' => $weighing->getKey()])
             ->assertOk()
-            ->assertSee('stroke-dasharray', escape: false)
-            ->assertSee('Momentenverfahren:', escape: false)
-            ->assertDontSee('Hebelverfahren:', escape: false);
+            ->assertSee('sheet/moments.png', escape: false)
+            ->assertDontSee('sheet/lever.png', escape: false);
     }
 
     #[Test]
-    public function without_supports_the_screen_says_what_is_missing(): void
+    public function the_sheet_shows_its_drawing_even_before_anything_is_weighed(): void
     {
-        // Eine leere Stelle sieht aus wie ein Fehler -- und wurde genau so
-        // gemeldet. Also sagt sie, worauf sie wartet.
         $weighing = $this->gliderWeighing();
 
         $this->actingAs($this->manager());
 
         Livewire::test(EditWeighing::class, ['record' => $weighing->getKey()])
             ->assertOk()
-            ->assertDontSee('stroke-dasharray', escape: false)
-            ->assertSee(__('fleet.weighing.sketch_pending'), escape: false);
+            /*
+             * Die Zeichnung erklaert die KONVENTION, nicht diese eine Waegung
+             * -- so wie auf Papier. Sie steht deshalb von Anfang an da, auch
+             * wenn noch keine Zahl eingetragen ist. Vorher war sie
+             * datengetrieben und blieb bis zur ersten Auflage leer, was wie ein
+             * Fehler aussah.
+             */
+            ->assertSee('sheet/lever.png', escape: false);
     }
 
     #[Test]

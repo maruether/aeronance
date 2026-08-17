@@ -264,6 +264,31 @@ final class ReceiveStockPage extends Page
         if ($lot !== null) {
             $notification->body(__('warehouse.receive.notification.lot', ['lot' => $lot->lot_number]));
 
+            /*
+             * ─────────────────────────────────────────────────────────────────
+             * DAS ETIKETT DIREKT HIER, nicht erst über den Bestand.
+             *
+             * Feldtest: „um losaufkleber zu drucken muss ich erst einbuchen und
+             * dann im bestand den druck auswählen. das sollte direkt beim
+             * einbuchen gehen."
+             *
+             * Das ist die Reihenfolge, in der es tatsächlich passiert: Die Ware
+             * liegt auf dem Tisch, das Los ist gerade entstanden, der Aufkleber
+             * gehört jetzt darauf -- nicht nach einem Umweg über eine Liste, in
+             * der man das eben angelegte Los erst wiederfinden muss.
+             *
+             * In einem neuen Tab, damit die Einbuchungsmaske stehen bleibt: Wer
+             * eine Lieferung annimmt, bucht selten genau ein Los ein.
+             * ─────────────────────────────────────────────────────────────────
+             */
+            $notification->actions([
+                Action::make('etikett')
+                    ->label(__('warehouse.receive.notification.print_label'))
+                    ->icon('heroicon-o-printer')
+                    ->url(route('warehouse.label.print', ['lots' => $lot->getKey()]))
+                    ->openUrlInNewTab(),
+            ]);
+
             // Goods without the certificate they need land in quarantine rather
             // than on the usable shelf. Say so plainly, because it is not what
             // the person booking them in expected.

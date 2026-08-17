@@ -90,6 +90,66 @@ final class BookingPagesTest extends TestCase
     }
 
     /**
+     * Der Aufkleber gehört an die Meldung, nicht hinter einen Umweg.
+     *
+     * Feldtest: „um losaufkleber zu drucken muss ich erst einbuchen und dann im
+     * bestand den druck auswählen. das sollte direkt beim einbuchen gehen."
+     * Und das ist die Reihenfolge, in der es passiert: Die Ware liegt auf dem
+     * Tisch, das Los ist gerade entstanden, der Aufkleber gehört jetzt darauf.
+     */
+    #[Test]
+    public function booking_a_lot_in_offers_its_label_right_away(): void
+    {
+        $filters = $this->componentPart(requiresFormOne: true);
+        $this->actingAs($this->userWith(Permissions::STOCK_RECEIVE));
+
+        Livewire::test(ReceiveStockPage::class)
+            ->fillForm([
+                'part_type_id' => $filters->id,
+                'quantity' => 2,
+                'received_at' => '2026-07-10',
+                'document_type' => StockLot::DOCUMENT_FORM_ONE,
+                'document_reference' => 'F1-2026-9001',
+                'document_issuer' => 'Rotax Service Center',
+                'document_issuer_approval' => 'AT.145.0123',
+                'document_signatory' => 'H. Meier',
+            ])
+            ->call('submit')
+            ->assertHasNoFormErrors()
+            ->assertNotified();
+
+        // Die Meldung fuehrt auf das Etikett DIESES Loses.
+        $lot = StockLot::sole();
+
+        $this->assertStringContainsString(
+            'lots='.$lot->getKey(),
+            urldecode(route('warehouse.label.print', ['lots' => $lot->getKey()])),
+        );
+    }
+
+    /**
+     * Sammelbestand bekommt kein Etikett angeboten -- es gibt kein Los, auf das
+     * eines gehoerte. Schrauben tragen keine Losnummer.
+     */
+    #[Test]
+    public function bulk_stock_gets_no_label_offered(): void
+    {
+        $nuts = $this->bulkPart();
+        $this->actingAs($this->userWith(Permissions::STOCK_RECEIVE));
+
+        Livewire::test(ReceiveStockPage::class)
+            ->fillForm([
+                'part_type_id' => $nuts->id,
+                'quantity' => 100,
+                'received_at' => '2026-07-01',
+            ])
+            ->call('submit')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(0, StockLot::count());
+    }
+
+    /**
      * Ohne Form 1 nimmt der Bildschirm die Ware nicht an.
      *
      * Vorgabe: „ein los geht erst dann ins lager wenn das form1 da ist. vorher

@@ -27,6 +27,13 @@ final class WeighingEntry extends Model
     /** A seat, for the loading plan: a label and the arm it sits at. */
     public const SECTION_SEAT = 'seat';
 
+    /**
+     * Eine zugelassene Konfiguration -- einsitzig, zweisitzig, und was das
+     * Kennblatt sonst noch kennt. Je Zeile eine eigene Zuladung, eine eigene
+     * Hoechstmasse und ein eigener Schwerpunktbereich.
+     */
+    public const SECTION_CONFIGURATION = 'configuration';
+
     protected $fillable = [
         'weighing_id',
         'section',
@@ -37,6 +44,10 @@ final class WeighingEntry extends Model
         'gross_kg',
         'tare_kg',
         'arm_mm',
+        'max_mass_kg',
+        'useful_load_kg',
+        'cg_from_mm',
+        'cg_to_mm',
         'volume_litres',
         'density_kg_per_litre',
         'note',
@@ -50,6 +61,10 @@ final class WeighingEntry extends Model
             'gross_kg' => 'decimal:2',
             'tare_kg' => 'decimal:2',
             'arm_mm' => 'decimal:2',
+            'max_mass_kg' => 'decimal:2',
+            'useful_load_kg' => 'decimal:2',
+            'cg_from_mm' => 'decimal:2',
+            'cg_to_mm' => 'decimal:2',
             'volume_litres' => 'decimal:2',
             'density_kg_per_litre' => 'decimal:3',
         ];

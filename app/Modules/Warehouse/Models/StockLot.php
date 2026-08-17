@@ -145,6 +145,36 @@ final class StockLot extends Model implements HasMedia
     }
 
     /**
+     * Nur Lose, von denen tatsächlich etwas da ist.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Feldtest: „unter lose funktioniert der filter ‚nur mit bestand' nicht. es
+     * werden lose mit menge 0 angezeigt."
+     *
+     * Der Filter prüfte, ob ein Los ÜBERHAUPT Buchungen hat -- und ein
+     * eingebuchtes und wieder vollständig entnommenes Los hat deren zwei. Er
+     * zeigte damit am zuverlässigsten genau das, was er ausblenden sollte.
+     *
+     * Über eine Unterabfrage MIT eigener Gruppierung, nicht über HAVING auf der
+     * äusseren Abfrage: Dort gibt es kein GROUP BY, und HAVING liest die
+     * Zeilenmenge dann als eine einzige Gruppe. Ausprobiert -- es filtert nicht
+     * so, wie man es liest.
+     *
+     * @param  Builder<self>  $query
+     */
+    public function scopeInStock(Builder $query): void
+    {
+        $query->whereIn(
+            'id',
+            StockMovement::query()
+                ->select('stock_lot_id')
+                ->whereNotNull('stock_lot_id')
+                ->groupBy('stock_lot_id')
+                ->havingRaw('SUM(quantity) > 0'),
+        );
+    }
+
+    /**
      * Preloads the remaining quantity as one aggregate per page.
      *
      * @param  Builder<self>  $query

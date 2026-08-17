@@ -121,12 +121,43 @@ test:
 render:
   stage: test
   <<: *php_setup
+  # ───────────────────────────────────────────────────────────────────────────
+  # NUR BEI TAGS UND MERGE REQUESTS.
+  #
+  # Der Job ist der laengste der Pipeline, und bei einem Zwischenstand auf
+  # master zahlt ihn niemand gern: Dort will man wissen, ob die Suite haelt,
+  # nicht ob jede Filament-Seite rendert. Vor einem Release und in einem Merge
+  # Request will man genau das wissen -- also da, und sonst nicht.
+  #
+  # Wer ihn zwischendurch braucht, startet ihn von Hand oder laesst lokal
+  # `composer test:rendering` laufen.
+  # ───────────────────────────────────────────────────────────────────────────
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - when: manual
+      allow_failure: true
   # Zwei Stunden statt der GitLab-Vorgabe von einer: Der Lauf braucht auf dem
   # Runner knapp 60 Minuten (jeder Test faehrt die Anwendung neu hoch), und
   # das v0.1.0-Release ist exakt an der 1h0m0s-Grenze gestorben -- bei Test
   # 12 von 13, Sekunden vor dem Ziel. Ein Timeout, das den Normalfall toetet,
   # ist keins.
-  timeout: 2h
+  # ───────────────────────────────────────────────────────────────────────────
+  # DREI STUNDEN, und die Zahl ist gemessen, nicht geschaetzt.
+  #
+  # v0.1.9 mit 28 Tests: 107 Minuten -- zwoelf unter der alten Grenze. v0.1.10
+  # brachte vier Tests dazu und lag damit darueber. Der Lauf war NICHT haengen
+  # geblieben (das war die erste Vermutung, und ein `timeout 45m` dagegen hat
+  # ihn nur frueher erschlagen): Die Punkte erscheinen gepuffert, weshalb es
+  # nach viereinhalb Minuten so aussieht, als sei schon alles durch.
+  #
+  # Jeder Test baut das Schema zweimal auf, 42 Sekunden je Aufbau -- die
+  # Laufzeit waechst also mit jedem neuen Test um anderthalb Minuten. Drei
+  # Stunden kaufen Luft, loesen aber nichts: Der eigentliche Weg ist ein
+  # billigerer Schemaaufbau (schema:dump, mit CI-Pruefung gegen einen
+  # veralteten Dump).
+  # ───────────────────────────────────────────────────────────────────────────
+  timeout: 3h
   services:
     - name: mariadb:10.11
       alias: mariadb

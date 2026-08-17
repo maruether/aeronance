@@ -81,15 +81,29 @@ trait RendersModulePages
 
     /**
      * Aufraeumen laeuft ueber tearDown, weil es niemand vergessen kann.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * DIESES ZWEITE migrate:fresh IST DIE HAELFTE DER LAUFZEIT -- UND ES BLEIBT.
+     *
+     * Gemessen: ein Schemaaufbau dauert 42 Sekunden (74 Migrationen), 28 Tests
+     * bauen es zweimal je Test, also 39 der 54 Minuten des Jobs. Der Versuch,
+     * es wegzulassen, lag nahe: Der NAECHSTE Test beginnt sein setUp ohnehin
+     * mit migrate:fresh, raeumt also selbst auf.
+     *
+     * Er tut es zu spaet. Ausprobiert und gemessen: 16 von 30 Tests, reihenweise
+     * „Route [filament.admin.resources.part-types.index] not defined". Denn
+     * aufzuraeumen ist nicht die Datenbank, sondern die gebootete ANWENDUNG --
+     * der naechste Test erbt sie mitsamt Modulen und Routen dieses hier, bevor
+     * sein setUp irgendetwas tun kann.
+     *
+     * Der billigere Weg fuehrt deshalb nicht ueber das Weglassen, sondern
+     * darueber, einen Schemaaufbau billiger zu machen (schema:dump). Das ist
+     * ein eigener Schritt mit eigener Falle: Ein veralteter Dump wirkt still,
+     * also braucht er einen Pruefschritt in der CI.
+     * ─────────────────────────────────────────────────────────────────────────
      */
     protected function tearDown(): void
     {
-        /*
-         * Aufraeumen, weil keine Transaktion es tut. Ohne das faende der
-         * naechste Test die Module eingeschaltet und die Daten dieses Tests
-         * vor -- und faende sie irgendwann als Fehler, der nichts mit ihm zu
-         * tun hat.
-         */
         $this->artisan('migrate:fresh');
 
         parent::tearDown();

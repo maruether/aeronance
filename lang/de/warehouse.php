@@ -214,6 +214,7 @@ return [
         'notification' => [
             'done' => 'Wareneingang gebucht.',
             'lot' => 'Los :lot angelegt.',
+            'print_label' => 'Losaufkleber drucken',
             'refused' => 'Das geht so nicht',
             'quarantined_title' => 'Ware wurde gesperrt',
             'quarantined_body' => 'Ohne den erforderlichen Nachweis lässt sich der '
