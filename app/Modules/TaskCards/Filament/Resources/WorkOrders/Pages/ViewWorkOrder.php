@@ -13,6 +13,7 @@ use App\Modules\TaskCards\Actions\CertifyTaskCard;
 use App\Modules\TaskCards\Actions\InspectCriticalTask;
 use App\Modules\TaskCards\Actions\IssuePartToCard;
 use App\Modules\TaskCards\Actions\IssueRelease;
+use App\Modules\TaskCards\Actions\ManageFindingReport;
 use App\Modules\TaskCards\Actions\ManageWorkOrder;
 use App\Modules\TaskCards\Actions\RecordFinding;
 use App\Modules\TaskCards\Enums\ActivityKind;
@@ -32,6 +33,7 @@ use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -69,6 +71,17 @@ final class ViewWorkOrder extends ViewRecord
                 $this->cancelCardAction(),
                 $this->scheduleFindingAction(),
             ])->label(__('taskcards.card.plural'))->button(),
+
+            /*
+             * Der Befundbericht als eigene Gruppe, nicht bei den Karten: Er ist
+             * der Weg, auf dem Karten in diesem Vorgang ENTSTEHEN, und das
+             * Blatt, das am Ende unterschrieben wird.
+             */
+            ActionGroup::make([
+                $this->findingReportAction(),
+                $this->foreignObjectCheckAction(),
+                $this->printFindingReportAction(),
+            ])->label(__('taskcards.finding_report.title'))->button(),
 
             $this->linkExternalOrderAction(),
             $this->releaseAction(),
@@ -799,6 +812,143 @@ final class ViewWorkOrder extends ViewRecord
 
                 Notification::make()->success()->title(__('taskcards.state.certified'))->send();
             });
+    }
+
+    /**
+     * Den Befundbericht aufnehmen — jeder Punkt wird eine eigene Arbeitskarte.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Vorgabe: „nach dem neu anlegen eines vorgangs sollte ein befundbericht
+     * angelegt werden können innerhalb des vorgangs, wobei jeder punkt zu einer
+     * arbeitskarte wird."
+     *
+     * EINE KARTE JE PUNKT, anders als bei der Sammelaktion an der Befundliste.
+     * Das ist kein Widerspruch, sondern der Unterschied zwischen Arbeiten und
+     * Dokumentieren: Auf dem Blatt trägt jede Zeile ihre eigenen drei
+     * Unterschriften -- erledigt, kontrolliert, geprüft. Eine gemeinsame Karte
+     * hätte für zehn Zeilen eine einzige, und das Blatt könnte nicht mehr
+     * sagen, wer welchen Punkt behoben hat.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    private function findingReportAction(): Action
+    {
+        return Action::make('findingReport')
+            ->label(__('taskcards.finding_report.action.record'))
+            ->icon('heroicon-o-clipboard-document-list')
+            ->visible(fn (WorkOrder $record): bool => $record->isOpen()
+                && (auth()->user()?->can(Permissions::FINDINGS_RECORD) ?? false)
+                && (auth()->user()?->can(Permissions::CARDS_WORK) ?? false))
+            ->modalDescription(__('taskcards.finding_report.help.record'))
+            ->schema([
+                DatePicker::make('found_on')
+                    ->label(__('taskcards.finding.field.found_on'))
+                    ->default(now())
+                    ->required(),
+
+                Repeater::make('points')
+                    ->label(__('taskcards.report.field.points'))
+                    ->schema([
+                        TextInput::make('title')
+                            ->label(__('taskcards.finding.field.title'))
+                            ->required()
+                            ->maxLength(160),
+
+                        Textarea::make('description')
+                            ->label(__('taskcards.finding.field.description'))
+                            ->required()
+                            ->rows(2)
+                            ->helperText(__('taskcards.report.help.description')),
+
+                        /*
+                         * „Kritisch" gehört in diese Maske, obwohl das Papier
+                         * es nicht kennt: Die Markierung ist nur beim Anlegen
+                         * zu setzen (TaskCard::booted), und sie ist es, die die
+                         * Spalte „Kontrolle" des Blatts überhaupt füllt.
+                         * Nachträglich ginge es nicht mehr.
+                         */
+                        Toggle::make('critical')
+                            ->label(__('taskcards.card.field.critical'))
+                            ->helperText(__('taskcards.inspection.help.critical'))
+                            ->live(),
+
+                        TextInput::make('critical_reason')
+                            ->label(__('taskcards.card.field.critical_reason'))
+                            ->maxLength(160)
+                            ->required()
+                            ->visible(fn (Get $get): bool => (bool) $get('critical')),
+                    ])
+                    ->defaultItems(1)
+                    ->addActionLabel(__('taskcards.report.add_point'))
+                    ->columnSpanFull(),
+            ])
+            ->action(function (array $data): void {
+                try {
+                    $cards = app(ManageFindingReport::class)->record(
+                        order: $this->record,
+                        points: array_values($data['points'] ?? []),
+                        user: auth()->user(),
+                        foundOn: $data['found_on'] ?? null,
+                    );
+                } catch (Throwable $e) {
+                    Notification::make()->danger()->title($e->getMessage())->persistent()->send();
+
+                    return;
+                }
+
+                Notification::make()
+                    ->success()
+                    ->title(__('taskcards.finding_report.recorded', ['count' => count($cards)]))
+                    ->body(implode(', ', array_map(
+                        static fn (TaskCard $card): string => $card->number,
+                        $cards,
+                    )))
+                    ->send();
+            });
+    }
+
+    /**
+     * Die vorgedruckte letzte Zeile des Blatts, als eigener Schritt.
+     *
+     * Ein Haken, den das Speichern nebenbei mitsetzt, wäre kein Haken. Ein
+     * vergessener Schraubenschlüssel im Rumpf ist genau die Sorte Fund, für die
+     * diese Zeile auf dem Papier steht.
+     */
+    private function foreignObjectCheckAction(): Action
+    {
+        return Action::make('foreignObjectCheck')
+            ->label(__('taskcards.finding_report.action.foreign_object_check'))
+            ->icon('heroicon-o-magnifying-glass')
+            ->requiresConfirmation()
+            ->modalDescription(__('taskcards.finding_report.help.foreign_object_check'))
+            ->visible(fn (WorkOrder $record): bool => ! $record->isReleased()
+                && ! $record->foreignObjectCheckDone()
+                && (auth()->user()?->can(Permissions::CARDS_WORK) ?? false))
+            ->action(function (): void {
+                try {
+                    app(ManageFindingReport::class)
+                        ->confirmForeignObjectCheck($this->record, auth()->user());
+                } catch (Throwable $e) {
+                    Notification::make()->danger()->title($e->getMessage())->persistent()->send();
+
+                    return;
+                }
+
+                Notification::make()
+                    ->success()
+                    ->title(__('taskcards.finding_report.foreign_object_check_done'))
+                    ->send();
+            });
+    }
+
+    /** Das Blatt zum Unterschreiben und Abheften. */
+    private function printFindingReportAction(): Action
+    {
+        return Action::make('printFindingReport')
+            ->label(__('taskcards.finding_report.action.print'))
+            ->icon('heroicon-o-printer')
+            ->color('gray')
+            ->url(fn (WorkOrder $record): string => route('taskcards.finding-report', ['workOrder' => $record]))
+            ->openUrlInNewTab();
     }
 
     private function recordFindingAction(): Action

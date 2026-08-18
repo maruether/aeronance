@@ -119,6 +119,8 @@ einen gab — nur als Lesehilfe beim Nachschlagen in
 | Vorgang | `work_order` | |
 | Arbeitskarte | `task_card` | |
 | Befund | `finding` | |
+| Befundbericht | `finding_report` | **kein eigener Datensatz** — die Befundsicht eines Vorgangs: Zeilen sind Befunde, die Unterschriftsspalten stehen an der Karte |
+| Fremdkörper-/Werkzeugkontrolle | `foreign_object_check` | die vorgedruckte letzte Zeile des Befundberichts; gilt dem ganzen Vorgang |
 | Freigabe (CRS) | `release_to_service` | unveränderlich nach Erteilung |
 | Instandhaltungsprogramm | `maintenance_programme` | AMP |
 | Luftfahrzeug | `aircraft` | |

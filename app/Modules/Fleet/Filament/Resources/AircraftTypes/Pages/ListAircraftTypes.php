@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Fleet\Filament\Resources\AircraftTypes\Pages;
 
 use App\Modules\Fleet\Actions\AdoptTypeCertificate;
+use App\Modules\Fleet\Enums\SheetVariant;
+use App\Modules\Fleet\Enums\Undercarriage;
 use App\Modules\Fleet\Filament\Resources\AircraftTypes\AircraftTypeResource;
 use App\Modules\Fleet\Models\AircraftType;
 use App\Modules\Fleet\Permissions;
@@ -235,6 +237,32 @@ final class ListAircraftTypes extends ListRecords
             TextInput::make('manufacturer')
                 ->label(__('fleet.type.field.manufacturer'))
                 ->maxLength(160),
+
+            /*
+             * ─────────────────────────────────────────────────────────────────
+             * WAS FÜR EIN WÄGEBLATT DIESES MUSTER BEKOMMT.
+             *
+             * Feldtest: „Noch besser wäre wenn Diese Daten direkt im Muster
+             * hinterlegt werden könnten." Beides ist eine Eigenschaft des
+             * Musters und nicht der einzelnen Wägung -- eine Aquila wird auf
+             * dem Flugzeugblatt gewogen, heute wie in vier Jahren und für jedes
+             * Exemplar gleich.
+             *
+             * Beide dürfen leer bleiben, und leer heisst hier wirklich leer:
+             * Dann fragt die Wägemaske und schlägt vor, was sie erschliessen
+             * kann. Ein Vorgabewert an dieser Stelle würde aus einer Vermutung
+             * eine Angabe machen -- und genau das war der gemeldete Fehler.
+             * ─────────────────────────────────────────────────────────────────
+             */
+            Select::make('sheet_variant')
+                ->label(__('fleet.type.field.sheet_variant'))
+                ->options(SheetVariant::options())
+                ->helperText(__('fleet.type.help.sheet_variant')),
+
+            Select::make('undercarriage')
+                ->label(__('fleet.type.field.undercarriage'))
+                ->options(Undercarriage::options())
+                ->helperText(__('fleet.type.help.undercarriage')),
 
             /*
              * The two halves of one question, kept side by side: who looks after

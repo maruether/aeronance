@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 use RuntimeException;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
@@ -50,6 +51,9 @@ final class WorkOrder extends Model
         'counters_at_close',
         'released_at',
         'external_work_order_id',
+        'foreign_object_check_at',
+        'foreign_object_check_by',
+        'foreign_object_check_by_name',
         'note',
     ];
 
@@ -61,7 +65,55 @@ final class WorkOrder extends Model
             'counters_at_open' => 'array',
             'counters_at_close' => 'array',
             'released_at' => 'datetime',
+            'foreign_object_check_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Der Befundbericht dieses Vorgangs — seine Zeilen.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Vorgabe: „Einem Vorgang sollte immer ein befundbericht zugeordnet sein ...
+     * wobei jeder punkt zu einer arbeitskarte wird."
+     *
+     * Der Bericht ist kein zweiter Datensatz, sondern diese Sicht: jeder Befund,
+     * der in diesem Vorgang behoben wird, und die Karte, die ihn behebt. Damit
+     * hat jeder Vorgang seinen Bericht, ohne dass ihn jemand anlegt und ohne
+     * dass er fehlen kann.
+     *
+     * ZWEI WEGE FÜHREN AUF DAS BLATT, und beide gehören darauf:
+     *   - was hier gemeldet wurde und eine Karte bekommen hat (der Regelfall),
+     *   - was BEIM Arbeiten an einer Karte dieses Vorgangs auffiel -- auch wenn
+     *     es noch keine eigene Karte hat. Ein offener Befund gehört auf den
+     *     Bericht, gerade weil er offen ist.
+     *
+     * Sortiert nach der Befundnummer: Sie ist vergeben worden, als der Befund
+     * aufgeschrieben wurde, und genau das ist die Reihenfolge des Papiers.
+     *
+     * @return Collection<int, Finding>
+     */
+    public function findingReportPoints(): Collection
+    {
+        $cardIds = $this->taskCards()->pluck('id');
+
+        if ($cardIds->isEmpty()) {
+            return new Collection;
+        }
+
+        return Finding::query()
+            ->where(function (Builder $query) use ($cardIds): void {
+                $query->whereIn('resolving_task_card_id', $cardIds)
+                    ->orWhereIn('task_card_id', $cardIds);
+            })
+            ->with('resolvingTaskCard')
+            ->orderBy('number')
+            ->get();
+    }
+
+    /** Ob nach den Arbeiten auf Fremdkörper und Werkzeug kontrolliert wurde. */
+    public function foreignObjectCheckDone(): bool
+    {
+        return $this->foreign_object_check_at !== null;
     }
 
     /**

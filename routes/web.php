@@ -13,6 +13,7 @@ use App\Modules\Fleet\Http\AircraftDocumentFileController;
 use App\Modules\Fleet\Http\AircraftRecordController;
 use App\Modules\Fleet\Http\MaintenanceManualFileController;
 use App\Modules\Part66\Http\ExperienceLogController;
+use App\Modules\TaskCards\Http\FindingReportController;
 use App\Modules\TaskCards\Http\ReleaseController;
 use App\Modules\Warehouse\Http\CountingListController;
 use App\Modules\Warehouse\Http\DocumentController;
@@ -175,6 +176,10 @@ Route::middleware(['web', 'auth'])->group(function (): void {
 
     // Freigabebescheinigung als Papier fuer die Bordunterlagen.
     Route::get('/freigabe/{release}', ReleaseController::class)->name('taskcards.release');
+
+    // Der Befundbericht eines Vorgangs -- das Blatt, das unterschrieben wird.
+    Route::get('/befundbericht/{workOrder}', FindingReportController::class)
+        ->name('taskcards.finding-report');
 
     // LTA/TM-Uebersicht eines Luftfahrzeugs als Papier fuer die Bordunterlagen.
     Route::get('/lta/{aircraft}', OverviewController::class)->name('directives.overview');

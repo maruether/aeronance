@@ -7,6 +7,7 @@ namespace Tests\Feature\Fleet;
 use App\Core\Access\AccessSetup;
 use App\Models\User;
 use App\Modules\Fleet\Actions\PrepareWeighing;
+use App\Modules\Fleet\Enums\SheetVariant;
 use App\Modules\Fleet\Enums\WeighingKind;
 use App\Modules\Fleet\Filament\Resources\Weighings\Pages\EditWeighing;
 use App\Modules\Fleet\Models\Aircraft;
@@ -132,7 +133,17 @@ final class WeighingSketchScreenTest extends TestCase
         );
 
         $motor = Aircraft::create(['registration' => 'D-EABC', 'model' => 'DR 400/180']);
-        $motorblatt = app(PrepareWeighing::class)->from($motor, $this->manager(), WeighingKind::Powered);
+
+        /*
+         * BENANNT ÜBERGEBEN: Die Blattart entscheidet, was hier herauskommt,
+         * und sie steht an dritter Stelle einer Signatur, die weitere
+         * Argumente bekommen hat.
+         */
+        $motorblatt = app(PrepareWeighing::class)->from(
+            aircraft: $motor,
+            user: $this->manager(),
+            variant: SheetVariant::Aeroplane,
+        );
 
         $this->assertCount(3, $motorblatt->entriesOf(WeighingEntry::SECTION_SUPPORT));
     }

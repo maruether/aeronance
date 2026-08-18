@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Fleet\Filament\Resources\Weighings\Pages;
 
+use App\Modules\Fleet\Actions\SwitchSheetVariant;
+use App\Modules\Fleet\Enums\SheetVariant;
+use App\Modules\Fleet\Enums\Undercarriage;
+use App\Modules\Fleet\Filament\Resources\Weighings\Schemas\WeighingForm;
 use App\Modules\Fleet\Filament\Resources\Weighings\WeighingResource;
 use App\Modules\Fleet\Models\Weighing;
 use App\Modules\Fleet\Models\WeighingEntry;
@@ -120,6 +124,70 @@ final class EditWeighing extends Page
                 ->icon('heroicon-o-check')
                 ->visible(fn (): bool => $this->darfSchreiben())
                 ->action('speichern'),
+
+            /*
+             * ─────────────────────────────────────────────────────────────────
+             * DIE BLATTART NACHTRÄGLICH ÄNDERN.
+             *
+             * Feldtest: „wenn ich für die D-EICC eine wägung anlege bekomme ich
+             * als eingabemaske die massenübersicht segelflugzeug." Diese Seite
+             * ist die einzige, die ein bestehendes Blatt zeigt -- ohne diesen
+             * Knopf bliebe für ein falsch angelegtes Blatt nur löschen und neu
+             * anlegen, und für die Blätter, die es heute schon gibt, gar nichts.
+             *
+             * Nur solange offen: Ein abgezeichnetes Blatt ist eingefroren, und
+             * die Blattart ist seine Überschrift.
+             * ─────────────────────────────────────────────────────────────────
+             */
+            Action::make('blattart')
+                ->label(__('fleet.weighing.action.change_sheet'))
+                ->icon('heroicon-o-arrows-right-left')
+                ->color('gray')
+                ->visible(fn (): bool => $this->darfSchreiben())
+                ->modalDescription(__('fleet.weighing.help.change_sheet'))
+                ->fillForm(fn (): array => [
+                    'sheet_variant' => ($this->blatt()->sheet_variant ?? SheetVariant::Glider)->value,
+                    'undercarriage' => ($this->blatt()->undercarriage
+                        ?? Undercarriage::defaultFor($this->blatt()->sheet_variant ?? SheetVariant::Glider))->value,
+                ])
+                ->schema(WeighingForm::sheetFields())
+                ->action(function (array $data): void {
+                    $variante = SheetVariant::tryFrom((string) ($data['sheet_variant'] ?? ''))
+                        ?? SheetVariant::Glider;
+
+                    $fahrwerk = Undercarriage::tryFrom((string) ($data['undercarriage'] ?? ''))
+                        ?? Undercarriage::defaultFor($variante);
+
+                    try {
+                        $geblieben = app(SwitchSheetVariant::class)
+                            ->handle($this->blatt(), $variante, $fahrwerk);
+                    } catch (Throwable $e) {
+                        Notification::make()->danger()->title($e->getMessage())->send();
+
+                        return;
+                    }
+
+                    $this->blatt()->refresh()->load(['entries', 'aircraft']);
+                    $this->fuellen();
+
+                    $meldung = Notification::make()
+                        ->success()
+                        ->title(__('fleet.weighing.sheet_changed', ['sheet' => $variante->label()]));
+
+                    // Was stehen geblieben ist, wird gesagt -- sonst sucht
+                    // jemand die Vorlagenzeilen, die nie kamen, weil in dem
+                    // Abschnitt schon Zahlen standen.
+                    if ($geblieben !== []) {
+                        $meldung->body(__('fleet.weighing.rows_kept', [
+                            'sections' => implode(', ', array_map(
+                                fn (string $abschnitt): string => __('fleet.weighing.section.'.$abschnitt),
+                                $geblieben,
+                            )),
+                        ]));
+                    }
+
+                    $meldung->send();
+                }),
 
             Action::make('drucken')
                 ->label(__('fleet.weighing.print') ?? 'Drucken')

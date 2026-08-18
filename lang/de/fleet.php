@@ -70,6 +70,8 @@ return [
         'field' => [
             'designation' => 'Musterbezeichnung',
             'manufacturer' => 'Hersteller',
+            'sheet_variant' => 'Wägeblatt',
+            'undercarriage' => 'Fahrwerk',
             'type_support' => 'Musterbetreuer',
             'without_type_support' => 'Kein Musterbetreuer mehr vorhanden',
             'type_certificate' => 'Kennblatt-Nr.',
@@ -127,6 +129,14 @@ return [
             'free_text' => 'Freitext ist erlaubt. Wer etwas fliegt, das niemand '
                 .'katalogisiert hat, tippt es hier ein — das Muster ist die bessere '
                 .'Antwort, wo es sie gibt, nicht die einzige.',
+            'sheet_variant' => 'Welches Wägeblatt jedes Luftfahrzeug dieses Musters '
+                .'bekommt. Einmal hier eingetragen, steht es beim Anlegen jeder Wägung '
+                .'schon richtig da. Leer lassen ist in Ordnung — dann fragt die '
+                .'Wägemaske und schlägt vor, was sie erschließen kann.',
+            'undercarriage' => 'Worauf das Luftfahrzeug beim Wiegen steht. Bestimmt die '
+                .'Zahl der Wägepunkte und die Zeichnung auf dem Blatt. Weicht ein '
+                .'einzelnes Exemplar ab, wird es in seiner Wägung geändert — das Muster '
+                .'bleibt davon unberührt.',
             'type_support' => 'Wer das Muster heute betreut — z. B. „LTB Lindner" für die '
                 .'Grob-Segelflugzeuge. Ist das Feld nur noch nicht ausgefüllt, heißt das '
                 .'nicht, dass es niemanden gibt; dafür gibt es das Kästchen darunter.',
@@ -652,6 +662,7 @@ return [
             'component' => 'Wägung (Bauteile)',
             'support' => 'Schwerpunktermittlung',
             'deduction' => 'Abzüge',
+            'configuration' => 'Zugelassene Konfigurationen',
             'limits' => 'Massengrenzen laut Kennblatt',
             'result' => 'Ergebnis',
         ],
@@ -702,6 +713,13 @@ return [
             'deduction_arm' => 'Auch Abzüge brauchen ihren Hebelarm: Kraftstoff aus '
                 .'einem Flügeltank zu nehmen verschiebt den Schwerpunkt und macht nicht '
                 .'nur leichter.',
+            'remember_on_type' => 'Dann bekommt jedes weitere Luftfahrzeug dieses Musters '
+                .'die Angabe von selbst. Vorhandene Angaben am Muster werden nicht '
+                .'überschrieben — die änderst du beim Muster.',
+            'change_sheet' => 'Ändert die Überschrift des Blatts und damit den Rechenweg. '
+                .'Abschnitte, in denen noch keine Zahl steht, werden durch die Vorlage der '
+                .'neuen Blattart ersetzt; wo bereits Zahlen stehen, bleibt alles, wie es '
+                .'ist.',
             'stored' => 'Ergebnis wird beim Speichern berechnet und festgeschrieben. Ein '
                 .'unterschriebenes Dokument behält seine Zahlen — sonst würde eine '
                 .'spätere Codeänderung eine fremde Unterschrift über ein anderes '
@@ -723,6 +741,23 @@ return [
         'sign_off_warning' => 'Damit werden die Werte unveränderlich festgesetzt. Eine '
             .'Korrektur ist danach eine neue Wägung — so wie auf Papier auch, denn das '
             .'alte Blatt trägt eine Unterschrift.',
+        'action' => [
+            'change_sheet' => 'Blattart ändern',
+        ],
+        'setup_origin' => [
+            'type' => 'Aus dem Muster übernommen.',
+            'previous' => 'Aus der letzten abgezeichneten Wägung dieses Luftfahrzeugs '
+                .'übernommen.',
+            'propulsion' => 'Vorschlag aus dem Antrieb — bitte prüfen. Ein Segelflugzeug '
+                .'mit Hilfstriebwerk ist motorisiert und wird trotzdem nicht zwangsläufig '
+                .'auf dem Flugzeugblatt gewogen.',
+        ],
+        'remember_on_type' => 'Beim Muster hinterlegen',
+        'remembered' => 'Blattart und Fahrwerk sind jetzt beim Muster :type hinterlegt.',
+        'sheet_changed' => 'Blattart auf „:sheet" umgestellt.',
+        'rows_kept' => 'Stehen geblieben, weil dort schon Zahlen eingetragen sind: '
+            .':sections. Diese Zeilen bitte selbst prüfen — die Vorlage der neuen '
+            .'Blattart wurde dafür nicht eingesetzt.',
         'new_from_last' => 'Neue Wägung (Werte übernehmen)',
         'prepared' => 'Neue Wägung angelegt.',
         'carried_over' => 'Handbuchwerte, Bezugspunkt-Definition und Sitzplätze aus der '

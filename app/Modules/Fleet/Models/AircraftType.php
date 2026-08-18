@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Fleet\Models;
 
+use App\Modules\Fleet\Enums\SheetVariant;
+use App\Modules\Fleet\Enums\Undercarriage;
 use App\Modules\Fleet\Events\AircraftTypeCreated;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -38,6 +40,8 @@ final class AircraftType extends Model implements HasMedia
     protected $fillable = [
         'designation',
         'manufacturer',
+        'sheet_variant',
+        'undercarriage',
         'type_support',
         'without_type_support',
         'type_certificate',
@@ -54,7 +58,61 @@ final class AircraftType extends Model implements HasMedia
         return [
             'data_sheet_checked_at' => 'date',
             'without_type_support' => 'boolean',
+            'sheet_variant' => SheetVariant::class,
+            'undercarriage' => Undercarriage::class,
         ];
+    }
+
+    /**
+     * Was am Muster über das Wägeblatt hinterlegt ist -- und nur das.
+     *
+     * Beide Werte einzeln nullbar, weil sie einzeln bekannt sein können: Dass
+     * eine Aquila auf dem Flugzeugblatt gewogen wird, weiss man ohne zu wissen,
+     * ob dieses Exemplar auf Bugrad oder Spornrad steht. Was fehlt, ergänzt
+     * SheetSetup aus dem, was das Flugzeug selbst hergibt.
+     */
+    public function sheetVariant(): ?SheetVariant
+    {
+        return $this->sheet_variant;
+    }
+
+    public function undercarriage(): ?Undercarriage
+    {
+        return $this->undercarriage;
+    }
+
+    /**
+     * Was beim Anlegen einer Wägung gewählt wurde, am Muster hinterlegen.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * NUR WAS LEER IST. Das Muster ist die Aussage, die jemand getroffen hat;
+     * eine Wägung darf sie ergänzen, aber nicht überschreiben. Sonst würde ein
+     * Exemplar mit Sonderfahrwerk das Muster für alle anderen umstellen -- und
+     * niemand hätte es gesehen.
+     *
+     * Gibt zurück, ob tatsächlich etwas geschrieben wurde: Der Aufrufer sagt es
+     * dem Benutzer, statt still am Muster zu drehen.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    public function rememberWeighingSetup(SheetVariant $variant, Undercarriage $undercarriage): bool
+    {
+        $werte = [];
+
+        if ($this->sheet_variant === null) {
+            $werte['sheet_variant'] = $variant;
+        }
+
+        if ($this->undercarriage === null) {
+            $werte['undercarriage'] = $undercarriage;
+        }
+
+        if ($werte === []) {
+            return false;
+        }
+
+        $this->fill($werte)->save();
+
+        return true;
     }
 
     public function getActivitylogOptions(): LogOptions
@@ -69,6 +127,10 @@ final class AircraftType extends Model implements HasMedia
                  * question somebody will ask a year later.
                  */
                 'type_support', 'without_type_support',
+                // Blattart und Fahrwerk entscheiden, welches Wägeblatt jedes
+                // Flugzeug dieses Musters bekommt -- eine Änderung hier wirkt
+                // auf die nächste Wägung jedes Exemplars.
+                'sheet_variant', 'undercarriage',
             ])
             ->logOnlyDirty()
             ->useLogName('fleet');

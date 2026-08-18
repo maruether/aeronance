@@ -237,6 +237,61 @@ return [
         'dismissed' => 'verworfen',
     ],
 
+    /*
+     * Der Befundbericht des VORGANGS -- das Blatt. Nicht zu verwechseln mit
+     * „report" darunter: Das ist die Meldung „Befund melden", mit der jemand
+     * von aussen etwas ins Buch bringt. Im Alltag heissen beide fast gleich
+     * und sind zwei verschiedene Dinge.
+     */
+    'finding_report' => [
+        'title' => 'Befundbericht',
+        'description' => 'Jede Zeile ist ein Befund mit der Arbeitskarte, die ihn behebt. '
+            .'Die drei Unterschriftsspalten kommen aus dieser Karte — fertig gemeldet, '
+            .'unabhängig kontrolliert, abgezeichnet — und werden hier nicht ein zweites '
+            .'Mal geführt: Ein Blatt, das etwas anderes sagt als die Akte darunter, wäre '
+            .'die schlimmste Sorte Dokument.',
+        'sheet_no' => 'Blatt Nr.',
+        'empty' => 'Noch keine Befunde in diesem Vorgang.',
+        'column' => [
+            'position' => 'Lfd. Nr.',
+            'finding' => 'Art der Beanstandung, Bericht oder Befund',
+            'fix' => 'Art der Behebung, Bemerkungen',
+            'done_by' => 'Erledigung',
+            'checked_by' => 'Kontrolle',
+            'certified_by' => 'Prüfung',
+        ],
+        'foreign_object_check' => 'Fremdkörperkontrolle und Werkzeugkontrolle nach '
+            .'Beendigung der Arbeiten',
+        'carried_out' => 'durchgeführt',
+        'foreign_object_check_done' => 'Fremdkörper- und Werkzeugkontrolle bestätigt.',
+        'made_by' => 'Bericht erstellt:',
+        'checked_finally' => 'Abschließend geprüft:',
+        'date' => 'Datum',
+        'signature' => 'Unterschrift',
+        'name' => 'Name',
+        'licence' => 'Lizenznummer',
+        'stamp' => 'Stempel',
+        'certifying_staff' => 'Freigabeberechtigter',
+        'deferred' => 'Zurückgestellt bis :date.',
+        'recorded' => ':count Punkt(e) aufgenommen — je eine Arbeitskarte',
+        'action' => [
+            'record' => 'Befundbericht erfassen',
+            'print' => 'Befundbericht drucken',
+            'foreign_object_check' => 'Fremdkörper-/Werkzeugkontrolle bestätigen',
+        ],
+        'help' => [
+            'record' => 'Jeder Punkt wird ein Befund mit eigener Nummer UND eine eigene '
+                .'Arbeitskarte. Das ist der Unterschied zur Sammelaktion an der '
+                .'Befundliste: Auf dem Blatt trägt jede Zeile ihre eigenen drei '
+                .'Unterschriften, und eine gemeinsame Karte hätte für zehn Zeilen nur '
+                .'eine.',
+            'foreign_object_check' => 'Die vorgedruckte letzte Zeile des Blatts, und sie '
+                .'meint den ganzen Vorgang: Nach Beendigung der Arbeiten wird auf '
+                .'Fremdkörper und vergessenes Werkzeug kontrolliert. Bestätigt wird sie '
+                .'mit Namen und Zeitpunkt.',
+        ],
+    ],
+
     'report' => [
         'title' => 'Befund melden',
         'subheading' => 'Aufgefallen ist etwas — hier kommt es ins Buch. Jeder Punkt '

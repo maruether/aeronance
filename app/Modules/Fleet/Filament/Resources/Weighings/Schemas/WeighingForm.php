@@ -10,7 +10,10 @@ use App\Modules\Fleet\Enums\WeighingKind;
 use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\Fleet\Models\Weighing;
 use App\Modules\Fleet\Models\WeighingEntry;
+use App\Modules\Fleet\Support\SheetSetup;
 use App\Modules\Fleet\Support\WeighingCalculator;
+use Closure;
+use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
@@ -44,49 +47,35 @@ final class WeighingForm
         return $schema->components([
             Section::make(__('fleet.weighing.singular'))
                 ->schema([
+                    /*
+                     * DIE WAHL DES FLUGZEUGS BEANTWORTET DIE NÄCHSTEN ZWEI
+                     * FRAGEN MIT -- Feldtest: „Bei der Auswahl des Flugzeuges
+                     * gehört die abfrage nach typ und fahrwerkskonfiguration
+                     * rein." Beantwortet, nicht entschieden: Die Felder bleiben
+                     * sichtbar und änderbar, sie stehen nur nicht mehr leer da.
+                     */
                     Select::make('aircraft_id')
                         ->label(__('fleet.aircraft.singular'))
                         ->options(fn (): array => Aircraft::orderBy('registration')
                             ->pluck('registration', 'id')->all())
                         ->searchable()
-                        ->required(),
-
-                    /*
-                     * DIE BLATTART, nicht der Rechenweg -- „drei, wie auf dem
-                     * papier". Gerechnet wird auf zwei Arten, ueberschrieben
-                     * sind die Blaetter mit drei Namen, und danach sucht
-                     * derjenige, der abschreibt. `kind` faellt daraus ab und
-                     * steht unsichtbar daneben.
-                     */
-                    Select::make('sheet_variant')
-                        ->label(__('fleet.weighing.field.sheet_variant'))
-                        ->options(SheetVariant::options())
-                        ->default(SheetVariant::Glider->value)
-                        ->selectablePlaceholder(false)
                         ->required()
                         ->live()
-                        ->afterStateUpdated(function (Set $set, ?string $state): void {
-                            $variante = SheetVariant::tryFrom((string) $state) ?? SheetVariant::Glider;
+                        ->afterStateUpdated(function (Set $set, mixed $state): void {
+                            $aircraft = Aircraft::find($state);
 
-                            $set('kind', $variante->kind()->value);
-                            $set('undercarriage', Undercarriage::defaultFor($variante)->value);
+                            if ($aircraft === null) {
+                                return;
+                            }
+
+                            $setup = SheetSetup::for($aircraft);
+
+                            $set('sheet_variant', $setup->variant->value);
+                            $set('kind', $setup->variant->kind()->value);
+                            $set('undercarriage', $setup->undercarriage->value);
                         }),
 
-                    Hidden::make('kind')->default(WeighingKind::Glider->value),
-
-                    /*
-                     * WORAUF ES BEIM WIEGEN STEHT. Bestimmt die Zahl der
-                     * Waegepunkte und die Zeichnung -- vorher hing beides an
-                     * der Blattart, was beim einraedrigen Segelflugzeug
-                     * zufaellig stimmte und beim Motorsegler mit Bugrad nicht.
-                     */
-                    Select::make('undercarriage')
-                        ->label(__('fleet.weighing.field.undercarriage'))
-                        ->options(Undercarriage::options())
-                        ->default(Undercarriage::TailwheelOneMain->value)
-                        ->selectablePlaceholder(false)
-                        ->required()
-                        ->live(),
+                    ...self::sheetFields(),
 
                     DatePicker::make('weighed_at')
                         ->label(__('fleet.weighing.field.weighed_at'))
@@ -309,6 +298,109 @@ final class WeighingForm
                 ])
                 ->columns(3),
         ]);
+    }
+
+    /**
+     * Blattart und Fahrwerk als ein Feldpaar — an genau einer Stelle gebaut.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * ZWEI MASKEN, EINE FRAGE. Eine Wägung entsteht auf zwei Wegen: „Neu" über
+     * dieses Formular und „Neue Wägung (Werte übernehmen)" über einen Dialog in
+     * der Liste. Der zweite fragte gar nicht -- und das war der gemeldete
+     * Fehler. Zwei Kopien derselben Auswahl wären die nächste Gelegenheit,
+     * genau das noch einmal auseinanderlaufen zu lassen; dieselbe Doppelung hat
+     * schon einmal Blätter ohne Auflagenzeilen erzeugt.
+     *
+     * `kind` steht als verstecktes Feld dazwischen: Der Rechenweg fällt aus der
+     * Blattart ab und wird nie getrennt gewählt.
+     * ─────────────────────────────────────────────────────────────────────────
+     *
+     * @param  Closure|null  $visible  Sichtbarkeitsbedingung für die zwei
+     *                                 Auswahlfelder (nicht für `kind`)
+     * @return list<Component>
+     */
+    public static function sheetFields(?Closure $visible = null): array
+    {
+        /*
+         * DIE BLATTART, nicht der Rechenweg -- „drei, wie auf dem papier".
+         * Gerechnet wird auf zwei Arten, ueberschrieben sind die Blaetter mit
+         * drei Namen, und danach sucht derjenige, der abschreibt.
+         */
+        $blattart = Select::make('sheet_variant')
+            ->label(__('fleet.weighing.field.sheet_variant'))
+            ->options(SheetVariant::options())
+            ->default(SheetVariant::Glider->value)
+            ->selectablePlaceholder(false)
+            ->required()
+            ->live()
+            ->helperText(fn (Get $get): ?string => self::originHint($get('aircraft_id')))
+            ->afterStateUpdated(function (Set $set, Get $get, ?string $state, ?string $old): void {
+                $neu = SheetVariant::tryFrom((string) $state);
+
+                if ($neu === null) {
+                    return;
+                }
+
+                $set('kind', $neu->kind()->value);
+
+                /*
+                 * Das Fahrwerk wird MITGEZOGEN, aber nicht überschrieben:
+                 * Nur wenn dort noch der Vorgabewert der bisherigen Blattart
+                 * steht, hat niemand ihn gewählt. Wer „Spornrad mit zwei
+                 * Haupträdern" eingetragen hat, behält es beim Wechsel von
+                 * Motorsegler auf Flugzeug -- das Fahrwerk ändert sich davon
+                 * ja nicht.
+                 */
+                $alt = SheetVariant::tryFrom((string) $old);
+                $aktuell = Undercarriage::tryFrom((string) $get('undercarriage'));
+
+                if ($aktuell === null || ($alt !== null && $aktuell === Undercarriage::defaultFor($alt))) {
+                    $set('undercarriage', Undercarriage::defaultFor($neu)->value);
+                }
+            });
+
+        /*
+         * WORAUF ES BEIM WIEGEN STEHT. Bestimmt die Zahl der Waegepunkte und
+         * die Zeichnung -- vorher hing beides an der Blattart, was beim
+         * einraedrigen Segelflugzeug zufaellig stimmte und beim Motorsegler mit
+         * Bugrad nicht.
+         */
+        $fahrwerk = Select::make('undercarriage')
+            ->label(__('fleet.weighing.field.undercarriage'))
+            ->options(Undercarriage::options())
+            ->default(Undercarriage::TailwheelOneMain->value)
+            ->selectablePlaceholder(false)
+            ->required()
+            ->live();
+
+        if ($visible !== null) {
+            $blattart->visible($visible);
+            $fahrwerk->visible($visible);
+        }
+
+        return [
+            $blattart,
+            Hidden::make('kind')->default(WeighingKind::Glider->value),
+            $fahrwerk,
+        ];
+    }
+
+    /**
+     * Woher der Vorschlag kommt — als Satz unter dem Feld.
+     *
+     * Weil „Flugzeug" allein nicht sagt, ob das jemand am Muster hinterlegt hat
+     * oder ob es aus dem Antrieb geraten ist. Der Unterschied entscheidet, ob
+     * man hinsehen muss.
+     */
+    private static function originHint(mixed $aircraftId): ?string
+    {
+        $aircraft = Aircraft::find($aircraftId);
+
+        if ($aircraft === null) {
+            return null;
+        }
+
+        return __('fleet.weighing.setup_origin.'.SheetSetup::for($aircraft)->origin);
     }
 
     /**

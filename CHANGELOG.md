@@ -31,6 +31,91 @@ erscheinen.
   Demomodus abschalten muss (Mails, Updates, echte Herstellerabrufe), ist
   Teil des Zuschnitts.
 
+## [0.1.11] — 2026-08-18
+
+Der Befundbericht des Vorgangs — und eine neue Wägung fragt endlich, welches
+Blatt sie wird.
+**Beim Update beachten:** `deploy/update.sh` bzw. `deploy/docker/update.sh`
+genügt. Zwei Migrationen laufen mit: Das Muster bekommt Wägeblatt und
+Fahrwerk (beide bleiben leer, bis jemand sie einträgt), der Vorgang die
+Felder der Fremdkörper- und Werkzeugkontrolle. Bestehende Wägungen und
+Vorgänge bleiben unverändert.
+
+### Neu
+
+- **Jeder Vorgang hat einen Befundbericht.** Vorgabe: „Einem Vorgang sollte
+  immer ein befundbericht zugeordnet sein, nach dem neu anlegen eines
+  vorgangs sollte ein befundbericht angelegt werden können innerhalb des
+  vorgangs, wobei jeder punkt zu einer arbeitskarte wird."
+
+  Auf der Vorgangsseite gibt es dafür eine eigene Gruppe: **Befundbericht
+  erfassen** nimmt beliebig viele Punkte auf — jeder wird ein Befund mit
+  eigener Nummer *und* eine eigene Arbeitskarte. Das ist der Unterschied
+  zur Sammelaktion an der Befundliste, die mehrere Punkte auf *eine* Karte
+  legt: Auf dem Blatt trägt jede Zeile ihre eigenen drei Unterschriften,
+  und eine gemeinsame Karte hätte für zehn Zeilen nur eine.
+
+  Der Bericht ist nach dem Schema der üblichen Formulare aufgebaut:
+  **Lfd. Nr. – Art der Beanstandung/Befund – Art der Behebung – Erledigung
+  – Kontrolle – Prüfung.** Die drei Unterschriftsspalten werden **nicht
+  eigens geführt**: Sie kommen aus der Arbeitskarte, die den Punkt behebt
+  — fertig gemeldet, unabhängig kontrolliert, abgezeichnet. Ein Blatt mit
+  eigenen Namensfeldern daneben könnte etwas anderes sagen als die Akte
+  darunter, und geglaubt würde das Blatt. Aus demselben Grund gibt es
+  keinen zweiten Datensatz „Bericht": Seine Zeilen *sind* die Befunde des
+  Vorgangs — damit hat jeder Vorgang seinen Bericht, ohne dass ihn jemand
+  anlegt und ohne dass er fehlen kann.
+
+  Auf dem Blatt steht auch, was nicht erledigt wurde: Ein zurückgestellter
+  Punkt bekommt seinen Satz samt Frist, ein verworfener seine Begründung.
+  Ein Bericht, der nur das Erledigte zeigt, liest sich, als wäre alles
+  gemacht.
+
+  Dazu die vorgedruckte letzte Zeile, **Fremdkörper- und
+  Werkzeugkontrolle nach Beendigung der Arbeiten** — als eigener,
+  bestätigter Schritt mit Namen und Zeitpunkt, nicht als Haken, den das
+  Speichern nebenbei mitsetzt. Ein vergessener Schraubenschlüssel im Rumpf
+  ist genau die Sorte Fund, für die diese Zeile gedruckt wurde.
+
+  Der Bericht steht eingeklappt auf der Vorgangsseite und lässt sich
+  drucken — beides aus **derselben Vorlage**: Bildschirm und Papier können
+  nicht auseinanderlaufen. „Abschließend geprüft" füllt die Freigabe, wenn
+  es sie gibt; sonst bleibt die Zeile zum Unterschreiben leer.
+
+### Behoben
+
+- **Eine neue Wägung fragt jetzt, welches Blatt sie wird — und das Muster
+  kann die Antwort kennen.** Feldtest: „wenn ich für die D-EICC eine
+  wägung anlege bekomme ich als eingabemaske die massenübersicht
+  segelflugzeug. Bei der Auswahl des Flugzeuges gehört die abfrage nach
+  typ und fahrwerkskonfiguration rein. Noch besser wäre wenn Diese Daten
+  direkt im Muster hinterlegt werden könnten."
+
+  Der Weg „Neue Wägung (Werte übernehmen)" fragte nur nach dem Flugzeug.
+  Gab es keine abgezeichnete Vorgängerwägung — beim ersten Blatt eines
+  Flugzeugs also immer —, fiel er stumm auf „Segelflugzeug" zurück. Ein
+  Flugzeug bekam damit das falsche Blatt, ohne dass irgendwo stand, warum.
+
+  Jetzt beantwortet die Wahl des Flugzeugs beide Fragen mit, in dieser
+  Reihenfolge: **das Muster**, sonst **die letzte abgezeichnete Wägung**
+  dieses Luftfahrzeugs, sonst **der Antrieb** als bloßer Vorschlag. Woher
+  die Angabe stammt, steht unter dem Feld — der Unterschied zwischen
+  „jemand hat das hinterlegt" und „das ist geraten" entscheidet, ob man
+  hinsehen muss. Beide Felder bleiben sichtbar und änderbar.
+
+  **Das Muster führt Wägeblatt und Fahrwerk selbst.** Einmal eingetragen,
+  steht die Angabe bei jedem Exemplar richtig da. Wer sie beim Anlegen
+  einer Wägung trifft, kann sie per Haken gleich dort hinterlegen —
+  sichtbar in der Meldung, und nur, solange das Muster noch nichts weiß:
+  Überschrieben wird dort nichts.
+
+  **Ein falsch angelegtes Blatt lässt sich umstellen.** „Blattart ändern"
+  auf der Wägeseite tauscht Überschrift, Rechenweg und Wägepunkte.
+  Abschnitte, in denen noch keine Zahl steht, werden durch die Vorlage der
+  neuen Blattart ersetzt; wo bereits Zahlen stehen, bleibt alles stehen —
+  und wird gemeldet. Gewogene Zahlen gehen nie stillschweigend verloren.
+  Abgezeichnete Blätter bleiben unverändert eingefroren.
+
 ## [0.1.10] — 2026-08-16
 
 Das Wägeblatt ist ein Blatt geworden — in der Eingabe wie im Ausdruck.

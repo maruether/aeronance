@@ -158,9 +158,22 @@ final readonly class RecordFinding
      * the card that fixes it is signed off, which is the only moment anybody can
      * honestly say the thing is dealt with.
      */
-    public function schedule(Finding $finding, WorkOrder $order, User $user): TaskCard
-    {
-        return $this->scheduleMany([$finding], $order, $user);
+    public function schedule(
+        Finding $finding,
+        WorkOrder $order,
+        User $user,
+        bool $critical = false,
+        ?string $criticalReason = null,
+        ?string $ataChapter = null,
+    ): TaskCard {
+        return $this->scheduleMany(
+            findings: [$finding],
+            order: $order,
+            user: $user,
+            critical: $critical,
+            criticalReason: $criticalReason,
+            ataChapter: $ataChapter,
+        );
     }
 
     /**
@@ -173,10 +186,22 @@ final readonly class RecordFinding
      * point on it (CertifyTaskCard already queries by card, not by finding),
      * and cancelling it reopens every one.
      *
+     * Die drei letzten Argumente reichen zur Karte durch, was das Papier des
+     * Befundberichts nicht kennt, die Karte aber braucht: ATA-Kapitel und die
+     * Markierung „kritisch". Letztere ist beim Anlegen zu setzen oder gar nicht
+     * (TaskCard::booted) -- und sie ist es, die die Spalte „Kontrolle" des
+     * Blatts überhaupt füllt.
+     *
      * @param  list<Finding>  $findings
      */
-    public function scheduleMany(array $findings, WorkOrder $order, User $user): TaskCard
-    {
+    public function scheduleMany(
+        array $findings,
+        WorkOrder $order,
+        User $user,
+        bool $critical = false,
+        ?string $criticalReason = null,
+        ?string $ataChapter = null,
+    ): TaskCard {
         if ($findings === []) {
             throw new InvalidArgumentException('No findings selected -- a card needs something to fix.');
         }
@@ -229,12 +254,15 @@ final readonly class RecordFinding
             }
         }
 
-        return DB::transaction(function () use ($findings, $order): TaskCard {
+        return DB::transaction(function () use ($findings, $order, $critical, $criticalReason, $ataChapter): TaskCard {
             $card = app(ManageWorkOrder::class)->addCard(
                 order: $order,
                 title: $this->cardTitle($findings),
                 instruction: $this->cardInstruction($findings),
                 kind: ActivityKind::Repair,
+                ataChapter: $ataChapter,
+                critical: $critical,
+                criticalReason: $criticalReason,
             );
 
             foreach ($findings as $finding) {

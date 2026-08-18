@@ -11,6 +11,7 @@ use App\Modules\TaskCards\Models\TaskCardTime;
 use App\Modules\TaskCards\Models\WorkOrder;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\ViewEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -221,6 +222,34 @@ final class WorkOrderInfolist
                                 ->visible(fn (): bool => app(IssuePartToCard::class)->isAvailable()),
                         ])
                         ->columns(6),
+                ]),
+
+            /*
+             * ─────────────────────────────────────────────────────────────────
+             * DER BEFUNDBERICHT — dasselbe Blatt, das gedruckt wird.
+             *
+             * Vorgabe: „Einem Vorgang sollte immer ein befundbericht zugeordnet
+             * sein ... nach dem Schema ‚Laufende Nummer - Befund - Behebung -
+             * Ausgeführt durch - Geprüft durch - freigegeben durch'."
+             *
+             * Er steht hier als Blatt und nicht als weitere Kartenliste: Wer
+             * ihn ausdruckt, soll vorher gesehen haben, was auf dem Papier
+             * landet. Anzeige und Ausdruck sind EINE Datei -- sie können damit
+             * nicht auseinanderlaufen.
+             *
+             * Eingeklappt, weil die Karten darüber die tägliche Sicht sind und
+             * der Bericht die zum Abschluss.
+             * ─────────────────────────────────────────────────────────────────
+             */
+            Section::make(__('taskcards.finding_report.title'))
+                ->description(__('taskcards.finding_report.description'))
+                ->collapsible()
+                ->collapsed()
+                ->schema([
+                    ViewEntry::make('finding_report')
+                        ->hiddenLabel()
+                        ->view('taskcards.report.screen')
+                        ->columnSpanFull(),
                 ]),
         ]);
     }

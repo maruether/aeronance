@@ -84,6 +84,19 @@ final class Finding extends Model
         return $this->belongsTo(TaskCard::class);
     }
 
+    /**
+     * Die Karte, die ihn behebt — nicht die, auf der er auffiel.
+     *
+     * Der Unterschied trägt den Befundbericht: Dort steht in der Zeile die
+     * Behebung, und die kommt aus der Karte, die dafür geschrieben wurde.
+     *
+     * @return BelongsTo<TaskCard, $this>
+     */
+    public function resolvingTaskCard(): BelongsTo
+    {
+        return $this->belongsTo(TaskCard::class, 'resolving_task_card_id');
+    }
+
     /** @return BelongsTo<User, $this> */
     public function foundBy(): BelongsTo
     {

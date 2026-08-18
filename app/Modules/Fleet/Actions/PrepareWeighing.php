@@ -6,10 +6,11 @@ namespace App\Modules\Fleet\Actions;
 
 use App\Models\User;
 use App\Modules\Fleet\Enums\SheetVariant;
-use App\Modules\Fleet\Enums\WeighingKind;
+use App\Modules\Fleet\Enums\Undercarriage;
 use App\Modules\Fleet\Models\Aircraft;
 use App\Modules\Fleet\Models\Weighing;
 use App\Modules\Fleet\Models\WeighingEntry;
+use App\Modules\Fleet\Support\SheetSetup;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -78,7 +79,7 @@ final class PrepareWeighing
             return [];
         }
 
-        $defaults = ['kind' => $previous->kind->value];
+        $defaults = [];
 
         foreach (self::FROM_THE_MANUAL as $field) {
             $defaults[$field] = $previous->{$field};
@@ -96,29 +97,48 @@ final class PrepareWeighing
 
     /**
      * Creates the new sheet, with the manual values and the seats carried over.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * BLATTART UND FAHRWERK KOMMEN VON AUSSEN ODER AUS SheetSetup -- nicht mehr
+     * aus einem Rückfall an dieser Stelle.
+     *
+     * Vorher stand hier „sonst Segelflugzeug". Das ist der gemeldete Fehler:
+     * „wenn ich für die D-EICC eine wägung anlege bekomme ich als eingabemaske
+     * die massenübersicht segelflugzeug." Ein Flugzeug ohne Vorgängerwägung
+     * bekam ein Segelflugblatt, und niemand wurde gefragt.
+     *
+     * Ein ausdrücklich übergebenes Fahrwerk gilt. Fehlt es, gilt das aus
+     * SheetSetup -- aber nur, solange die Blattart dieselbe ist. Wer von aussen
+     * auf „Flugzeug" umstellt, bekommt die Wägepunkte dazu und nicht die des
+     * Segelflugzeugs, das zuletzt hier stand.
+     * ─────────────────────────────────────────────────────────────────────────
      */
-    public function from(Aircraft $aircraft, ?User $user = null, ?WeighingKind $kind = null): Weighing
-    {
+    public function from(
+        Aircraft $aircraft,
+        ?User $user = null,
+        ?SheetVariant $variant = null,
+        ?Undercarriage $undercarriage = null,
+    ): Weighing {
         $previous = $this->lastSignedOff($aircraft);
+        $setup = SheetSetup::for($aircraft);
 
-        return DB::transaction(function () use ($aircraft, $previous, $user, $kind): Weighing {
+        $variante = $variant ?? $setup->variant;
+
+        $fahrwerk = $undercarriage ?? ($variante === $setup->variant
+            ? $setup->undercarriage
+            : Undercarriage::defaultFor($variante));
+
+        return DB::transaction(function () use ($aircraft, $previous, $user, $variante, $fahrwerk): Weighing {
             $weighing = Weighing::create(array_merge($this->defaultsFor($aircraft), [
                 'aircraft_id' => $aircraft->id,
                 'weighed_at' => now()->toDateString(),
                 'user_id' => $user?->id,
 
-                // Explicit wins, then whatever the last sheet was, then the
-                // glider form -- which is what a club fleet mostly is, and the
-                // form asks anyway before anybody fills anything in.
-                'kind' => $kind ?? $previous?->kind ?? WeighingKind::Glider,
-
-                // Blattart und Fahrwerk wandern mit -- dasselbe Flugzeug wird
-                // beim naechsten Mal auf denselben Punkten stehen.
-                'sheet_variant' => $previous?->sheet_variant
-                    ?? (($kind ?? $previous?->kind ?? WeighingKind::Glider) === WeighingKind::Glider
-                        ? SheetVariant::Glider
-                        : SheetVariant::Aeroplane),
-                'undercarriage' => $previous?->undercarriage,
+                // Der Rechenweg fällt aus der Blattart ab und wird nicht
+                // getrennt entschieden -- zwei Wahrheiten dazu hatten wir schon.
+                'kind' => $variante->kind(),
+                'sheet_variant' => $variante,
+                'undercarriage' => $fahrwerk,
             ]));
 
             /*
