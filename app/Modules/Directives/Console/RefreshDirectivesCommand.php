@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Directives\Console;
 
+use App\Core\Demo\DemoMode;
 use App\Core\Modules\ModuleManager;
 use App\Models\User;
 use App\Modules\Directives\Actions\ImportDirectives;
@@ -56,6 +57,18 @@ final class RefreshDirectivesCommand extends Command
     ): int {
         if (! $modules->isEnabled('directives')) {
             $this->components->warn('Das LTA/TM-Modul ist nicht aktiv.');
+
+            return self::SUCCESS;
+        }
+
+        /*
+         * In der Demo holt nachts NICHTS. Der Handabruf bleibt moeglich (stark
+         * begrenzt, siehe DemoLimits) -- der naechtliche Lauf dagegen wuerde
+         * eine Spielwiese jede Nacht bei einem Dutzend Herstellern anklopfen
+         * lassen, ohne dass ein Mensch das je gewollt haette.
+         */
+        if (app(DemoMode::class)->isActive()) {
+            $this->components->warn('Demomodus: Es werden keine Herstellerlisten abgerufen.');
 
             return self::SUCCESS;
         }

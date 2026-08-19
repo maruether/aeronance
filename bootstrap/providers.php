@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Providers\AppServiceProvider;
+use App\Providers\DemoServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
 use App\Providers\ModuleServiceProvider;
 
@@ -18,5 +19,14 @@ return [
      * entscheidet auf der rohen .env.
      */
     ModuleServiceProvider::class,
+
+    /*
+     * VOR dem Panel: Der Demomodus legt den Mailer um, und das Panel
+     * entscheidet in seinem eigenen Aufbau, ob es „Passwort vergessen"
+     * ueberhaupt anbietet (Postman::canSend). Danach waere die Entscheidung
+     * schon gefallen -- mit einem Link, der ins Leere fuehrt.
+     */
+    DemoServiceProvider::class,
+
     AdminPanelProvider::class,
 ];

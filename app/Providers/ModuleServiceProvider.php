@@ -10,6 +10,7 @@ use App\Core\Console\BackupCommand;
 use App\Core\Console\BreakGlassCommand;
 use App\Core\Console\BreakGlassExpireCommand;
 use App\Core\Console\BreakGlassRevokeCommand;
+use App\Core\Console\DemoResetCommand;
 use App\Core\Console\MailTestCommand;
 use App\Core\Console\RequirementsCommand;
 use App\Core\Console\RestoreCommand;
@@ -462,6 +463,15 @@ final class ModuleServiceProvider extends ServiceProvider
                 MailTestCommand::class,
                 UpdateCheckCommand::class,
                 RemindOverdueOrdersCommand::class,
+
+                /*
+                 * Auch dieser bedingungslos, und hier ist es besonders
+                 * wichtig: Der Reset weigert sich selbst, wenn keine
+                 * Demo-Marke da ist. Ihn nur im Demomodus zu registrieren
+                 * hiesse, dieselbe Frage an zwei Stellen zu beantworten --
+                 * und die Registrierung ist die schlechtere Stelle dafuer.
+                 */
+                DemoResetCommand::class,
 
                 // Module commands are registered unconditionally, exactly like
                 // module migrations (D1): the command exists whether or not the

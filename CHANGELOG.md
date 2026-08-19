@@ -25,11 +25,72 @@ erscheinen.
   EASA-Felder. Der genaue Zuschnitt wird vor dem Bau entschieden und hier
   begründet.
 
-- **Demomodus.** Eine öffentlich erreichbare Spielwiese mit Beispieldaten
-  (`demo.aeronance.de`): ausprobieren ohne Installation, schreibend, aber
-  folgenlos — der Bestand setzt sich regelmäßig selbst zurück. Was genau ein
-  Demomodus abschalten muss (Mails, Updates, echte Herstellerabrufe), ist
-  Teil des Zuschnitts.
+## [0.2.0] — 2026-08-18
+
+Der Demomodus — und damit der erste Sprung auf 0.2.
+
+**Beim Update beachten:** Für bestehende Installationen ändert sich nichts;
+`deploy/update.sh` bzw. `deploy/docker/update.sh` genügt, es läuft keine
+Migration mit. Der Demomodus betrifft ausschließlich NEUE Installationen:
+Er wird im Setup-Assistenten gewählt und lässt sich danach nicht mehr
+umstellen — eine bestehende Vereinsinstallation wird niemals zur Demo.
+
+### Neu
+
+- **Demomodus.** Bei der Installation lässt sich statt einer Vereins-
+  installation eine Spielwiese einrichten — die Grundlage für
+  `demo.aeronance.de`. Die Wahl fällt einmal und bleibt: Aus einer Demo
+  wird keine Live-Installation und umgekehrt.
+
+  Entschieden wird über eine **Marke im Dateiverzeichnis**
+  (`storage/demo`), nicht über eine Zeile in der `.env` und nicht über
+  eine Tabelle. Eine Umgebungsvariable wandert beim Kopieren einer `.env`
+  mit — und machte aus einem Vereinsbestand eine Instanz, die jede Nacht
+  gelöscht wird. Eine Datenbankzeile wäre nach dem ersten Reset selbst
+  weg. Die Umgebungsvariable `AERONANCE_DEMO` gibt es trotzdem: als
+  Vorauswahl für den Assistenten im Docker-Kanal.
+
+  **Was in einer Demo anders ist:**
+
+  - **Feste Konten**, Passwort `demo`, unveränderlich — Passwort, Rolle
+    und Aktivstatus lassen sich nicht ändern, das Konto nicht löschen.
+    Sonst wäre die Demo nach dem ersten Besucher, der „admin" umstellt,
+    für alle anderen zu. Die Liste steht auf der Anmeldeseite; sechs
+    Sichten vom Administrator bis zum Mitglied, dazu ein Pilot-Owner mit
+    Rechten an zwei der drei Luftfahrzeuge.
+  - **Keine Uploads.** Die Felder sind gesperrt und erklären sich — und
+    der Upload-Endpunkt dahinter antwortet mit 403, weil eine Sperre, die
+    nur im Formular steht, keine ist. Beispieldokumente liegen bereit.
+  - **Kein Mailversand und keine Mailkonfiguration.** Der Mailer steht auf
+    „log", womit alles daran Hängende (Passwort-vergessen, Erinnerer,
+    Testmail) von selbst verschwindet.
+  - **Keine gespeicherten Zugangsdaten.** Die Felder der
+    Vereinsflieger-Anbindung sind gesperrt, und das Modell verwirft
+    Passwort, App-Key und Geheimnis auch dann, wenn sie auf anderem Weg
+    hereinkommen.
+  - **Handabrufe von Herstellermitteilungen sind begrenzt** — fünf pro
+    Stunde für die **ganze Instanz**, nicht pro Sitzung: Der Schutz gilt
+    dem Hersteller, dessen Server sonst für jeden Besucher einzeln
+    befragt würde. Die nächtlichen Abrufe und der Vereinsflieger-Abgleich
+    laufen gar nicht.
+  - **Täglicher Reset um 03:00**: Datenbank und Dateien werden gelöscht
+    und der Beispielbestand neu aufgesetzt. Ein Banner nennt die
+    verbleibende Zeit; ein Administrator kann sofort zurücksetzen, statt
+    bis zur Nacht zu warten.
+
+  Das Reset-Kommando **weigert sich ohne Demo-Marke** und rührt eine
+  Live-Installation nicht an. Der Installationsmarker überlebt den Reset,
+  sonst stünde der Setup-Assistent danach offen im Netz.
+
+  **Der Beispielbestand ist der eigentliche Inhalt:** ein kleiner Verein
+  mit drei Luftfahrzeugen (Segelflugzeug, Motorsegler, Flugzeug — damit
+  alle drei Wägeblätter vorkommen), einer abgeschlossenen
+  Jahresnachprüfung mit Befundbericht, unabhängiger Kontrolle und
+  erteilter Freigabe, einem laufenden Vorgang mit blockierendem Befund,
+  einer Nachprüfung, die in drei Wochen abläuft, einem Lager mit Losen,
+  unterschrittenem Mindestbestand und überfälliger Bestellung sowie zwei
+  Vereinsflieger-Anbindungen — eine mit Mitgliedersync, eine nur für
+  Luftfahrzeugzeiten.
 
 ## [0.1.11] — 2026-08-18
 

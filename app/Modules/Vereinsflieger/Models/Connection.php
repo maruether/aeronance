@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Vereinsflieger\Models;
 
+use App\Core\Demo\DemoMode;
 use App\Modules\Vereinsflieger\VereinsfliegerClient;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -90,6 +91,28 @@ final class Connection extends Model
      */
     protected static function booted(): void
     {
+        /*
+         * IN DER DEMO WERDEN KEINE ZUGANGSDATEN GESPEICHERT -- Vorgabe, und im
+         * Modell durchgesetzt, nicht nur im Formular. Die Felder dort sind
+         * gesperrt; ein Import, ein Konsolenlauf oder das naechste Formular
+         * wuessten davon nichts. Der Seeder legt die Beispielanbindungen mit
+         * leeren Werten an, und leer bleibt leer.
+         */
+        $ohneZugangsdaten = function (self $connection): void {
+            if (! app(DemoMode::class)->isActive()) {
+                return;
+            }
+
+            foreach (['password', 'app_key', 'auth_secret'] as $feld) {
+                if (filled($connection->{$feld})) {
+                    $connection->{$feld} = '';
+                }
+            }
+        };
+
+        self::creating($ohneZugangsdaten);
+        self::updating($ohneZugangsdaten);
+
         self::saved(function (self $connection): void {
             if (! $connection->provides_identities) {
                 return;

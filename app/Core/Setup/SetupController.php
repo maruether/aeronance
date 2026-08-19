@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Setup;
 
+use App\Core\Demo\DemoMode;
 use App\Core\Modules\ModuleRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,7 @@ final class SetupController
     public function __construct(
         private readonly InstallationState $state,
         private readonly SetupWizard $wizard,
+        private readonly DemoMode $demo,
     ) {}
 
     public function index(): View
@@ -41,7 +43,35 @@ final class SetupController
             'hasAdministrator' => $this->state->hasAdministrator(),
             'preconfigured' => $this->state->databaseIsPreconfigured(),
             'modules' => $this->availableModules(),
+            'demoPreselected' => $this->demo->preselected(),
+            'demoAccounts' => DemoMode::ACCOUNTS,
         ]);
+    }
+
+    /**
+     * Der zweite Weg durch diesen Assistenten: eine Spielwiese statt eines
+     * Vereins.
+     *
+     * Er endet, wo der andere endet -- mit dem verriegelten Assistenten --,
+     * fragt aber nichts, weil in einer Demo nichts zu entscheiden ist. Die
+     * Bestätigung im Formular ist Absicht: Was hier entsteht, wird jede Nacht
+     * gelöscht, und diese Wahl lässt sich nicht zurücknehmen.
+     */
+    public function installDemo(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'confirm' => ['accepted'],
+        ], [
+            'confirm.accepted' => __('setup.demo.confirm_required'),
+        ]);
+
+        try {
+            $this->wizard->installDemo();
+        } catch (Throwable $e) {
+            return back()->withErrors(['demo' => $e->getMessage()]);
+        }
+
+        return redirect('/verwaltung');
     }
 
     public function configureDatabase(Request $request): RedirectResponse

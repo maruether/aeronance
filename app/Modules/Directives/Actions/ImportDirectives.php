@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Directives\Actions;
 
 use App\Core\Access\Authority;
+use App\Core\Demo\DemoLimits;
 use App\Models\User;
 use App\Modules\Directives\Models\Directive;
 use App\Modules\Directives\Permissions;
@@ -69,6 +70,18 @@ final readonly class ImportDirectives
         }
 
         $source = $this->sources->get($sourceName);
+
+        /*
+         * In der Demo ist der Handabruf begrenzt -- pro Instanz, nicht pro
+         * Sitzung, denn der Schutz gilt dem Hersteller. Die Einfuegequellen
+         * (Handeingabe, CSV) zaehlen nicht mit: Sie gehen nicht ins Netz, und
+         * genau sie soll man ausprobieren. Ausserhalb des Demomodus tut die
+         * Zeile nichts.
+         */
+        app(DemoLimits::class)->guardDirectiveFetch(
+            reachesOut: ! in_array($sourceName, ['manual', 'csv'], true),
+        );
+
         $rows = $source->fetch($options);
 
         /*

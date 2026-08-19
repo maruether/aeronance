@@ -144,3 +144,16 @@ Schedule::command('aeronance:vereinsflieger-sync')
 Schedule::command('aeronance:update-check')
     ->dailyAt('03:40')
     ->onOneServer();
+
+/*
+ * Die Spielwiese auf Anfang -- nachts, wenn niemand mitten in einer Vorführung
+ * steht. Vorgabe: „eingetragene Daten werden alle 24h automatisch gelöscht."
+ *
+ * Der Eintrag steht hier ohne Bedingung, und das ist Absicht: Der Befehl selbst
+ * weigert sich auf jeder Instanz ohne Demo-Marke. Eine Bedingung an dieser
+ * Stelle wäre eine ZWEITE Wahrheit darüber, ob gelöscht werden darf -- und die
+ * gefährlichere, weil sie beim Lesen der Datei überzeugend aussieht.
+ */
+Schedule::command('aeronance:demo-reset')
+    ->dailyAt((string) config('aeronance.demo.reset_at', '03:00'))
+    ->withoutOverlapping();

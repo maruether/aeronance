@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Filament\Pages;
 
 use App\Core\Access\CorePermissions;
+use App\Core\Demo\DemoMode;
 use App\Core\Documents\ClamAvScanner;
 use App\Core\Mail\Postman;
 use App\Core\Mail\TestMail;
@@ -27,6 +28,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
@@ -101,6 +103,46 @@ class SettingsPage extends Page implements HasForms
     public static function canAccess(): bool
     {
         return auth()->user()?->can(CorePermissions::SETTINGS_MANAGE) ?? false;
+    }
+
+    /**
+     * Der Sofort-Reset der Demo.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Vierundzwanzig Stunden auf den nächtlichen Lauf zu warten, weil jemand
+     * etwas kaputtgespielt hat, ist die schlechteste Vorführung. Deshalb der
+     * Knopf -- hinter einer Rückfrage, weil er tut, was er sagt.
+     *
+     * Er ruft denselben Befehl, den der Zeitplan ruft, und der weigert sich
+     * ausserhalb des Demomodus von selbst. Zwei Wege, eine Sperre.
+     * ─────────────────────────────────────────────────────────────────────────
+     *
+     * @return array<Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('demoReset')
+                ->label(__('demo.reset.action'))
+                ->icon('heroicon-o-arrow-path')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalDescription(__('demo.reset.confirm'))
+                ->visible(fn (): bool => app(DemoMode::class)->isActive())
+                ->action(function (): void {
+                    $code = Artisan::call('aeronance:demo-reset');
+
+                    if ($code !== 0) {
+                        Notification::make()->danger()->title(__('demo.reset.failed'))->send();
+
+                        return;
+                    }
+
+                    Notification::make()->success()->title(__('demo.reset.done'))->send();
+
+                    $this->redirect(self::getUrl());
+                }),
+        ];
     }
 
     public function mount(): void
@@ -413,7 +455,21 @@ class SettingsPage extends Page implements HasForms
              * zu allem und damit zu nichts.
              */
             if ($gruppe === SettingsCatalogue::GROUP_MAIL) {
-                $abschnitt = $abschnitt->footerActions([$this->testMailAction()]);
+                /*
+                 * IN DER DEMO GESPERRT, nicht versteckt. Vorgabe: „ausgehende
+                 * mailserver sind in der demo nicht verfügbar und nicht
+                 * einrichtbar." Sichtbar bleibt der Abschnitt trotzdem -- wer
+                 * sich das Programm ansieht, soll sehen, dass es Mail KANN,
+                 * und daneben, warum es hier nicht geht. Ein verschwundener
+                 * Abschnitt beantwortet keine der beiden Fragen.
+                 */
+                if (app(DemoMode::class)->isActive()) {
+                    $abschnitt = $abschnitt
+                        ->description(__('demo.mail.disabled'))
+                        ->disabled();
+                } else {
+                    $abschnitt = $abschnitt->footerActions([$this->testMailAction()]);
+                }
             }
 
             // Und aus demselben Grund die Scannerpruefung im Betriebsabschnitt.

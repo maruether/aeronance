@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Vereinsflieger\Console;
 
+use App\Core\Demo\DemoMode;
 use App\Core\Modules\ModuleManager;
 use App\Modules\Vereinsflieger\Actions\RunConnectionSync;
 use App\Modules\Vereinsflieger\Models\Connection;
@@ -58,6 +59,17 @@ final class SyncCommand extends Command
          */
         if (! app(ModuleManager::class)->isEnabled('vereinsflieger')) {
             $this->components->info('Das Vereinsflieger-Modul ist nicht aktiv -- nichts zu tun.');
+
+            return self::SUCCESS;
+        }
+
+        /*
+         * In der Demo spricht diese Instanz keinen fremden Server an. Die
+         * beiden Anbindungen dort sind Beispiele ohne Zugangsdaten -- der
+         * Abgleich haette nichts zu holen und wuerde es trotzdem versuchen.
+         */
+        if (app(DemoMode::class)->isActive()) {
+            $this->components->warn('Demomodus: Es wird kein Abgleich mit Vereinsflieger ausgefuehrt.');
 
             return self::SUCCESS;
         }

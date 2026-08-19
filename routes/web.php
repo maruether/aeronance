@@ -53,6 +53,13 @@ Route::middleware(BlockSetupWhenInstalled::class)
             Route::post('/datenbank', [SetupController::class, 'configureDatabase'])->name('database');
             Route::post('/migrate', [SetupController::class, 'migrate'])->name('migrate');
 
+            /*
+             * Der Demoweg: ein Knopf statt fuenf Formularen. Er richtet die
+             * Instanz vollstaendig ein und verriegelt den Assistenten --
+             * deshalb steht er hinter derselben Wache wie alles andere.
+             */
+            Route::post('/demo', [SetupController::class, 'installDemo'])->name('demo');
+
             Route::post('/organisation', [SetupController::class, 'configureOrganisation'])->name('organisation');
             Route::post('/module', [SetupController::class, 'selectModules'])->name('modules');
             Route::post('/fertig', [SetupController::class, 'finish'])->name('finish');

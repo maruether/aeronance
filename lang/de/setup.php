@@ -19,10 +19,35 @@ return [
 
     'step' => [
         'database' => 'Datenbank',
+        'demo' => 'Oder: Demo einrichten',
         'migrate' => 'Tabellen anlegen',
         'administrator' => 'Administratorkonto',
         'modules' => 'Module',
         'finish' => 'Abschließen',
+    ],
+
+    'demo' => [
+        'preselected' => 'in der Umgebung vorgewählt',
+        'what' => 'Eine Spielwiese zum Ausprobieren statt einer Vereinsinstallation. '
+            .'Alles ist da und alles ist erfunden — und die Wahl lässt sich nicht '
+            .'zurücknehmen: Aus einer Demo wird später keine Live-Installation und '
+            .'umgekehrt.',
+        'point' => [
+            'reset' => 'Der gesamte Datenbestand wird jede Nacht gelöscht und neu '
+                .'aufgesetzt. Was du einträgst, ist morgen weg.',
+            'accounts' => 'Feste Konten mit bekanntem Passwort, die niemand ändern kann — '
+                .'sonst wäre die Demo nach dem ersten Besucher zu.',
+            'uploads' => 'Keine Dateiuploads. Beispieldokumente liegen bereit.',
+            'mail' => 'Kein Mailversand und keine Mailkonfiguration.',
+            'fetch' => 'Handabrufe von Herstellermitteilungen sind stark begrenzt.',
+        ],
+        'account' => 'Anmeldung',
+        'password' => 'Passwort',
+        'can' => 'kann',
+        'confirm' => 'Ich richte eine Demo ein. Mir ist klar, dass der Datenbestand täglich '
+            .'gelöscht wird und dass sich das nicht mehr umstellen lässt.',
+        'confirm_required' => 'Ohne Bestätigung wird keine Demo eingerichtet.',
+        'action' => 'Demo einrichten',
     ],
 
     'db' => [

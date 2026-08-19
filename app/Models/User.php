@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Core\Demo\DemoMode;
 use App\Core\Models\Qualification;
 use Database\Factories\UserFactory;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
@@ -21,6 +22,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Permission\Traits\HasRoles;
@@ -313,5 +315,49 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     {
         $this->app_authentication_recovery_codes = $codes;
         $this->save();
+    }
+
+    /**
+     * Die Demokonten sind unveränderlich.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Vorgabe: „alle mit Benutername=Rollenname und Passwort=demo dies ist
+     * nicht änderbar."
+     *
+     * IM MODELL UND NICHT NUR IN DER MASKE, aus demselben Grund wie überall in
+     * diesem System: Eine Regel, die im Formular steht, kennt der nächste
+     * Bildschirm nicht -- und hier hängt mehr daran als sonst. Wer in einer
+     * öffentlich erreichbaren Demo das Passwort von „admin" ändert, sperrt
+     * jeden anderen Besucher aus, und niemand kann es zurückdrehen: Der Reset
+     * kommt erst in der Nacht.
+     *
+     * Ausserhalb des Demomodus tut das hier nichts -- isProtectedAccount()
+     * fragt zuerst, ob überhaupt eine Demo läuft.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    protected static function booted(): void
+    {
+        self::updating(function (self $user): void {
+            if (! app(DemoMode::class)->isProtectedAccount($user->getOriginal('email'))) {
+                return;
+            }
+
+            /*
+             * Geschützt ist, was den Zugang ausmacht -- und der Name, weil er
+             * auf der Anmeldeseite steht. Alles andere (Profilbild, Sprache)
+             * darf ein Besucher gern verstellen; der nächste Reset räumt es weg.
+             */
+            foreach (['email', 'password', 'is_active', 'locked_at'] as $feld) {
+                if ($user->isDirty($feld)) {
+                    throw new RuntimeException(__('demo.account_locked'));
+                }
+            }
+        });
+
+        self::deleting(function (self $user): void {
+            if (app(DemoMode::class)->isProtectedAccount($user->email)) {
+                throw new RuntimeException(__('demo.account_locked'));
+            }
+        });
     }
 }

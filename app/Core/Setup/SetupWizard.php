@@ -6,9 +6,11 @@ namespace App\Core\Setup;
 
 use App\Core\Access\AccessSetup;
 use App\Core\Access\CoreRoles;
+use App\Core\Demo\DemoMode;
 use App\Core\Modules\ModuleManager;
 use App\Core\Settings\Settings;
 use App\Models\User;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -33,7 +35,63 @@ final readonly class SetupWizard
         private AccessSetup $access,
         private ModuleManager $modules,
         private Settings $settings,
+        private DemoMode $demo,
     ) {}
+
+    /**
+     * Die Instanz als Spielwiese einrichten -- in einem Zug.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * Vorgabe: „auswahl bei der installation ob demo oder live, kein
+     * nachträgliches umstellen."
+     *
+     * WARUM EIN ZUG UND NICHT FÜNF SCHRITTE: In einer Demo gibt es nichts zu
+     * entscheiden. Administrator, Vereinsname und Modulauswahl sind vorgegeben
+     * -- die Konten stehen fest, der Name ist erfunden, und eine Demo, in der
+     * die Hälfte der Module fehlt, zeigt die Hälfte des Programms. Fünf
+     * Formulare, deren Antworten feststehen, wären fünf Gelegenheiten für einen
+     * Zustand, den es nicht geben soll.
+     *
+     * DIE MARKE ZUERST: Alles, was danach läuft -- die Migrationen, der Seeder
+     * -- soll sich schon wie eine Demo verhalten. Bricht der Seeder ab, bleibt
+     * der Assistent offen (der Installationsmarker kommt zuletzt), und ein
+     * zweiter Versuch fängt an derselben Stelle an.
+     * ─────────────────────────────────────────────────────────────────────────
+     */
+    public function installDemo(): void
+    {
+        if ($this->state->isInstalled()) {
+            throw new RuntimeException('Diese Installation ist bereits abgeschlossen.');
+        }
+
+        /*
+         * Der Riegel gegen den schlimmsten Fall: eine LAUFENDE Installation,
+         * deren Marker verlorenging. Der Demoweg legt eine Datenbank voller
+         * Beispieldaten an und stellt sie unter tägliches Löschen -- auf einem
+         * System mit echten Aufzeichnungen wäre das die teuerste Fehlbedienung,
+         * die dieses Programm anbietet.
+         */
+        if ($this->state->looksInUse()) {
+            throw new RuntimeException(
+                'Diese Datenbank ist bereits in Benutzung -- der Demomodus richtet sich nur '
+                .'auf einer frischen Installation ein.'
+            );
+        }
+
+        $check = $this->testDatabase();
+
+        if (! $check['ok']) {
+            throw new RuntimeException($check['message']);
+        }
+
+        $this->demo->activate();
+
+        $this->migrate();
+
+        Artisan::call('db:seed', ['--class' => DemoSeeder::class, '--force' => true]);
+
+        $this->state->markInstalled();
+    }
 
     /**
      * @return array{ok: bool, message: string}

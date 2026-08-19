@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Core\Http\SecurityHeaders;
+use App\Http\Middleware\BlockUploadsInDemo;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -54,6 +55,12 @@ return Application::configure(basePath: dirname(__DIR__))
          * Endpunkten.
          */
         $middleware->append(SecurityHeaders::class);
+
+        /*
+         * Kein Upload in der Demo -- an der Tuer und nicht nur im Formular.
+         * Ausserhalb des Demomodus tut die Middleware nichts.
+         */
+        $middleware->append(BlockUploadsInDemo::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

@@ -620,4 +620,34 @@ return [
         ],
     ],
 
+    /*
+    |---------------------------------------------------------------------------
+    | Demomodus
+    |---------------------------------------------------------------------------
+    |
+    | NUR DIE VORAUSWAHL steht hier. Ob eine Installation eine Demo IST,
+    | entscheidet die Marke storage/demo, die der Setup-Assistent schreibt --
+    | siehe App\Core\Demo\DemoMode. Eine Env-Variable allein waere zu wenig:
+    | Eine Zeile in der .env machte sonst aus einer Live-Instanz eine Demo, und
+    | der naechtliche Reset loeschte echte Daten.
+    |
+    | Im Docker-Kanal beantwortet der Betreiber die Frage ueber die Umgebung,
+    | statt sie im Browser noch einmal zu bekommen.
+    |
+    */
+
+    'demo' => [
+        'preselect' => env('AERONANCE_DEMO', false),
+
+        // Nachts, wenn niemand mitten in einer Vorfuehrung steht.
+        'reset_at' => env('AERONANCE_DEMO_RESET_AT', '03:00'),
+
+        /*
+         * Der Handabruf von Herstellermitteilungen -- pro INSTANZ, nicht pro
+         * Sitzung: Der Schutz gilt dem Hersteller, dessen Server die Demo
+         * sonst fuer jeden Besucher einzeln befragt.
+         */
+        'fetch_per_hour' => (int) env('AERONANCE_DEMO_FETCH_PER_HOUR', 5),
+    ],
+
 ];

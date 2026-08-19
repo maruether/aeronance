@@ -35,6 +35,16 @@
         .mod:first-of-type { border-top: 0; }
         .mod strong { font-weight: 600; }
         .mod small { color: #616e7c; display: block; }
+        .demo { border-color: #b7c4d0; background: #fbfcfd; }
+        .demo-list { margin: .6rem 0 0; padding-left: 1.1rem; color: #3e4c59; font-size: .9rem; }
+        .demo-list li { margin: .2rem 0; }
+        .accounts { border-collapse: collapse; margin-top: .9rem; font-size: .85rem; width: 100%; }
+        .accounts th { text-align: left; font-weight: 600; color: #52606d; padding: .25rem .5rem .25rem 0; }
+        .accounts td { padding: .2rem .5rem .2rem 0; vertical-align: top; }
+        .accounts code { background: #eef1f4; padding: .05rem .3rem; border-radius: .2rem; }
+        .check { display: flex; gap: .5rem; align-items: flex-start; font-weight: 400;
+                 font-size: .9rem; margin-top: 1rem; }
+        .check input { margin-top: .25rem; }
     </style>
 </head>
 <body>
@@ -90,6 +100,59 @@
             </form>
         @endif
     </div>
+
+    {{--
+        Die Abzweigung: Verein oder Spielwiese.
+
+        Sie steht nach der Datenbank und vor allem anderen, weil sie alles
+        andere ersetzt: Wer hier abbiegt, bekommt keinen Administrator-, keinen
+        Vereins- und keinen Modulschritt -- in einer Demo steht das alles fest.
+        Und sie steht nur da, solange die Datenbank leer ist: Der Demoweg legt
+        Beispieldaten an und stellt sie unter taegliches Loeschen.
+    --}}
+    @if (! $hasAdministrator)
+        <div class="step demo">
+            <h2>
+                {{ __('setup.step.demo') }}
+                @if ($demoPreselected)
+                    <span class="badge todo">{{ __('setup.demo.preselected') }}</span>
+                @endif
+            </h2>
+            <p class="hint">{{ __('setup.demo.what') }}</p>
+
+            <ul class="demo-list">
+                <li>{{ __('setup.demo.point.reset') }}</li>
+                <li>{{ __('setup.demo.point.accounts') }}</li>
+                <li>{{ __('setup.demo.point.uploads') }}</li>
+                <li>{{ __('setup.demo.point.mail') }}</li>
+                <li>{{ __('setup.demo.point.fetch') }}</li>
+            </ul>
+
+            <table class="accounts">
+                <tr>
+                    <th>{{ __('setup.demo.account') }}</th>
+                    <th>{{ __('setup.demo.password') }}</th>
+                    <th>{{ __('setup.demo.can') }}</th>
+                </tr>
+                @foreach ($demoAccounts as $konto => $angaben)
+                    <tr>
+                        <td><code>{{ \App\Core\Demo\DemoMode::email($konto) }}</code></td>
+                        <td><code>{{ \App\Core\Demo\DemoMode::PASSWORD }}</code></td>
+                        <td>{{ $angaben['description'] }}</td>
+                    </tr>
+                @endforeach
+            </table>
+
+            <form method="post" action="{{ route('setup.demo') }}">
+                @csrf
+                <label class="check">
+                    <input type="checkbox" name="confirm" value="1" @checked($demoPreselected)>
+                    {{ __('setup.demo.confirm') }}
+                </label>
+                <button type="submit" @disabled(! $database['ok'])>{{ __('setup.demo.action') }}</button>
+            </form>
+        </div>
+    @endif
 
     {{-- 2. Migrations --}}
     <div class="step">

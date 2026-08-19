@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Vereinsflieger\Filament\Resources\Connections;
 
 use App\Core\Access\CorePermissions;
+use App\Core\Demo\DemoMode;
 use App\Modules\Vereinsflieger\Filament\Resources\Connections\Pages\ListConnections;
 use App\Modules\Vereinsflieger\Jobs\SyncConnectionJob;
 use App\Modules\Vereinsflieger\Models\Connection;
@@ -117,11 +118,23 @@ final class ConnectionResource extends Resource
                      * zurueckgezeigt -- ein Feld, das ihn enthaelt, wandert beim
                      * naechsten Speichern durch den Browser.
                      */
+                    /*
+                     * IN DER DEMO GESPERRT. Vorgabe: „zugangsdaten zu vf und co
+                     * werden nicht gespeichert." Die Felder bleiben sichtbar --
+                     * wer sich das Programm ansieht, soll erkennen, was eine
+                     * Anbindung braucht -- aber nichts davon geht in die
+                     * Datenbank; das Model weist es zusaetzlich ab.
+                     */
                     TextInput::make('password')
                         ->label(__('vereinsflieger.connection.field.password'))
                         ->password()
                         ->revealable()
-                        ->required(fn (?Connection $record): bool => $record === null)
+                        ->disabled(fn (): bool => app(DemoMode::class)->isActive())
+                        ->helperText(fn (): ?string => app(DemoMode::class)->isActive()
+                            ? __('demo.credentials_disabled')
+                            : null)
+                        ->required(fn (?Connection $record): bool => $record === null
+                            && ! app(DemoMode::class)->isActive())
                         ->dehydrated(fn (?string $state): bool => filled($state)),
 
                     Toggle::make('password_is_hash')
@@ -132,13 +145,16 @@ final class ConnectionResource extends Resource
                         ->label(__('vereinsflieger.connection.field.app_key'))
                         ->password()
                         ->revealable()
-                        ->required(fn (?Connection $record): bool => $record === null)
+                        ->disabled(fn (): bool => app(DemoMode::class)->isActive())
+                        ->required(fn (?Connection $record): bool => $record === null
+                            && ! app(DemoMode::class)->isActive())
                         ->dehydrated(fn (?string $state): bool => filled($state)),
 
                     TextInput::make('auth_secret')
                         ->label(__('vereinsflieger.connection.field.auth_secret'))
                         ->password()
                         ->revealable()
+                        ->disabled(fn (): bool => app(DemoMode::class)->isActive())
                         ->dehydrated(fn (?string $state): bool => filled($state))
                         ->helperText(__('vereinsflieger.connection.help.auth_secret')),
 
