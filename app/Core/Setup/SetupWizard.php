@@ -13,6 +13,7 @@ use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
 
@@ -116,9 +117,65 @@ final readonly class SetupWizard
         }
     }
 
+    /**
+     * Die Tabellen anlegen.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * DER SCHEMA-ABZUG IST EINE ABKÜRZUNG, KEINE VORAUSSETZUNG.
+     *
+     * Seit `database/schema/mariadb-schema.sql` im Release liegt, lädt Laravel
+     * bei einer leeren Datenbank diese Datei, statt alle Migrationen zu fahren
+     * -- Sekunden statt einer Minute. Eingespielt wird sie über den
+     * Kommandozeilen-Client `mariadb`, und genau da lauert der Fall, der eine
+     * Installation sonst zum Stehen brächte:
+     *
+     *   Seit MariaDB 11.4 verlangt der Client von sich aus eine verschlüsselte
+     *   Verbindung. Steht auf demselben Rechner ein älterer Server ohne TLS
+     *   (oder einer, dem der Betreiber keins beigebracht hat), bricht das Laden
+     *   mit „SSL is required, but the server does not support it" ab -- während
+     *   dieselbe Verbindung über PDO tadellos funktioniert. Denkbar ist auch
+     *   schlicht: kein `mariadb` im Pfad.
+     *
+     * In beiden Fällen ist die richtige Antwort nicht „Installation
+     * gescheitert", sondern „dann eben der lange Weg". `--schema-path` auf eine
+     * Datei, die es nicht gibt, schaltet die Abkürzung ab; Laravel migriert
+     * dann so, wie es das jahrelang getan hat.
+     *
+     * Der zweite Versuch läuft auf einer Datenbank, in der der erste
+     * möglicherweise schon Tabellen angelegt hat -- deshalb `migrate:fresh`
+     * statt `migrate`: Er räumt zuerst ab. Auf einer benutzten Datenbank käme
+     * dieser Weg nie zum Zug, denn dort ist der Assistent gar nicht erreichbar
+     * (looksInUse, RequireSetupAuthority).
+     * ─────────────────────────────────────────────────────────────────────────
+     */
     public function migrate(): void
     {
-        Artisan::call('migrate', ['--force' => true]);
+        $abzug = database_path('schema/'.config('database.default').'-schema.sql');
+
+        try {
+            Artisan::call('migrate', ['--force' => true]);
+
+            return;
+        } catch (Throwable $e) {
+            /*
+             * NUR wenn die Abkürzung überhaupt im Spiel war. Gibt es keinen
+             * Abzug, ist ein Fehlschlag ein echter Fehlschlag -- und dann wäre
+             * ein zweiter Versuch mit `migrate:fresh` nichts weiter als ein
+             * Löschbefehl auf einen unbekannten Zustand.
+             */
+            if (! is_file($abzug)) {
+                throw $e;
+            }
+
+            Log::warning('Der Schema-Abzug liess sich nicht einspielen; es wird migriert.', [
+                'grund' => $e->getMessage(),
+            ]);
+        }
+
+        Artisan::call('migrate:fresh', [
+            '--force' => true,
+            '--schema-path' => 'database/schema/gibt-es-nicht.sql',
+        ]);
     }
 
     /**

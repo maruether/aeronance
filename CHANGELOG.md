@@ -25,6 +25,110 @@ erscheinen.
   EASA-Felder. Der genaue Zuschnitt wird vor dem Bau entschieden und hier
   begründet.
 
+## [0.2.2] — 2026-10-22
+
+Ein Sicherheits-Release ohne neue Funktion: Es gibt das Container-Image mit
+gepatchtem PHP heraus, hebt die Abhängigkeiten auf einen Stand ohne bekannte
+Lücken und nimmt die zwei Korrekturen mit, die seit 0.2.0 auf `master` lagen.
+
+**Beim Update beachten:** Es läuft keine Migration mit. Bei **Docker**
+genügt `deploy/docker/update.sh v0.2.2`, und das sollte zeitnah geschehen:
+Erst dieses Image schließt die Lücke. Bei **eigenem Server und LXC** kommt
+PHP nicht aus dem Release, sondern vom System. Dort bringt
+`deploy/update.sh` nur die Anwendung auf den neuen Stand; die Lücke
+schließt `apt upgrade`. Danach prüfen, ob `php -v` 8.4.27 oder das von
+der Distribution gepatchte Paket zeigt.
+
+### Sicherheit
+
+- **Das Container-Image baut auf PHP 8.4.27.** PHP hat am 21. Oktober 2026
+  zwei kritische Lücken geschlossen (CVE-2026-109618, CVE-2026-109619, je
+  CVSS 9.2): Ein Angreifer kann ohne Anmeldung über präparierte
+  Anfragen — etwa Multipart-Uploads, die den Speicher erschöpfen — Code auf
+  dem Server ausführen. Betroffen ist jedes PHP vor 8.2.35, 8.3.36, 8.4.27
+  bzw. 8.5.12; vollständige Gegenmaßnahmen außer dem Update gibt es nicht.
+
+  **Alle bisher veröffentlichten Aeronance-Images sind betroffen**; das
+  Image zu 0.2.0 trug PHP 8.4.24. Das Image wird nur beim Schneiden einer
+  Fassung gebaut, und bis zur nächsten trägt es die Lücken seines
+  Basis-Images mit. Deshalb ist der Patch eine eigene Fassung und kein
+  stilles Neubauen von 0.2.0: Nur so meldet ihn die Aktualisierungsprüfung,
+  und nur so zieht `deploy/docker/update.sh` ihn überhaupt.
+
+- **Die Abhängigkeiten tragen keine bekannte Lücke mehr.** Die Lock-Datei
+  stammte vom 9. August; `composer audit` fand darin inzwischen 15 Meldungen
+  zu 8 Paketen, und genau dieser Prüfschritt hat die Pipeline zu 0.2.1
+  angehalten — so soll es sein. Gehoben wurden nur die betroffenen
+  Pakete samt dem, was sie zwingend mitziehen: Filament 5.7.3 → 5.10.3,
+  Laravel 13.23 → 13.38, Livewire 4.3.3 → 4.4.8, league/commonmark
+  2.9.0 → 2.10.4, Flysystem 3.35.2 → 3.36.0, phpseclib 3.0.56 → 3.0.57,
+  Symfony HttpFoundation und YAML auf 8.1.9. Guzzle bleibt absichtlich bei 7
+  und brick/math bei 0.18: Beide hätten auf eine neue Hauptversion springen
+  können, und ein Sicherheits-Release ist nicht der Ort dafür.
+
+  Mit dem neuen Filament ändern sich zwei seiner Inline-Skripte, deshalb
+  sind die Hashes in `config/csp.php` neu erzeugt — der Test, der sie
+  bewacht, hat sie geliefert.
+
+  Dass die Lock-Datei zwei Monate alt werden konnte, ist der eigentliche
+  Befund: Renovate hat seit August keinen Merge Request erzeugt. Warum, wird
+  getrennt geklärt.
+
+### Behoben
+
+- **Gleichzeitige Einträge stehen jetzt verlässlich in der richtigen
+  Reihenfolge.** Die Zustandsgeschichte eines Loses, die Wägungen eines
+  Luftfahrzeugs und die Freigaben eines Vorgangs waren nur nach ihrem
+  Zeitstempel sortiert. Sind zwei Einträge gleich alt, entschied der
+  Datenbankspeicher — und der antwortet nicht immer gleich.
+
+  Beim Los fiel es in der Pipeline auf: Die Geschichte begann plötzlich
+  mit dem *ältesten* Eintrag. Schwerer wiegt der Fall bei den Wägungen,
+  denn `weighed_at` ist ein Datum ohne Uhrzeit: Wurde ein Luftfahrzeug am
+  selben Tag zweimal gewogen — Wägung und Korrektur —, war es Zufall,
+  welche als die aktuelle galt. Jetzt entscheidet bei gleicher Zeit die
+  laufende Nummer: Was später eingetragen wurde, ist das Spätere.
+
+### Geändert
+
+- **Der Datenbankaufbau lädt eine Datei, statt 77 Migrationen zu fahren.**
+  `database/schema/mariadb-schema.sql` liegt jetzt im Repository und wird
+  überall dort benutzt, wo eine Datenbank von Null entsteht: bei der
+  Erstinstallation und in jedem Testlauf. Gemessen **8 statt 45 Sekunden**
+  je Aufbau.
+
+  Für einen Verein heißt das: Der Schritt „Tabellen anlegen" im
+  Setup-Assistenten ist in Sekunden durch. Für die Entwicklung heißt es
+  mehr: Die Oberflächen-Tests bauen die Datenbank zweimal je Test auf, der
+  entsprechende CI-Job lag bei 140 Minuten und wuchs mit jedem neuen Test
+  um anderthalb Minuten. Zwei dieser Tests brauchten vorher 194 Sekunden,
+  jetzt 33.
+
+  Bestehende Installationen merken nichts — der Abzug wird nur geladen,
+  wenn noch keine Migration gelaufen ist.
+
+  Eingespielt wird der Abzug über den Kommandozeilen-Client `mariadb` —
+  und der verlangt seit MariaDB 11.4 von sich aus eine verschlüsselte
+  Verbindung. Trifft ein solcher Client auf einen Server ohne TLS, bricht
+  das Laden ab, während dieselbe Verbindung über PHP tadellos
+  funktioniert. Der Setup-Assistent fängt das ab und migriert dann den
+  langen Weg: **Der Abzug ist eine Abkürzung, keine Voraussetzung.**
+
+  **Der Preis ist eine zweite Quelle für dieselbe Wahrheit**, und die kann
+  auseinanderlaufen, ohne dass ein Test rot wird: Fehlende Migrationen
+  laufen einfach oben drauf. Deshalb gibt es `aeronance:schema-verify` und
+  den Pipeline-Job `schema`: Er baut eine Vergleichsdatenbank aus **allen**
+  Migrationen und hält Tabellen-DDL und Migrationsliste gegen den Abzug.
+  Verglichen wird das Schema, nicht die Datei — sonst meldete jede andere
+  `mariadb-dump`-Version einen Unterschied, der keiner ist.
+
+## [0.2.1] — 2026-10-22
+
+**Nie ausgeliefert.** Der Tag existiert, aber die Pipeline hielt am
+Abhängigkeits-Audit an, bevor Paket oder Image entstanden; nach GitHub ging
+nichts. Was 0.2.1 bringen sollte, bringt 0.2.2 — samt dem, was das Audit
+gefunden hat.
+
 ## [0.2.0] — 2026-08-18
 
 Der Demomodus — und damit der erste Sprung auf 0.2.

@@ -141,7 +141,16 @@ final class Aircraft extends Model
     /** @return HasMany<Weighing, $this> */
     public function weighings(): HasMany
     {
-        return $this->hasMany(Weighing::class)->orderByDesc('weighed_at');
+        /*
+         * Nach Datum UND laufender Nummer: `weighed_at` ist ein Datum ohne
+         * Uhrzeit. Zwei Wägungen am selben Tag -- Erstwägung und Korrektur,
+         * kommt vor -- waren damit gleichrangig, und currentWeighing() nahm
+         * die, die der Speicher zuerst hergab. Die zweite Ordnung macht aus
+         * dem Zufall die Regel: Was später eingetragen wurde, gilt.
+         */
+        return $this->hasMany(Weighing::class)
+            ->orderByDesc('weighed_at')
+            ->orderByDesc('id');
     }
 
     public function currentWeighing(): ?Weighing

@@ -164,7 +164,13 @@ final class WorkOrder extends Model
     /** @return HasMany<ReleaseToService, $this> */
     public function releases(): HasMany
     {
-        return $this->hasMany(ReleaseToService::class)->orderByDesc('released_at');
+        // Zweite Ordnung wie überall dort, wo ein Zeitstempel gleich sein kann:
+        // Eine Korrektur kann in derselben Sekunde erteilt werden wie das, was
+        // sie ersetzt -- und dann ist die laufende Nummer die einzige Auskunft,
+        // welche der beiden die spätere ist.
+        return $this->hasMany(ReleaseToService::class)
+            ->orderByDesc('released_at')
+            ->orderByDesc('id');
     }
 
     /**

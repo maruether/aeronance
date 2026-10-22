@@ -46,9 +46,9 @@ return [
     'script_hashes' => [
         // Filament 5 — erzeugt, siehe Kopf
         'sha256-0mqBbIWwNzdgIFPFU9BM5l9RnzSn/EbrlFBGLZHGf5Y=',
-        'sha256-CUO614iJ1yQTie8j253djmvmNcad8Y2m0MoYGZs+JQo=',
-        'sha256-U1bkbkwEe1mD+tUU83n0bTj/yfxW/ZR1XA7I/KciRwU=',
         'sha256-WX5lAdf8niz6n+76OT4AN25MZGGAcHm6ofSPP/WrrqQ=',
+        'sha256-jYfvfsG+XbE2cSa6CmBoh4ckUmCxhXi+2glQeVh2wec=',
+        'sha256-wIU/wZ3C0uAbXUJ1ym8Hn+XeJ93yqTzciYi7RNk2MwM=',
     ],
 
 ];

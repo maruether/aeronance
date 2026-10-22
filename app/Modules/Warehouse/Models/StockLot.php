@@ -126,7 +126,17 @@ final class StockLot extends Model implements HasMedia
     /** @return HasMany<LotStateChange, $this> */
     public function stateChanges(): HasMany
     {
-        return $this->hasMany(LotStateChange::class)->orderByDesc('occurred_at');
+        /*
+         * Die zweite Ordnung ist kein Zierat: Bei gleichem Zeitstempel ist die
+         * Reihenfolge sonst dem Speicher überlassen -- und der antwortet nicht
+         * immer gleich. Aufgefallen in der Pipeline, als der Schema-Abzug die
+         * Tabellen anders anlegte und die Geschichte eines Loses plötzlich mit
+         * dem ÄLTESTEN Eintrag begann. Wer später eingetragen wurde, ist bei
+         * gleicher Zeit der Spätere; die laufende Nummer sagt das verlässlich.
+         */
+        return $this->hasMany(LotStateChange::class)
+            ->orderByDesc('occurred_at')
+            ->orderByDesc('id');
     }
 
     /**

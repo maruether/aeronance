@@ -55,6 +55,22 @@ variables:
     - composer install --no-progress --prefer-dist --no-interaction
     - cp .env.example .env
     - php artisan key:generate
+    # ─────────────────────────────────────────────────────────────────────────
+    # DER CLIENT BESTEHT SONST AUF TLS, DER SERVICE KANN KEINS.
+    #
+    # Seit MariaDB 11.4 verlangt der Kommandozeilen-Client von sich aus eine
+    # verschluesselte Verbindung; der 10.11-Service dieser Pipeline bietet
+    # keine. Ergebnis: "TLS/SSL error: SSL is required, but the server does not
+    # support it" -- an einer ueberraschenden Stelle, naemlich beim Laden des
+    # Schema-Abzugs, den Laravel ueber genau diesen Client einspielt. PDO ist
+    # davon nicht betroffen, weshalb die Tests vorher jahrelang liefen.
+    #
+    # Hier ist das unbedenklich: Datenbank und Runner stehen im selben
+    # Docker-Netz dieser Pipeline und leben Minuten. Fuer eine Installation
+    # waere es die falsche Antwort -- dort faengt der Setup-Assistent den Fall
+    # ab und migriert notfalls den langen Weg (SetupWizard::migrate).
+    # ─────────────────────────────────────────────────────────────────────────
+    - printf '[client]\nskip-ssl\n' > "$HOME/.my.cnf" && chmod 600 "$HOME/.my.cnf"
 
 cache:
   key:
@@ -103,6 +119,46 @@ test:
     expire_in: 1 week
 
 # ─────────────────────────────────────────────────────────────────────────────
+# SAGT DER SCHEMA-ABZUG DASSELBE WIE DIE MIGRATIONEN?
+#
+# `database/schema/mariadb-schema.sql` ist der Grund, warum die Testlaeufe nicht
+# mehr 77 Migrationen je Datenbankaufbau fahren. Der Preis ist eine zweite
+# Quelle fuer dieselbe Wahrheit -- und die kann auseinanderlaufen, ohne dass ein
+# einziger Test rot wird: Fehlende Migrationen laufen oben drauf, das Ergebnis
+# stimmt, es dauert nur wieder laenger. Schlimmer ist der Fall, in dem der Abzug
+# etwas ANDERES sagt als die Migrationen; dann bauen Tests und frische
+# Installationen still verschiedene Schemata.
+#
+# Also einmal je Pipeline beide Wege gehen und vergleichen. Kostet einen vollen
+# Migrationslauf (etwa eine Minute) und beantwortet die Frage abschliessend.
+# ─────────────────────────────────────────────────────────────────────────────
+schema:
+  stage: test
+  <<: *php_setup
+  services:
+    - name: mariadb:10.11
+      alias: mariadb
+  script:
+    - |
+      for i in $(seq 1 30); do
+        php -r 'exit(@fsockopen(getenv("DB_HOST"), 3306) ? 0 : 1);' && break
+        echo "warte auf MariaDB ($i/30)"; sleep 2
+      done
+    # Die Vergleichsdatenbank legt der Betreiber an -- hier also die Pipeline.
+    # Der Testbenutzer selbst bekommt dafuer bewusst kein Recht: Ein
+    # Pruefwerkzeug soll weniger duerfen als der Betrieb, nicht mehr.
+    - |
+      mariadb -h "$DB_HOST" -u root -p"$MARIADB_ROOT_PASSWORD" -e "
+        CREATE DATABASE IF NOT EXISTS aeronance_schema_check
+          CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+        GRANT ALL ON aeronance_schema_check.* TO '$DB_USERNAME'@'%';
+        FLUSH PRIVILEGES;"
+    # Die Standardverbindung aus dem Abzug plus Restmigrationen aufbauen ...
+    - php artisan migrate:fresh --force
+    # ... und gegen einen vollstaendigen Migrationslauf halten.
+    - php artisan aeronance:schema-verify --database=aeronance_schema_check
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Die Oberflaechen-Tests, PARALLEL zum normalen Lauf.
 #
 # Sie fahren je Test die Anwendung neu hoch, damit die Modul-Ressourcen
@@ -143,19 +199,18 @@ render:
   # 12 von 13, Sekunden vor dem Ziel. Ein Timeout, das den Normalfall toetet,
   # ist keins.
   # ───────────────────────────────────────────────────────────────────────────
-  # DREI STUNDEN, und die Zahl ist gemessen, nicht geschaetzt.
+  # DAS ZEITLIMIT STEHT WEITER AUF DREI STUNDEN -- gebraucht wird es nicht mehr.
   #
-  # v0.1.9 mit 28 Tests: 107 Minuten -- zwoelf unter der alten Grenze. v0.1.10
-  # brachte vier Tests dazu und lag damit darueber. Der Lauf war NICHT haengen
-  # geblieben (das war die erste Vermutung, und ein `timeout 45m` dagegen hat
-  # ihn nur frueher erschlagen): Die Punkte erscheinen gepuffert, weshalb es
-  # nach viereinhalb Minuten so aussieht, als sei schon alles durch.
+  # Jeder Test baut das Schema zweimal auf. Das kostete 42 Sekunden je Aufbau,
+  # womit jeder neue Test die Laufzeit um anderthalb Minuten verlaengerte:
+  # v0.1.9 mit 28 Tests 107 Minuten, v0.1.11 mit 34 Tests 140. Seit es
+  # database/schema/mariadb-schema.sql gibt, laedt derselbe Aufbau eine Datei
+  # statt 77 Migrationen zu fahren -- gemessen 8 statt 45 Sekunden, der Job
+  # faellt damit auf etwa ein Viertel.
   #
-  # Jeder Test baut das Schema zweimal auf, 42 Sekunden je Aufbau -- die
-  # Laufzeit waechst also mit jedem neuen Test um anderthalb Minuten. Drei
-  # Stunden kaufen Luft, loesen aber nichts: Der eigentliche Weg ist ein
-  # billigerer Schemaaufbau (schema:dump, mit CI-Pruefung gegen einen
-  # veralteten Dump).
+  # Das Limit bleibt trotzdem: Es kostet nichts, solange nichts haengt, und die
+  # Erfahrung mit v0.1.0 (Job Sekunden vor dem Ziel erschlagen) war teurer als
+  # jede grosszuegige Zahl. Ob der Abzug noch stimmt, prueft der Job `schema`.
   # ───────────────────────────────────────────────────────────────────────────
   timeout: 3h
   services:

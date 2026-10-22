@@ -40,6 +40,17 @@ use App\Core\Modules\ModuleManager;
  * Der Preis sind zwei Schema-Laeufe je Test. Fuer eine Handvoll
  * Oberflaechen-Tests ist das der richtige Tausch: Sie sind die einzigen, die
  * eine kaputte Seite ueberhaupt finden koennen.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ZUM PREIS: Er ist seit dem Schema-Abzug klein.
+ *
+ * Ein Versuch, den tearDown-Lauf zu sparen, ging schief -- ohne ihn brachen
+ * sechzehn von dreissig Tests weg (RouteNotFoundException): Was zwischen zwei
+ * dieser Tests aufzuraeumen ist, ist die gebootete Anwendung, und die Datenbank
+ * haengt daran. Der Aufbau war also nicht zu streichen, sondern billiger zu
+ * machen: `migrate:fresh` laedt seit database/schema/mariadb-schema.sql eine
+ * Datei, statt 77 Migrationen zu fahren -- gemessen 8 statt 45 Sekunden je
+ * Aufbau. Ob der Abzug noch stimmt, prueft `aeronance:schema-verify`.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 trait RendersModulePages

@@ -281,7 +281,20 @@ final class LotStateTest extends TestCase
         $history = $lot->fresh()->stateChanges;
 
         $this->assertCount(3, $history);
-        $this->assertSame('Erneut aufgefallen', $history->first()->reason);
+
+        /*
+         * DIE GANZE REIHENFOLGE, nicht nur der erste Eintrag -- und darum geht
+         * es hier wirklich: Alle drei Änderungen fallen in dieselbe Sekunde,
+         * `occurred_at` ist damit für alle drei gleich. Ohne zweite Ordnung
+         * entscheidet der Speicher, was oben steht; in der Pipeline stand
+         * daraufhin einmal der ÄLTESTE Eintrag vorn. Die Geschichte eines Loses
+         * ist aber genau dann interessant, wenn mehreres kurz hintereinander
+         * passiert.
+         */
+        $this->assertSame(
+            ['Erneut aufgefallen', 'Verdacht ausgeräumt', 'Erster Verdacht'],
+            $history->pluck('reason')->all(),
+        );
     }
 
     private function lot(): StockLot

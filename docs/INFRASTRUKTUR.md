@@ -462,6 +462,39 @@ Stilprüfung braucht keine Datenbank. Testberichte laufen als JUnit-Artefakt
 nach GitLab; die erste Fassung hatte die Artefakte deklariert, aber nichts
 schrieb die Datei.
 
+### Der Schema-Abzug — warum die Testläufe nicht mehr 77 Migrationen fahren
+
+Jeder Testfall, der eine Datenbank braucht, baut sie neu auf; die
+Oberflächen-Tests tun es zweimal je Test. Das kostete **45 Sekunden je
+Aufbau** und wuchs mit jeder neuen Migration weiter — der `render`-Job lag bei
+v0.1.11 bei 140 Minuten, und jeder zusätzliche Test legte anderthalb Minuten
+drauf.
+
+Seit `database/schema/mariadb-schema.sql` existiert, lädt derselbe Aufbau eine
+SQL-Datei und fährt nur noch die Migrationen, die darin fehlen: **8 Sekunden**.
+Gemessen an zwei Oberflächen-Tests: 194 → 33 Sekunden.
+
+Der Abzug ist eine **zweite Quelle für dieselbe Wahrheit**, und die kann
+auseinanderlaufen, ohne dass ein Test rot wird. Deshalb prüft der Job `schema`
+bei jedem Pipeline-Lauf beides gegeneinander:
+
+```bash
+php artisan aeronance:schema-verify --database=aeronance_schema_check
+```
+
+Er baut die Vergleichsdatenbank aus **allen** Migrationen auf (der
+Verbindungsname `schema_check` sorgt dafür, dass Laravel dort keinen Abzug
+findet) und vergleicht Tabellen-DDL und die Liste der angewandten Migrationen.
+Verglichen wird das Schema, nicht die Datei: Ein Abzug aus `mariadb-dump 12.3`
+unterscheidet sich von einem aus `10.11` in Kommentarzeilen, ohne dass sich am
+Schema etwas ändert.
+
+Aufgefrischt wird er mit `php artisan schema:dump` auf einer frisch migrierten,
+sonst leeren Datenbank. Das braucht einen `mariadb-dump`, der auch
+`SHOW FUNCTION STATUS` beantworten kann — nach einem Serverwechsel also einmal
+`mariadb-upgrade`, sonst bricht der Befehl mit „Column count of mysql.proc is
+wrong" ab.
+
 ### Wohin das Container-Image gehen soll
 
 Der `container`-Job baut es bei jedem Tag und **verwirft es**, solange kein Ziel

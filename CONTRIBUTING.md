@@ -74,6 +74,20 @@ Beide Testläufe müssen grün sein. Der zweite ist ausgelagert, weil er die
 Anwendung mehrfach neu hochfährt — er ist der einzige, der eine kaputte Seite
 überhaupt finden kann.
 
+**Wenn dein Beitrag eine Migration mitbringt**, gehört noch eine Zeile dazu:
+
+```
+php artisan schema:dump                  # auf einer frisch migrierten, leeren DB
+php artisan aeronance:schema-verify --database=<wegwerf-db>
+```
+
+`database/schema/mariadb-schema.sql` ist der Grund, warum ein Datenbankaufbau
+im Test acht statt fünfundvierzig Sekunden dauert: Er lädt eine Datei, statt
+alle Migrationen zu fahren. Ohne Auffrischung läuft deine Migration danach
+einfach oben drauf — richtig, aber wieder langsam. Die Prüfung sagt, ob der
+Abzug noch dasselbe Schema ergibt wie die Migrationen; in der Pipeline macht
+das der Job `schema` bei jedem Lauf.
+
 ## Was nicht angenommen wird
 
 - **Multi-Tenant.** Eine Instanz, ein Verein. Keine `tenant_id`, auch nicht

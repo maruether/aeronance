@@ -15,6 +15,7 @@ use App\Core\Console\MailTestCommand;
 use App\Core\Console\RequirementsCommand;
 use App\Core\Console\RestoreCommand;
 use App\Core\Console\RetentionCommand;
+use App\Core\Console\SchemaVerifyCommand;
 use App\Core\Console\SyncAccessCommand;
 use App\Core\Console\UpdateCheckCommand;
 use App\Core\Contracts\AircraftDirectory;
@@ -472,6 +473,13 @@ final class ModuleServiceProvider extends ServiceProvider
                  * und die Registrierung ist die schlechtere Stelle dafuer.
                  */
                 DemoResetCommand::class,
+
+                /*
+                 * Die Schema-Pruefung. Sie legt eine Wegwerf-Datenbank an und
+                 * gehoert damit in dieselbe Reihe wie der Rest: registriert,
+                 * aber nur wirksam, wenn jemand sie aufruft.
+                 */
+                SchemaVerifyCommand::class,
 
                 // Module commands are registered unconditionally, exactly like
                 // module migrations (D1): the command exists whether or not the
