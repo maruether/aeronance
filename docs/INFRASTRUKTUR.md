@@ -585,23 +585,60 @@ löschen, neu anlegen.
 | Flotte | Luftfahrzeuge, Komponenten, Muster + Kennblatt, Lufttüchtigkeitsprüfung | `FLOTTE.md`, `MUSTER-KENNBLATT.md`, `KOMPONENTENMUSTER.md` |
 | Arbeitskarten | Vorgänge, Befunde, Zeiten, Fremdarbeit, Freigabe (CRS) | `ARBEITSKARTEN.md`, `AUSGEBAUTE-TEILE.md` |
 | Part-66 | Erfahrungslogbuch, Recency 66.A.20(b), ARS-Zähler | `PART66.md` |
-| LTA/TM | fünf Abrufmodi, sieben Hersteller, Wochenlauf, Druckübersicht | `LTA-TM.md` |
+| LTA/TM | fünf Abrufmodi, 48 Quellen, Wochenlauf, Druckübersicht | `LTA-TM.md` |
+| Eingangsprüfung | Ware bleibt gesperrt, bis die Prüfung unterschrieben ist | `HANDBUCH.md` Kap. 8 |
+| Werkzeuge | Kalibrierfristen, Nachprüfzeiträume, Ausgabe | `HANDBUCH.md` Kap. 12 |
+| Vereinsflieger | Mitgliederabgleich, Luftfahrzeugzeiten, Arbeitsstunden | `IDENTITAETEN.md`, `ANALYSE.md` §6 |
 
 ### Was noch aussteht
 
-1. **AuthZ-Negativtests je Filament-Resource.** Der Panel baut seine Resources
-   beim Boot aus der Modultabelle; unter `RefreshDatabase` ist die leer, deshalb
-   fehlen Routen und die üblichen Resource-Tests laufen nicht. Der Weg dahin ist
-   ein Test-Setup, das die Module vor dem Panel-Boot aktiviert — noch nicht
-   gebaut. *(Vorgabe: „AuthZ macht später fable.")*
-2. **Identity-Provider-Module** (Vereinsflieger, LDAP/AD) — vorbereitet, aber
-   nicht begonnen. Der Kern kann lokales Login inkl. Break-glass.
-3. **Docker-Kanal steht — es fehlt nur das Ziel.** Der `container`-Job baut auf
-   SemVer-Tags aus **demselben Tarball**, das `pack` erzeugt, prüft das Ergebnis
-   und ist **einmal echt durchgelaufen** (Wegwerf-Tag `v0.0.6`, danach gelöscht):
-   Archiv 216,9 MB, alle tragenden Pfade vorhanden. Dazu `deploy/docker/` mit
-   Compose-Verbund (PHP-FPM, nginx, MariaDB, Worker, Scheduler), nginx-Konfig,
-   Entrypoint und `.env`-Beispiel.
+1. ~~**AuthZ-Negativtests je Filament-Resource.**~~ **Erledigt am 2026-10-30.**
+   Das Test-Setup, das die Module vor dem Panel-Boot aktiviert, gab es seit
+   den Oberflächen-Tests (`tests/Support/RendersModulePages.php`); was fehlte,
+   war die systematische Abdeckung. `PanelDenyByDefaultTest` fragt das Panel
+   mit allen acht Modulen, was es einhängt, und verlangt für jede Resource und
+   jede Seite eine Regel: wer die Liste sieht, wer anlegt und bearbeitet, wie
+   ein Datensatz entsteht. Je Bildschirm drei Personen — niemand (403), der
+   Betrachter (200 auf der Liste, 403 auf Anlegen und Bearbeiten), der
+   Verwalter (200). Die 200er sind kein Schmuck: Ohne sie bewiese eine 403
+   nichts, denn eine kaputte Route antwortet auch dem Falschen mit einem
+   Fehler. Ein neuer Bildschirm ohne Regel lässt die Suite scheitern.
+
+   Gefunden hat der Lauf genau eine Abweichung, und die ist Absicht: Das
+   Wägeblatt hat keine Ansichtsseite, die Bearbeitungsseite *ist* das Blatt,
+   und ein Betrachter darf es öffnen. Geschrieben wird nur über
+   `darfSchreiben()`; ein eigener Test schickt den Speichern-Aufruf als
+   Betrachter ab und prüft, dass nichts ankommt.
+
+   Läuft in der Hauptsuite, nicht in der Gruppe `rendering`: Die läuft nur
+   auf Tags und Merge Requests, und ein Rechteloch soll master an dem Tag rot
+   machen, an dem es gepusht wird. Kostet gemessen 94 Sekunden für fünf
+   Methoden, fast alles Schema-Aufbau.
+2. **Identity-Provider-Module.** ~~Vorbereitet, aber nicht begonnen.~~
+   **Vereinsflieger ist gebaut** (seit 0.1.x; Mitgliederabgleich,
+   Luftfahrzeugzeiten, Arbeitsstunden — `IDENTITAETEN.md`, `ANALYSE.md` §6).
+   **LDAP/AD hat niedrige Priorität** (Entscheidung Marvin, 2026-10-30): Für
+   die absehbaren Installationen reicht Vereinsflieger; die Naht im Kern
+   (`IdentityProviderRegistry`, Rollenzuordnung nach E4) liegt bereit. Der
+   Kern kann weiterhin lokales Login inkl. Break-glass.
+3. ~~**Docker-Kanal steht — es fehlt nur das Ziel.**~~ **Der Kanal ist fertig,
+   nachgetragen am 2026-10-30.** Der `container`-Job baut auf SemVer-Tags aus
+   **demselben Tarball**, das `pack` erzeugt, und schiebt das Image nach
+   **`ghcr.io/maruether/aeronance`** — mit dem Tag der Fassung und zusätzlich
+   als `latest`. Das `latest` ist ein Registry-Tag, kein Installationsweg: Die
+   Compose-Datei verweigert den Start ohne ausdrücklich gesetztes
+   `AERONANCE_IMAGE`, und `deploy/docker/update.sh` nimmt nur eine genannte
+   Fassung. Vereine ziehen anonym; GHCR drosselt das für öffentliche Pakete
+   nicht, Docker Hub hätte es getan. Die GitLab-Registry der eigenen Instanz
+   wurde nie gebraucht: Der Verbund läuft produktiv direkt vom
+   veröffentlichten Image.
+
+   Nötig sind drei CI-Variablen: `AERONANCE_IMAGE_REPO` (der volle Bildpfad;
+   der Host für die Anmeldung wird davon abgeschnitten, weil Kaniko sich am
+   Host anmeldet, aber an den Pfad schiebt — das war einmal verwechselt),
+   `AERONANCE_REGISTRY_USER` und `AERONANCE_REGISTRY_TOKEN` (GitHub-Token
+   mit `write:packages`). Ohne Ziel wird das Image weiterhin gebaut, geprüft
+   und verworfen, damit der Tag beweist, dass es baut.
 
    **Gebaut wird mit Kaniko, und das ist gemessen.** Zuerst stand dort Buildah —
    der übliche Weg ohne `docker:dind`. Es scheiterte reproduzierbar an
@@ -615,34 +652,16 @@ löschen, neu anlegen.
    Namespace, kein privilegierter Modus. Die Alternative wäre gewesen, seccomp
    für diesen Runner abzuschalten; ein hoher Preis für einen Build-Schritt.
 
-   **Ohne Registry wird geprüft und verworfen, nicht hochgeladen.** Das
-   OCI-Archiv sprengt das Upload-Limit der Instanz (`413 Request Entity Too
-   Large`) — ein Bau, der durchläuft und am Artefakt scheitert, sieht aus wie ein
-   kaputter Bau und ist keiner. Sobald eine Registry steht, genügen drei
-   CI-Variablen: `AERONANCE_REGISTRY`, `_USER`, `_TOKEN`.
+   **Das Image ist kein Job-Artefakt**, und das ist gemessen: Das OCI-Archiv
+   sprengt das Upload-Limit der Instanz (`413 Request Entity Too Large`) — ein
+   Bau, der durchläuft und am Artefakt scheitert, sieht aus wie ein kaputter
+   Bau und ist keiner. Der Weg führt deshalb direkt in die Registry.
 
-   **Die Registry ist bewusst vertagt, keine offene Lücke.** Das Projekt geht
-   erst öffentlich, wenn es fertig ist — bis dahin hat das Image keinen
-   Abnehmer, und ein Ablageort ohne Nutzer ist Speicher und ein bewegliches Teil
-   mehr. Der Job liefert seinen Wert schon heute: er beweist auf jedem Tag, dass
-   das Image baut und vollständig ist.
-
-   Entschieden wird in zwei Schritten, und die Reihenfolge ergibt sich aus dem,
-   was jeweils zählt:
-
-   - **Sobald der Verbund selbst betrieben werden soll** (Testinstallation):
-     die **GitLab-Registry der eigenen Instanz**. Privat, im eigenen Haus, und
-     bei einem einzelnen Nutzer spielen Bandbreite und Uptime keine Rolle.
-     Nötig: Subdomain, Zertifikat, Storage, Aktivierung in der `gitlab.rb`.
-   - **Zur Veröffentlichung** zusätzlich **GHCR**. Dann zählt etwas anderes:
-     Vereine ziehen das Image **anonym**, und Docker Hub drosselt genau das.
-     GHCR kennt für öffentliche Pakete keine solche Grenze, und der öffentliche
-     GitHub-Spiegel ist ohnehin geplant (CLAUDE.md, Distribution). Ausserdem
-     hinge sonst der Installationsweg jeder Vereinsinstallation an der Uptime
-     eines privaten Servers.
-
-   Beides schliesst sich nicht aus — der Job bedient jedes Ziel, das in
-   `AERONANCE_IMAGE_REPO` steht, und braucht dafür keine Änderung.
+   Seit 0.2.2 ist das Basis-Image auf die PHP-Patchversion gepinnt, damit
+   Renovate bei jedem PHP-Release einen Merge Request öffnet — die Lehre aus
+   dem 21. Oktober 2026, als zwei kritische PHP-Lücken zwei Releases lang
+   unbemerkt blieben, weil `composer audit` Pakete prüft und nicht die
+   Laufzeit.
 
 4. **LXC: beim Skript geblieben, und das ist eine Entscheidung.** Ein vorgebautes
    Template klingt sauberer, ist es hier aber nicht: Proxmox bezieht Templates

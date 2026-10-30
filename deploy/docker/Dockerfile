@@ -15,9 +15,18 @@
 # weder einzeln neu starten noch einzeln skalieren -- und ein Absturz nimmt alles
 # mit.
 # ──────────────────────────────────────────────────────────────────────────────
-ARG PHP_VERSION=8.4
+# DAS BASIS-IMAGE IST AUF DIE PATCH-VERSION GEPINNT, und das ist die Lehre aus
+# dem 21.10.2026: PHP schloss zwei kritische Luecken (CVE-2026-109618,
+# CVE-2026-109619), und nichts im Projekt hat es gemerkt -- composer audit
+# prueft Pakete, nicht die Laufzeit, und ein gleitendes Tag "8.4" gibt
+# Renovate nichts zu heben. Das veroeffentlichte Image lag zu dem Zeitpunkt
+# zwei Security-Releases zurueck. Mit der vollen Versionsnummer hier erzeugt
+# Renovate bei jedem PHP-Release einen Merge Request (siehe renovate.json),
+# und der ist das Signal, eine Fassung zu schneiden. Der Sprung auf 8.5 bleibt
+# eine Entscheidung ueber die Systemvoraussetzung und wird dort unterdrueckt.
+ARG PHP_IMAGE=php:8.4.27-fpm-bookworm
 
-FROM php:${PHP_VERSION}-fpm-bookworm
+FROM ${PHP_IMAGE}
 
 # poppler-utils liefert pdftotext: die Kennblatt- und LTA-Listen der Hersteller
 # richten ihre Spalten per Leerzeichen aus, und ohne -layout sind sie unlesbar.

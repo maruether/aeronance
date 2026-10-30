@@ -170,6 +170,58 @@ say "Dienste"
 # gerade noch lief, nicht mit neuem Code weiterarbeitet.
 docker compose exec -T app php artisan queue:restart || true
 
+# ── Die Skripte neben dem Verbund nachziehen ──────────────────────────────────
+#
+# BISHER ERNEUERTE DIESES SKRIPT DIE CONTAINER, ABER NIE SICH SELBST. Die
+# Dateien in deploy/docker/ liegen auf dem Wirt und kommen nicht aus dem
+# Image -- beim Update auf 0.1.3 lief deshalb noch die Fassung der
+# Erstinstallation ohne den nginx-Neustart von oben, und die Instanz stand
+# kurz auf 502, obwohl das Release den Fehler laengst nicht mehr hatte.
+#
+# Nachgezogen werden NUR DIE SKRIPTE: update.sh und auto-update.sh gehoeren dem
+# Release. docker-compose.yml und nginx.conf gehoeren der INSTALLATION -- ein
+# Verein hat dort vielleicht Ports, Volumes oder einen Proxy eingetragen --
+# und werden nicht angefasst; weichen sie vom Release ab, wird es gesagt.
+#
+# Ganz am Ende, nach allem, was schiefgehen kann: Eine neue Fassung dieses
+# Skripts nuetzt erst dem NAECHSTEN Lauf, und ein Fehler hier darf ein
+# gelungenes Update nicht mehr als gescheitert melden (daher `|| true`).
+#
+# `mv` statt `cp` ueber die Datei: Die laufende Shell liest aus der alten,
+# bereits geoeffneten Datei weiter; cat > update.sh wuerde ihr unter dem
+# Lesezeiger den Inhalt tauschen.
+say "Deploy-Skripte aus dem Release"
+STAGE="$(docker create "$TARGET_IMAGE" 2>/dev/null || true)"
+if [ -n "$STAGE" ]; then
+    for datei in update.sh auto-update.sh; do
+        if docker cp "$STAGE:/var/www/aeronance/deploy/docker/$datei" "./$datei.neu" 2>/dev/null; then
+            if cmp -s "./$datei.neu" "./$datei"; then
+                rm -f "./$datei.neu"
+            else
+                chmod 0755 "./$datei.neu"
+                mv -f "./$datei.neu" "./$datei"
+                echo "    $datei erneuert"
+            fi
+        else
+            rm -f "./$datei.neu"
+            echo "    $datei liegt nicht im Image -- unveraendert gelassen"
+        fi
+    done
+    for datei in docker-compose.yml nginx.conf; do
+        if docker cp "$STAGE:/var/www/aeronance/deploy/docker/$datei" "./$datei.release" 2>/dev/null; then
+            if ! cmp -s "./$datei.release" "./$datei"; then
+                echo "    $datei weicht vom Release ab -- absichtlich nicht ersetzt."
+                echo "        Unterschiede: docker run --rm --entrypoint cat $TARGET_IMAGE \\"
+                echo "                          /var/www/aeronance/deploy/docker/$datei | diff $datei -"
+            fi
+            rm -f "./$datei.release"
+        fi
+    done
+    docker rm -f "$STAGE" >/dev/null 2>&1 || true
+else
+    echo "    Konnte keinen Container aus dem Image anlegen -- Skripte unveraendert."
+fi
+
 say "Fertig: $CURRENT_IMAGE -> $TARGET_IMAGE"
 echo
 echo "    Sicherungen liegen im storage-Volume unter app/backups."

@@ -1,21 +1,25 @@
 # CLAUDE.md — Aeronance
 
+**Stand dieses Dokuments: v0.2.2 (2026-10-22).** Die Abschnitte „Stand" und
+„Arbeitsweise" werden bei jedem Release nachgezogen; die Leitplanken ändern
+sich nur durch eine festgehaltene Entscheidung.
+
 ## Projektkontext
 
 Webbasiertes, selbstgehostetes Werkstattverwaltungssystem (MRO), gedacht als
 **Open-Source-Projekt für Luftsportvereine**. Referenzinstallation ist die
-Akaflieg Freiburg e.V.; die Architektur muss aber vom kleinen Verein (nur Lager)
-bis zum kleinen Part-145-Betrieb skalieren. Ein voller 145-Stack ist für die
-meisten Vereine zu groß — deshalb ist Modularität kein Nice-to-have, sondern
+Akaflieg Freiburg e.V.; die Architektur skaliert vom kleinen Verein (nur
+Lager) bis zum kleinen Part-145-Betrieb. Ein voller 145-Stack ist für die
+meisten Vereine zu groß — deshalb ist Modularität keine Nice-to-have, sondern
 Kernanforderung.
 
 **Woher das kommt, und warum es die Prioritäten erklärt.** Die ursprüngliche
 Anforderung war: *„Ich habe ein halbfertiges Lagertool und will einen besseren
 Weg, mein Part-66-Log zu führen."* Das Erfahrungslogbuch ist also nicht der
 letzte Punkt einer Liste, sondern **das eigentliche Ziel** — Lager, Flotte und
-Arbeitskarten sind das Gerüst, das sich als nötig herausgestellt hat, um es
-sauber ableiten zu können. Wo eine Entscheidung zwischen „bequem jetzt" und
-„später auswertbar" steht, gewinnt die Auswertbarkeit.
+Arbeitskarten sind das Gerüst, das nötig ist, um es sauber abzuleiten. Wo eine
+Entscheidung zwischen „bequem jetzt" und „später auswertbar" steht, gewinnt
+die Auswertbarkeit.
 
 Dieses Repo ist die Neuimplementierung. Der Vorgänger — ein handgeschriebenes
 PHP/JS-Lagerverwaltungstool — liegt weiterhin unter `../clubwarehouse/` und
@@ -23,70 +27,134 @@ dient nur noch als Nachschlagewerk; sein Domänenwissen ist vollständig in
 [`docs/ANALYSE.md`](docs/ANALYSE.md) überführt. **Nichts aus dem Bestandscode
 wird übernommen, ohne dass es dort begründet steht.**
 
-**Strikt modularer Aufbau — Kern + einzeln aktivierbare Module:**
+**Der Betreiber heißt im Code und in der Oberfläche *Organisation*, nicht
+Verein** — ein Part-145-Betrieb ist kein Verein. „Verein" bleibt nur als
+Halterart eines Luftfahrzeugs und in Fließtexten, wo ein Verein das konkrete
+Beispiel ist. Begründung in [`docs/GLOSSAR.md`](docs/GLOSSAR.md).
 
-- **Kern (Grundsystem):** Benutzer/Auth (lokales Login), Rollen & Rechte,
-  Audit-Trail, Dokumentenablage, Einstellungen, Modulverwaltung,
-  Erst-Setup-Assistent (siehe „Setup, Module & Updates")
-- **Identity-Provider (als Module):** Vereinsflieger (Login +
-  Mitglieder-/Rechte-Sync über die VF-API), LDAP/Samba AD, später ggf. OIDC
-- **Lager** — Ersatzteile, Lagerorte, Bestände, Ein-/Ausbuchung
-- **Flotte** — Flugzeuge, Halter, Komponenten (S/N, TSN/TSO), Form-1-Ablage
-- **Arbeitskarten** — Vorgänge, Karten, Befunde, Arbeitszeiten **und die
-  Freigabe (CRS)**; Teileentnahme nur, wenn das Lagermodul aktiv ist
-- **Personal & Part-66** — Erfahrungslogbuch, Recency (66.A.20(b)),
-  Lizenz-/ARS-Zähler, abgeleitet aus den Arbeitskarten
-- später: 145-Bausteine (Eingangsprüfung, Werkzeug-/Kalibrierungsverwaltung,
-  unabhängige Zweitprüfung, …)
-
-Ausbaureihenfolge: Kern → Lager → Flotte → Arbeitskarten → Part-66.
-Identity-Provider-Module kommen, sobald der Kern steht und der Bedarf da ist.
-
-### Warum die Freigabe kein eigenes Modul ist
-
-Ursprünglich war sie eines. Nach dem Bau der Nachbarmodule sprechen drei Dinge
-dagegen, und zugestimmt wurde dem am 2026-07-30:
-
-1. **Sie ist nicht abwählbar.** Nach ML.A.801 braucht jede Instandhaltung eine
-   Freigabebescheinigung. Das Lager ist optional, die Flotte ist optional — wer
-   aber Arbeitskarten führt, erteilt zwangsläufig Freigaben. Ein Modul, das
-   niemand abschalten kann, ist keins.
-2. **Die Unveränderlichkeitsregel koppelt hart.** Sie spricht von *Vorgängen*,
-   und die liegen in den Arbeitskarten. In einem anderen Modul müsste jenes in
-   fremde Tabellen greifen oder die Karten müssten ein Modul befragen, das sie
-   nicht fordern — beides bricht genau die Grenze, die die Trennung begründen
-   sollte.
-3. **Es wäre die vierte Fassung derselben Regel.** „Jemand Qualifiziertes steht
-   für etwas ein, Credential eingefroren" steht bereits an drei Stellen
-   (Loszustand, externe Arbeit, Kartenabzeichnung). Als die Pilot-Owner-Grenze
-   nachgezogen wurde, war sie an zwei von drei Stellen falsch — genau das
-   passiert bei verteilten Regeln.
-
-Die Freigabe ist deshalb die **dritte Stufe an der Karte bzw. am Vorgang**: nach
-*fertig gemeldet* und *abgezeichnet*. Was ein eigenes Modul rechtfertigt, sind
-die **145-Bausteine** — unabhängige Zweitprüfung, Eingangsprüfung,
-Werkzeugkalibrierung. Die sind echte Zusatztiefe und tatsächlich abschaltbar.
-
-Technik: Laravel + Filament, **MariaDB** (Hard Limit, siehe Leitplanken).
-Auslieferung über drei Kanäle (siehe „Distribution"). Referenzinstallation:
-LXC auf Proxmox, CI über eine eigene GitLab-CE-Instanz; als Identity-Provider
-dort perspektivisch LDAP/Samba AD und/oder Vereinsflieger.
-
-**Wichtig:** Der Betreiber ist Laravel-Neuling (PHP-Erfahrung vorhanden). Framework-Konzepte
-(Migrations, Eloquent, Service Container, Filament Resources, Queues) beim ersten
-Auftreten in 1–2 Sätzen erklären, nicht als bekannt voraussetzen.
+**Wichtig:** Der Betreiber ist Laravel-Neuling (PHP-Erfahrung vorhanden).
+Framework-Konzepte (Migrations, Eloquent, Service Container, Filament
+Resources, Queues) beim ersten Auftreten in 1–2 Sätzen erklären, nicht als
+bekannt voraussetzen.
 
 ---
 
-## Phase 1 — Analyse des Bestandscodes (ABGESCHLOSSEN, 2026-07-28)
+## Stand — was gebaut ist
 
-Ergebnis: **[`docs/ANALYSE.md`](docs/ANALYSE.md)** — Ist-Schema mit ERD,
-Fachlogik, regulatorischer Rahmen nach VO (EU) 1321/2014, Glossar und acht
-festgehaltene Entscheidungen. **Das Dokument ist ab hier verbindliche
-Grundlage**, kein Archivmaterial: Wer am Datenmodell arbeitet, liest die
-Abschnitte 4.4 bis 4.8 und 5.1 bis 5.6.
+Phase 1 (Analyse des Bestandscodes) und Phase 2 (Grundgerüst) sind
+abgeschlossen; seit v0.1.0 läuft das System im Feldtest bei der Akaflieg.
+Technik: **Laravel 13, Filament 5, PHP ≥ 8.4, MariaDB ≥ 10.11.** Laufzeit-
+abhängigkeiten außerdem `poppler-utils` (Kennblätter, LTA-Listen) und
+`mariadb-client` (Sicherung).
 
-Die Entscheidungen in Kurzform — die Begründungen stehen jeweils im Dokument:
+**Kern** (`app/Core/`): lokales Login mit optionaler 2FA, Rollen und Rechte
+(`spatie/laravel-permission`), Qualifikationen als eigenes Konzept (E8),
+append-only Audit-Trail (`spatie/laravel-activitylog`), Dokumentenablage mit
+Virenprüfung (`spatie/laravel-medialibrary`, optional ClamAV), Einstellungen,
+Modulverwaltung mit Abhängigkeitsauflösung, Erst-Setup-Assistent mit
+dauerhafter Verriegelung, Break-glass über die Konsole, Backup/Restore mit
+Offsite-Kopie (SFTP/S3), Update-Prüfung gegen die GitHub-Tags,
+Retention-Jobs, Demomodus, Security-Header-Middleware, Identity-Provider-
+Schnittstelle mit providerunabhängiger Rollenzuordnung (E4).
+
+**Module** (`app/Modules/`), jedes ein Filament-Plugin mit eigenem Manifest:
+
+| Modul | Schlüssel | `requires` | `provides` | Doku |
+|---|---|---|---|---|
+| Lager | `warehouse` | — | — | `LAGERMODUL.md`, `INVENTURBERICHT.md`, `AUSGEBAUTE-TEILE.md` |
+| Flotte | `fleet` | — | `aircraft-register` | `FLOTTE.md`, `MUSTER-KENNBLATT.md`, `KOMPONENTENMUSTER.md` |
+| LTA / TM | `directives` | `fleet` | — | `LTA-TM.md` |
+| Arbeitskarten + Freigabe | `taskcards` | `fleet` | `maintenance-record` | `ARBEITSKARTEN.md` |
+| Eingangsprüfung | `inspection` | `warehouse` | — | — |
+| Werkzeuge | `tooling` | — | — | — |
+| Part-66-Logbuch | `part66` | `taskcards`, `fleet` | — | `PART66.md` |
+| Vereinsflieger | `vereinsflieger` | — | `identity-provider` | `IDENTITAETEN.md`, `ANALYSE.md` §6 |
+
+`provides` ist eine Fähigkeit, keine Voraussetzung: Arbeitskarten entnehmen
+Teile nur, wenn das Lager aktiv ist, und laufen ohne. LDAP/AD und OIDC sind
+als Identity-Provider vorgesehen, aber nicht gebaut und nicht dringlich.
+
+**Rollen** (`App\Core\Access\CoreRoles`): `admin`, `workshop_manager`,
+`certifying_staff`, `mechanic`, `member`. Keine davon hat alle Rechte; Rechte
+sind tätigkeitsbezogen und werden vom jeweiligen Modul deklariert. Wer
+freigeben darf, entscheidet nicht die Rolle, sondern die Qualifikation
+(Part-66-Lizenz oder Pilot-Owner-Berechtigung je Luftfahrzeug).
+
+**Dokumentation**, und wo was steht:
+
+- [`HANDBUCH.md`](HANDBUCH.md) — Benutzerhandbuch, alle Module und Abläufe,
+  Kommandoreferenz. Wird mit dem Release ausgeliefert.
+- [`CHANGELOG.md`](CHANGELOG.md) — Keep-a-Changelog; jede Fassung nennt
+  unter „Beim Update beachten", was eine Installation tun muss. Der Abschnitt
+  „Vorgemerkt" ist die einzige Roadmap.
+- [`docs/`](docs/) — Entscheidungsdokumente (nur im Repo, nicht im Release).
+  `ANALYSE.md` ist die verbindliche Grundlage für das Datenmodell,
+  `INFRASTRUKTUR.md` für Modulschnitt, CI und Deploy (D1–D8, §8–§11),
+  `GLOSSAR.md` die Brücke zwischen deutscher UI und englischem Code.
+- [`deploy/README.md`](deploy/README.md) — vhost-Vorlagen, systemd, Docker,
+  LXC, Veröffentlichen, Release schneiden.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md), [`SECURITY.md`](SECURITY.md).
+
+**Offen** (Stand v0.2.2):
+
+- **Ultraleichtflugzeuge** in der Flotte — eigener Zuschnitt statt
+  aufgebogener EASA-Felder; wird vor dem Bau entschieden und im CHANGELOG
+  begründet.
+- `docs/ISSUES.md` (lokal, nicht im Repo): weitere Hersteller-Logins für
+  LTA-Quellen sind vertagt.
+- **LDAP/AD** als Identity-Provider hat niedrige Priorität (2026-10-30);
+  Vereinsflieger reicht für die absehbaren Installationen.
+- Die LXC-Skripte sind `shellcheck`-geprüft, aber nie auf einem Proxmox-Host
+  gelaufen; die Einreichung bei den Community-Scripts steht aus.
+- Was je Modul noch fehlt, steht am Ende des jeweiligen Dokuments in `docs/`.
+
+---
+
+## Modularer Aufbau — Kern + einzeln aktivierbare Module
+
+Der Kern muss ohne jedes Modul lauffähig sein, jedes Modul einzeln
+deaktivierbar, ohne dass der Rest bricht. `ModuleBoundaryTest` prüft das,
+auch für Übersetzungen. Die Detailentscheidungen D1–D8 stehen in
+`docs/INFRASTRUKTUR.md` §6; die wichtigsten:
+
+- Migrationen laufen immer, auch für inaktive Module (D1).
+- Modulzustand liegt in der Datenbank, die Modulliste explizit in
+  `config/aeronance.php` — kein Verzeichnis-Scan (D2, D5).
+- Deaktivieren blendet aus und stoppt Jobs, **löscht aber keine Daten**.
+  Deinstallieren gibt es nicht (D3).
+- Optionale Zusammenarbeit über Events und `provides`, nicht über das
+  Manifest-`requires` (D6, D7).
+
+### Warum die Freigabe kein eigenes Modul ist
+
+Ursprünglich war sie eines. Nach dem Bau der Nachbarmodule sprachen drei
+Dinge dagegen, zugestimmt am 2026-07-30:
+
+1. **Sie ist nicht abwählbar.** Nach ML.A.801 braucht jede Instandhaltung eine
+   Freigabebescheinigung. Wer Arbeitskarten führt, erteilt zwangsläufig
+   Freigaben. Ein Modul, das niemand abschalten kann, ist keins.
+2. **Die Unveränderlichkeitsregel koppelt hart.** Sie spricht von *Vorgängen*,
+   und die liegen in den Arbeitskarten. In einem anderen Modul müsste jenes in
+   fremde Tabellen greifen — genau die Grenze, die die Trennung begründen
+   sollte.
+3. **Es wäre die vierte Fassung derselben Regel.** „Jemand Qualifiziertes
+   steht für etwas ein, Credential eingefroren" steht bereits an drei Stellen.
+   Als die Pilot-Owner-Grenze nachgezogen wurde, war sie an zwei von drei
+   Stellen falsch — das passiert bei verteilten Regeln.
+
+Die Freigabe ist deshalb die **dritte Stufe an der Karte bzw. am Vorgang**:
+nach *fertig gemeldet* und *abgezeichnet*. Was ein eigenes Modul rechtfertigt,
+sind die 145-Bausteine — Eingangsprüfung und Werkzeuge sind gebaut, die
+unabhängige Zweitprüfung liegt als „unabhängige Kontrolle" in den
+Arbeitskarten.
+
+---
+
+## Die gesetzten Entscheidungen E1–E8
+
+Festgehalten in `docs/ANALYSE.md`; wer abweichen will, legt es zur
+Entscheidung vor, statt es still anders zu bauen. Neue Erkenntnisse wandern
+als weitere Entscheidung ins Dokument.
 
 | | Entscheidung | Abschnitt |
 |---|---|---|
@@ -96,240 +164,167 @@ Die Entscheidungen in Kurzform — die Begründungen stehen jeweils im Dokument:
 | **E3a** | Name und Lizenznummer **in Freigaben bleiben unverändert** — Aufbewahrungspflicht sticht DSGVO | 5.3 |
 | **E4** | Zuordnung externer Identitäten auf interne Rollen gehört **in den Kern**, nicht in ein Provider-Modul | 5.4 |
 | **E5** | Klassifizierung am **Bauteiltyp**; Zustände serviceable → unserviceable → unsalvageable → disposed; Sperrlager als Lagerorttyp | 4.7 |
-| **E6** | **Lagerhaltung, keine Warenwirtschaft** — keine Lieferscheine, Bestellungen, Rechnungen, Preishistorie | 4.8 |
+| **E6** | **Lagerhaltung, keine Warenwirtschaft** — Bestellungen nur als Erinnerung, keine Lieferscheine, Rechnungen, Preishistorie | 4.8 |
 | **E7** | **Bescheinigungsinhalt** wird als unveränderlicher Snapshot gespeichert, nie als Fremdschlüssel | 5.5 |
 | **E8** | **Qualifikationen sind keine Rollen** — Autorisierung ist zweistufig; die PO-Berechtigung gilt je Luftfahrzeug | 5.6 |
 
-Zentrale fachliche Erkenntnis: **Das Los ist die rückverfolgbare Einheit.** Ein
-Form 1 deckt eine Menge ab (Seriennummer *oder* Charge) und kann in mehreren
-Luftfahrzeugen enden. Seriennummerngeführte Teile sind der Sonderfall „Los mit
-Menge 1".
+Zentrale fachliche Erkenntnis: **Das Los ist die rückverfolgbare Einheit.**
+Ein Form 1 deckt eine Menge ab (Seriennummer *oder* Charge) und kann in
+mehreren Luftfahrzeugen enden. Seriennummerngeführte Teile sind der Sonderfall
+„Los mit Menge 1".
 
 ---
 
-## Phase 2 — Laravel-Grundgerüst (AKTUELL)
+## Distribution — drei Kanäle, ein Artefakt
 
-- **Modul-Infrastruktur zuerst festlegen** — Vorschlag liegt vor:
-  **[`docs/INFRASTRUKTUR.md`](docs/INFRASTRUKTUR.md)**. Empfohlen ist die
-  Domain-Ordnerstruktur mit einem Filament-Plugin je Modul; darin hängen sechs
-  Detailentscheidungen (D1–D6) und zwei offene Fragen (I1, I2).
-  **Wartet auf die Entscheidung** — bis dahin kein Laravel-Scaffold.
-- Neues Laravel-Projekt (aktuelles Stable-Release) in diesem Repo. Der
-  Bestandscode bleibt unter `../clubwarehouse/` und wird **nicht** übernommen.
-- Pakete (Kern): `filament/filament`, `spatie/laravel-permission`,
-  `spatie/laravel-activitylog`, `spatie/laravel-medialibrary`.
-  Provider-Pakete (z. B. `directorytree/ldaprecord-laravel`) kommen erst mit
-  dem jeweiligen Identity-Provider-Modul.
-- **MariaDB** (Laravel-`mariadb`-Treiber, `utf8mb4`); Konfiguration über
-  `.env`, **keine Secrets ins Repo**
-- Erste vertikale Scheibe: **minimaler Kern + Lagermodul vollständig** (Teile,
-  Lagerorte, Bestand, Ein-/Ausbuchung, Mindestbestände) — damit ist das Tool
-  sofort für die Akaflieg nutzbar und beweist gleichzeitig den Modulschnitt.
-- **Lizenz: AGPL-3.0, kein CLA, Spendenlink im Repo.** Der offizielle
-  Lizenztext liegt als `LICENSE` im Repo; der Spendenlink fehlt noch, und die
-  Lizenzwahl ist vor der Veröffentlichung final zu bestätigen.
-  Begründung: Copyleft der GPL
-  greift nur bei *Verbreitung* — der Einbau in proprietäre kommerzielle
-  Produkte ist damit ausgeschlossen (das Gesamtwerk würde GPL-pflichtig
-  inkl. Quellcode-Herausgabe), aber der Betrieb als Webdienst wäre keine
-  Verbreitung (SaaS-Lücke). AGPL §13 schließt genau das: Wer eine veränderte
-  Version als Netzwerkdienst betreibt, muss deren Quellcode anbieten. Ohne
-  CLA gilt inbound = outbound: Jeder Beitragende behält sein Copyright,
-  derselbe Copyleft-Schutz gilt automatisch für alle Beiträge.
-  Copyright-Hinweise (Namensnennung) müssen unter AGPL erhalten bleiben.
-  Bewusste Grenze: interne, unveränderte Nutzung durch Firmen bleibt frei —
-  das verhindert keine Open-Source-Lizenz.
+Ein signiertes Tag ist die einzige Quelle; alle Kanäle konsumieren dasselbe
+Release:
 
----
+1. **Webserver-Pack:** Tarball mit fertigem `vendor/` und gebauten Assets —
+   auf dem Zielsystem weder Composer noch Node. Zielgruppe ist ein eigener
+   Server mit Root-Zugriff, **kein Shared Webspace**. Vorlagen in `deploy/`.
+2. **Docker:** Image aus demselben Tarball (Kaniko, Basis-Image auf die
+   PHP-Patch-Version gepinnt), Compose-Verbund in `deploy/docker/`.
+3. **Proxmox LXC:** `deploy/lxc/` nach den Konventionen der Community-Scripts
+   (Debian 13, Stack aus Debian-Quellen, Übergabe an den Setup-Assistenten).
 
-## Setup, Module & Updates
+Updates laufen über `deploy/update.sh` bzw. `deploy/docker/update.sh`:
+Beschaffen und Signatur prüfen → Sicherung → Wartungsmodus → Code →
+Migrationen → Caches → Worker → Wartungsmodus aus. `.env` und `storage/`
+bleiben unberührt. Details in `HANDBUCH.md` Kap. 15.
 
-- **Erst-Setup-Assistent** (Stil: Vaultwarden/Bookstack-Erstinstallation):
-  Wird nur im uninstallierten Zustand ausgeliefert und führt durch
-  DB-Verbindung (mit Verbindungstest), Migrationen, Admin-Konto,
-  Basiskonfiguration (Vereinsname, Logo) und Modulauswahl.
-  **Nach Abschluss verriegelt sich der Assistent dauerhaft** (Install-Marker);
-  im installierten Zustand sind die Setup-Routen nicht erreichbar — offen
-  liegende Install-Routen sind ein klassisches Einfallstor.
-  Der Assistent erkennt per Env vorkonfigurierte Werte (z. B. DB-Zugang im
-  Docker-Setup) und überspringt die betreffenden Schritte.
-- **Modulauswahl mit Logikprüfung:** Jedes Modul deklariert im Manifest
-  `requires` und `conflicts`. Aktivierung und Deaktivierung prüfen den
-  Abhängigkeitsgraphen (z. B. Arbeitskarten ⇒ Flotte; Part-66 ⇒
-  Arbeitskarten). Der Assistent und die
-  Modulverwaltung erklären dem Nutzer, *warum* etwas mit rein muss oder
-  nicht kombinierbar ist.
-- **Deaktivieren ≠ Deinstallieren:** Deaktivieren blendet Funktionen aus und
-  stoppt Jobs des Moduls, **löscht aber keine Daten**. Echtes Deinstallieren
-  (Tabellen entfernen) ist ein separater, explizit bestätigter Schritt und
-  kommt frühestens später.
-- **Auslieferung als Komplettpaket:** Alle Module sind im Release enthalten;
-  nur die Aktivierung entscheidet, was läuft. Kein Nachladen von Code.
-- **Updates git-basiert:** Releases als SemVer-Tags. Update-Ablauf als ein
-  Befehl (Artisan-Command oder Skript): Backup (DB + Storage) → Maintenance
-  Mode → `git fetch && git checkout <tag>` → `composer install --no-dev` →
-  `php artisan migrate --force` → Caches neu aufbauen → Maintenance Mode aus.
-  `.env` und `storage/` bleiben unberührt. Pro Release CHANGELOG mit
-  UPGRADE-Hinweisen.
+**Entwicklung auf der eigenen GitLab-CE-Instanz, Veröffentlichung auf
+GitHub** (`maruether/aeronance`, Image unter `ghcr.io/maruether/aeronance`).
+Die CI baut auf jedem Tag Tarball und Image; **veröffentlicht wird getrennt
+über `deploy/publish.sh`**, weil die Update-Prüfung der Installationen die
+öffentlichen Tags liest — automatische Spiegelung machte jeden internen Tag
+sofort zum Update für alle. Die öffentliche Historie ist eine
+Release-Historie, ein Commit je Fassung.
+
+Konsequenzen für den Code:
+
+- **Keine kanalspezifischen Codepfade.** Alles über `.env`/Env-Variablen.
+- **Node bleibt reine Build-Zeit-Abhängigkeit** — Assets kommen aus der CI.
+- **Dienste wie Redis dürfen Pflicht werden — aber erst mit echtem Grund.**
+  Defaults bleiben `database` für Queue/Cache/Session. Wird ein Dienst
+  nötig, wird er in allen drei Kanälen Voraussetzung (Doku, Compose, LXC).
+- **Kein Code-Nachladen zur Laufzeit** — in keiner Ausbaustufe.
+  Herstellerquellen für LTA/TM sind deshalb YAML-Daten, kein Code.
 
 ---
 
-## Distribution (drei Kanäle, eine Codebasis)
-
-Ein getaggtes Release ist die einzige Quelle; alle Kanäle konsumieren dasselbe
-Artefakt:
-
-1. **Webserver-Pack (vhost auf eigenem Server, Apache/nginx):** Release-Tarball
-   mit fertigem `vendor/` und in der CI gebauten Frontend-Assets — auf dem
-   Zielsystem sind weder Composer noch Node nötig, nur PHP-FPM (Mindestversion
-   + Extensions einmal zentral definieren) und die vorausgesetzten Dienste.
-   Zielgruppe ist ein voll ausgestatteter Server mit Root-Zugriff, **kein
-   Shared Webspace**. Beiliegend: `deploy/`-Beispiele (nginx-vhost- und
-   Apache-Konfiguration mit Document-Root → `public/`, systemd-Units für
-   Queue-Worker und Scheduler).
-2. **Docker:** offizielles Image + `docker-compose.yml` (App/PHP-FPM, nginx,
-   MariaDB, Worker/Scheduler); Konfiguration vollständig über
-   Env-Variablen, persistente Volumes für DB und `storage/`.
-3. **Proxmox LXC:** Installations- und Update-Skript nach den Konventionen
-   der Proxmox VE Community-Scripts (Einreichung per Pull Request in deren
-   GitHub-Repo). Das Skript erstellt den Container, installiert den Stack
-   (nginx, PHP-FPM, MariaDB), zieht das Release und übergibt an den
-   Setup-Assistenten.
-
-Konsequenzen für den Code (gelten ab Phase 2):
-
-- **Keine kanalspezifischen Codepfade.** Alles Verhalten wird über
-  `.env`/Env-Variablen gesteuert; die drei Kanäle unterscheiden sich nur im
-  Drumherum.
-- **Zielbild „eigener Server oder Container", kein Shared Webspace:**
-  Langlaufende Prozesse (Queue-Worker über systemd/Supervisor) dürfen
-  vorausgesetzt werden. Node bleibt trotzdem reine Build-Zeit-Abhängigkeit —
-  Assets kommen fertig aus der CI.
-- **Dienste wie Redis dürfen Pflicht werden — aber erst mit echtem Grund:**
-  Start-Defaults bleiben `database` für Queue/Cache/Session (der Wechsel ist
-  eine `.env`-Zeile). Sobald ein Feature Redis o. Ä. wirklich braucht, wird
-  es regulär zur Voraussetzung in allen drei Kanälen (Doku, Compose,
-  LXC-Skript) — vorher wäre es nur ein zusätzlicher Dienst, den jede
-  Installation pflegen muss, ohne Nutzen bei Vereinsgröße.
-- **CI (GitLab) baut pro Tag:** Release-Tarball und Docker-Image aus derselben
-  Pipeline. **Veröffentlicht wird davon getrennt**, über `deploy/publish.sh` —
-  die Aktualisierungsprüfung liest die Tags des öffentlichen Repositorys, und
-  automatische Spiegelung machte aus jedem internen Tag sofort ein Update für
-  alle Installationen. GitLab ist die Entwicklung, GitHub der
-  Veröffentlichungskanal für Community-Sichtbarkeit, Issues und die
-  Community-Scripts-Einreichung.
-- **Reihenfolge:** erst Release-Pipeline (Fundament für alles), dann Docker,
-  zuletzt Community-Scripts — die Einreichung dort setzt ein öffentliches,
-  gepflegtes Projekt mit stabilen Releases voraus.
-
----
-
-## Architektur-Leitplanken (gelten ab Phase 2 dauerhaft)
+## Architektur-Leitplanken (gelten dauerhaft)
 
 - **Datenbank: ausschließlich MariaDB — Hard Limit.** Kein PostgreSQL, kein
-  SQLite, auch nicht für Tests oder lokale Entwicklung. Laravel-`mariadb`-Treiber
-  verwenden, `utf8mb4`. Tests und CI laufen gegen einen MariaDB-Service
-  (GitLab-CI-Service-Container), **nicht** gegen das Laravel-übliche SQLite
-  in-memory. Mindestversion einmal festlegen (Vorschlag: 10.11 LTS =
-  Debian-12-Standard). Schwere JSON-Pfad-Queries vermeiden, lieber sauber
-  relationale Spalten. MySQL ist **explizit unsupported** — 8.0 ist seit
-  April 2026 EOL, und 8.4+ driftet zunehmend von MariaDB weg; wer Webspace
-  ohne MariaDB hat, nutzt den Docker- oder LXC-Kanal.
-- **Modulgrenzen respektieren:** Jedes Modul bringt eigene Migrations, Models,
-  Filament-Resources und Policies mit. Kommunikation zwischen Modulen nur über
-  definierte Schnittstellen/Events — nie direkt auf fremde Tabellen zugreifen.
-  Abhängigkeiten explizit im Manifest deklarieren.
-  Der Kern muss ohne jedes Modul lauffähig sein, jedes Modul einzeln
-  deaktivierbar, ohne dass der Rest bricht.
+  SQLite, auch nicht für Tests oder lokale Entwicklung. Laravel-`mariadb`-
+  Treiber, `utf8mb4`, Mindestversion 10.11 (CI-Service). MySQL ist
+  **explizit unsupported**. Schwere JSON-Pfad-Queries vermeiden, lieber
+  sauber relationale Spalten.
+- **Modulgrenzen respektieren:** Jedes Modul bringt eigene Migrations,
+  Models, Filament-Resources und Policies mit. Kommunikation zwischen
+  Modulen nur über definierte Schnittstellen/Events — nie direkt auf fremde
+  Tabellen. Abhängigkeiten explizit im Manifest.
 - **Identity-Provider als Module:** Der Kern kann immer lokales Login inkl.
-  Break-glass-Admin. Provider-Module (Vereinsflieger, LDAP/AD, …) übernehmen
-  Authentifizierung und/oder Mitglieder-Sync; externe Funktionen/Gruppen werden
-  über eine **konfigurierbare Zuordnung** auf die internen Rollen gemappt.
-  Intern ist `spatie/laravel-permission` die einzige Rechte-Wahrheit — kein
-  Fachmodul prüft jemals direkt gegen VF oder LDAP.
-- **Nichts Vereinsspezifisches hardcoden:** Vereinsname, Logo, Kennzeichen-Formate,
-  Auth-Provider usw. sind Instanz-Konfiguration. Die Akaflieg ist
-  Referenzinstallation, kein Sonderfall im Code.
-- **Eine Instanz = ein Verein:** Kein Multi-Tenant-Datenmodell — keine
-  `tenant_id`-Spalten, kein Mandanten-Scoping, auch nicht „vorsorglich".
-  Ein späteres Managed-Hosting-Angebot liefe als verwaltete Einzelinstanzen
-  (ein Container pro Verein); die Datenisolation kommt aus der Infrastruktur,
-  nicht aus dem Schema.
+  Break-glass. Provider-Module übernehmen Authentifizierung und/oder
+  Mitglieder-Sync; externe Gruppen werden über die Zuordnung im Kern auf
+  interne Rollen gemappt. `spatie/laravel-permission` ist die einzige
+  Rechte-Wahrheit — kein Fachmodul prüft jemals direkt gegen VF oder LDAP.
+- **Nichts Organisationsspezifisches hardcoden:** Name, Logo,
+  Kennzeichen-Formate, Auth-Provider sind Instanz-Konfiguration. Die Akaflieg
+  ist Referenzinstallation, kein Sonderfall im Code.
+- **Eine Instanz = eine Organisation:** Kein Multi-Tenant-Datenmodell, keine
+  `tenant_id`, auch nicht „vorsorglich". Managed Hosting liefe als verwaltete
+  Einzelinstanzen.
 - **Audit-Trail von Tag eins:** alle fachlich relevanten Änderungen über
-  activitylog, append-only. Ein späteres 145-Audit muss nachvollziehen können,
-  wer wann was geändert hat.
+  activitylog, append-only. Ein späteres 145-Audit muss nachvollziehen
+  können, wer wann was geändert hat.
 - **Unveränderlichkeit nach Freigabe:** Vorgänge mit erteilter CRS sind
   eingefroren. Korrekturen nur als neue, referenzierende Einträge — nie durch
-  Editieren des Originals. (Diese Regel spricht von *Vorgängen* und war damit
-  immer eine Aussage über Arbeitskarten-Daten — der Grund, warum die Freigabe
-  dort hingehört.)
-- **Traceability:** Form 1 / Herkunftsnachweis hängt an der Komponente. Die Kette
+  Editieren des Originals.
+- **Traceability:** Form 1 / Herkunftsnachweis hängt am Los. Die Kette
   Teil → Vorgang → Flugzeug muss immer abfragbar sein.
-- **Part-66-Felder ab der ersten Arbeitskarte:** Datum, Kennzeichen, Muster,
-  ATA-Kapitel, Tätigkeitsart, Dauer, ausgeführt/unterstützt, freigebende Person.
-  Das Erfahrungslogbuch ist eine Auswertung, keine Extra-Pflege.
+- **Part-66-Felder an jeder Arbeitskarte:** Datum, Kennzeichen, Muster,
+  ATA-Kapitel, Tätigkeitsart, Dauer, ausgeführt/unterstützt, freigebende
+  Person. Das Erfahrungslogbuch ist eine Auswertung, keine Extra-Pflege.
 - **Dokumente** (Form 1, CRS, Wägeberichte, Fotos) über medialibrary am
   jeweiligen Datensatz; Originaldateien unverändert aufbewahren.
-- **Nichts hart löschen:** Soft Deletes überall; Aufbewahrung von Records
-  mindestens 3 Jahre, Löschkonzept kommt später.
+- **Nichts hart löschen:** Soft Deletes überall; Aufbewahrung mindestens
+  3 Jahre, Retention je Datenklasse einzeln schaltbar.
 - **Sprache:** Code, DB und Commits englisch; UI deutsch, übersetzbar über
-  Laravel-Sprachdateien (Open Source!). Glossar in `docs/GLOSSAR.md` pflegen
-  (z. B. Vorgang = work_order, Arbeitskarte = task_card,
-  Freigabe = release_to_service, Lagerort = storage_location, Befund = finding).
-- **Rollen von Anfang an mitdenken:** `admin`, `werkstattleiter`,
-  `certifying_staff`, `mechaniker`, `mitglied` (read-only) — auch wenn anfangs
-  nur zwei davon genutzt werden.
+  Laravel-Sprachdateien. Kommentare dürfen deutsch sein — Hauptsache, sie
+  erklären den Grund. `docs/GLOSSAR.md` mitpflegen, sobald ein neuer
+  Fachbegriff auftaucht: deutsche UI-Bezeichnung und englischer Bezeichner
+  werden zusammen entschieden.
 
 ---
 
-## Security-Leitplanken (Defense in Depth, ab Phase 2)
+## Security-Leitplanken (Defense in Depth)
 
-Das Projekt wird Open Source — Angreifer lesen den Code mit. Sicherheit darf
-deshalb nie auf Verschleierung beruhen, sondern nur auf korrekten Mechanismen.
-Ziel ist, ganze Fehlerklassen strukturell auszuschließen:
+Das Projekt ist Open Source — Angreifer lesen den Code mit. Sicherheit beruht
+nie auf Verschleierung, sondern auf korrekten Mechanismen. Ziel ist, ganze
+Fehlerklassen strukturell auszuschließen:
 
 - **Framework-Mechanismen nutzen, nie umgehen:** Eloquent/Query-Builder statt
-  roher SQL-Strings, Blade-Escaping, CSRF aktiv, Validierung über Form Requests.
-- **AuthZ deny-by-default:** Jede Filament-Resource, Route und Action hat eine
-  Policy. Objektzugriff immer über Scope/Ownership prüfen (IDOR). Rechte, die
-  nur im UI versteckt sind, gelten als nicht vorhanden.
-- **Datei-Uploads härten:** Typ-Whitelist (PDF, JPG/PNG), private Storage-Disk
-  außerhalb des Webroots, Auslieferung nur über auth-geprüfte Controller bzw.
-  signierte URLs, generierte Dateinamen, Größenlimits, kein ungefiltertes SVG.
-- **Secrets & Tokens:** nur in `.env` bzw. verschlüsselten DB-Feldern
-  (encrypted casts) — insbesondere VF-/LDAP-Zugangsdaten. Secrets nie loggen.
-- **Auth härten:** Rate Limiting auf Login und API, Passwort-Hashing über
-  Framework-Standard (bcrypt/argon2), 2FA als Option im Kern, fehlgeschlagene
-  Logins ins Audit-Log.
-- **HTTP-Härtung:** HTTPS only, Security-Header (CSP, HSTS, X-Frame-Options),
-  sichere Session-/Cookie-Flags.
-- **Supply Chain:** `composer.lock` committen, `composer audit` in der CI,
-  Renovate/Dependabot, keine verwaisten Pakete einbauen.
-- **Kein Code-Nachladen zur Laufzeit** — in keiner Ausbaustufe. Auslieferung
-  und Updates laufen ausschließlich über Releases (siehe „Setup, Module &
-  Updates").
-- **Resilienz:** automatisierte Backups (DB + Dokumente) mit getestetem
-  Restore; Migrationen so schreiben, dass ein Rollback möglich bleibt.
+  roher SQL-Strings, Blade-Escaping, CSRF aktiv, Validierung über Form
+  Requests.
+- **AuthZ deny-by-default:** Jede Filament-Resource, Route und Action hat
+  eine Policy. Objektzugriff immer über Scope/Ownership prüfen (IDOR).
+  Rechte, die nur im UI versteckt sind, gelten als nicht vorhanden — eine
+  Sperre im Formular braucht immer die 403 am Endpunkt dahinter.
+- **Datei-Uploads härten:** Typ-Whitelist, private Disk außerhalb des
+  Webroots, Auslieferung nur über auth-geprüfte Controller, generierte
+  Dateinamen, Größenlimits, kein ungefiltertes SVG, optional ClamAV.
+- **Secrets & Tokens:** nur in `.env` bzw. `encrypted`-Casts — insbesondere
+  VF-Zugangsdaten und TOTP-Geheimnisse. Secrets nie loggen.
+- **Auth härten:** Rate Limiting auf Login, Hashing über Framework-Standard,
+  2FA als Option, fehlgeschlagene Logins ins Audit-Log.
+- **HTTP-Härtung:** `SecurityHeaders`-Middleware (CSP ohne `unsafe-inline`
+  in `script-src`, HSTS, X-Frame-Options, nosniff), sichere Cookie-Flags.
+- **Supply Chain:** `composer.lock` committet, `composer audit` bricht die
+  Pipeline ab, Renovate mit OSV-Alerts und eigenem Signierschlüssel.
+  **Zwei Quellen sind kein Luxus** — OSV und Packagist kannten
+  CVE-2026-45070 unterschiedlich. PHP selbst wird über das gepinnte
+  Basis-Image beobachtet; auf eigenem Server und LXC kommt PHP vom System.
+- **Resilienz:** `aeronance:backup`/`restore` mit Offsite-Kopie; Migrationen
+  so schreiben, dass ein Rollback möglich bleibt.
 - **Angreifer-Review als Arbeitsschritt:** Bei jedem neuen Endpoint/Feature
-  kurz durchspielen: Wie umgehe ich die Policy? Was passiert mit manipulierten
-  IDs, Uploads, Parametern? Erkenntnisse direkt als Tests festhalten —
-  mindestens AuthZ-Negativtests pro Resource.
+  kurz durchspielen: Wie umgehe ich die Policy? Was passiert mit
+  manipulierten IDs, Uploads, Parametern? Erkenntnisse direkt als Tests
+  festhalten. Die Grundabdeckung liefert `PanelDenyByDefaultTest`: Jede
+  Resource und jede Seite des Panels braucht dort eine Regel, wer sie
+  sehen und wer sie verwalten darf — ein neuer Bildschirm ohne Regel lässt
+  die Suite scheitern.
 
 ---
 
 ## Arbeitsweise
 
-- Ein Thema nach dem anderen; ein Modul fertigstellen, bevor das nächste beginnt.
-- Minimal-invasive, nachvollziehbare Änderungen. Vor größeren Umbauten kurzen
-  Plan vorlegen und auf Freigabe warten.
-- Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`).
-- Keine Zugriffe auf produktive Systeme oder Datenbanken ohne explizite Anweisung.
+- Ein Thema nach dem anderen; ein Modul fertigstellen, bevor das nächste
+  beginnt. Minimal-invasive, nachvollziehbare Änderungen. Vor größeren
+  Umbauten kurzen Plan vorlegen und auf Freigabe warten.
+- **Begründung an Ort und Stelle.** Jede unübliche Entscheidung trägt ihren
+  Grund als Kommentar im Code; was beim Bauen gefunden wurde, wandert in das
+  Dokument des Moduls unter `docs/`. Commit-Nachrichten erklären das WARUM.
+- **Conventional Commits** (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`,
+  `test:`, `ci:`), Scope ist der Modulschlüssel (`feat(warehouse): …`).
+- **Alles wird signiert.** Jeder Commit und jedes Tag trägt eine
+  GPG-Signatur; die CI prüft gegen `.gitlab/signing-keys.asc`. Claude
+  bereitet Commits vor, Marvin signiert.
+- **CHANGELOG mitführen.** Jede Änderung, die eine Installation betrifft,
+  landet sofort unter `[Unveröffentlicht]` — mit dem Warum, und unter „Beim
+  Update beachten", falls der Betreiber etwas tun muss.
+- **Tests gehören dazu**, gegen echtes MariaDB. Vor jedem Abschluss:
+  `./vendor/bin/pint`, `./vendor/bin/phpunit`, bei UI-Änderungen zusätzlich
+  `--group rendering`. Bringt eine Änderung eine Migration mit:
+  `php artisan schema:dump` auf leerer DB und `aeronance:schema-verify`, sonst
+  wird die Pipeline langsam oder der Job `schema` rot.
+- **Release schneiden:** `[Unveröffentlicht]` umbenennen, „Beim Update
+  beachten" ausfüllen, Commit `chore(release): vX.Y.Z`, signiertes
+  annotiertes Tag, dann `deploy/publish.sh` — nach Abschluss des pack-Jobs
+  ein zweites Mal für das Artefakt. Ablauf in `deploy/README.md`.
+- Keine Zugriffe auf produktive Systeme oder Datenbanken ohne explizite
+  Anweisung. Das ist auch die Feldtest-Installation der Akaflieg.
 - Bei Unklarheiten zur Fachlichkeit (Luftfahrt-Regularien, Vereinsabläufe):
   fragen, nicht raten.
-- **Die Entscheidungen E1–E8 aus `docs/ANALYSE.md` sind gesetzt.** Wer davon
-  abweichen will, legt es zur Entscheidung vor, statt es still anders zu bauen. Ergeben
-  sich beim Bauen neue Erkenntnisse, wandern sie als weitere Entscheidung ins
-  Dokument — es ist ein lebendes Dokument, kein Protokoll.
-- **`docs/GLOSSAR.md` mitpflegen**, sobald ein neuer Fachbegriff auftaucht.
-  Deutsche UI-Bezeichnung und englischer Bezeichner werden zusammen entschieden,
-  nicht nachträglich zusammengesucht.
+- **Lizenz: AGPL-3.0-or-later, kein CLA**, inbound = outbound. Begründung in
+  `CONTRIBUTING.md`. Der Spendenlink im Repo fehlt noch.

@@ -314,40 +314,25 @@ Wahl.
 
 ## 9. Was noch fehlt
 
-**Braucht eine Entscheidung von Vorgabe: **
-
-- **Losaufkleber (F36).** Vorgabe vom 2026-08-03: „wir brauchen losaufkleber für
-  die Teile. kommen aus dem thermodrucker."
-
-  **Nicht der Sperrzettel.** Der hängt an gesperrter Ware und ist binnen Wochen
-  erledigt; der Losaufkleber klebt an eingelagerter Ware und liegt Jahre. Auch
-  die Ausgabe ist eine andere: Bogenraster gegen Endlosrolle.
-
-  **Zur Haltbarkeit entschieden:** Abschnitt 10 hält fest, dass
-  Thermodirektdruck nach 3 bis 12 Monaten verblasst. Vorgabe: „bei den
-  Losnummern gehe ich davon aus das diese nicht so lange liegen." Der
-  Sperrzettel bleibt also beim Farblaser, der Losaufkleber darf aus dem
-  Thermodrucker kommen. *Im Blick behalten:* Teile mit langer Lagerzeit —
-  Gummi, Klebstoffe, Dichtungen — liegen sehr wohl Jahre; dafür genügt der
-  Nachdruck.
-
-  **Die Losnummer ist bereits gebaut** — siehe `LotNumber` und Abschnitt 16.
-
-  **Zu entscheiden:** Gerät und Etikettenbreite · Inhalt (Vorschlag:
-  Losnummer, Teilenummer, Bezeichnung, Lagerort und ein **Code zum Scannen** —
-  keine Menge, die ist ab der ersten Entnahme falsch) · Druck beim Einbuchen
-  automatisch oder auf Knopfdruck · Nachdruck muss möglich sein, Etiketten
-  fallen ab.
-
-  **Nicht zu entscheiden, weil schon entschieden:** der Ausgabeweg. HTML mit
-  Millimeter-Geometrie wie beim Sperrzettel, kein PDF — die Begründung steht in
-  Abschnitt 10 und gilt unverändert. Dazu ein Kalibrierbogen je Drucker.
+**Braucht eine Entscheidung von Vorgabe:**
 
 - **Eingehende Bestellungen (F37).** Nur vorgemerkt, ausdrücklich nicht zu
   bauen. Siehe [`ANALYSE.md`](ANALYSE.md).
 
 **Erledigt seit dem letzten Stand:**
 
+- **Losaufkleber (F36)** — gebaut, nachgetragen am 2026-10-30. Vorgabe vom
+  2026-08-03: „wir brauchen losaufkleber für die Teile. kommen aus dem
+  thermodrucker." Entschieden und umgesetzt: Ausgabe als Rolle *oder*
+  A4-Bogen, je Drucker ein Kalibrierbogen; Inhalt Losnummer, Teilenummer,
+  Bezeichnung, Lagerort und ein QR-Code `AER1:L:<Losnummer>` — bewusst ohne
+  Menge, die ist ab der ersten Entnahme falsch, und ohne Web-Adresse. Druck
+  auf Knopfdruck, seit 0.1.10 direkt aus der Erfolgsmeldung des Einbuchens
+  (neuer Tab, damit die Maske stehen bleibt); Nachdruck jederzeit aus der
+  Loseliste. Sammelbestand bekommt keinen Aufkleber angeboten. Zur
+  Haltbarkeit gilt weiter Abschnitt 10: Thermodirektdruck verblasst, der
+  Nachdruck ist die Antwort; der Sperrzettel bleibt beim Farblaser.
+  Bedienung in `HANDBUCH.md` 7.10.
 - **Einheiten (F17)** — Auswahl statt freiem Text, gruppiert, mit Zoll, Fuß und
   Pfund; eigene Einheiten bleiben möglich. Siehe Abschnitt 17.
 - **Dokumentart mit Freitext (F5)** — mit der Grenze, dass ein selbst benanntes

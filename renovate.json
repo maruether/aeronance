@@ -10,10 +10,12 @@
     "CLAUDE.md verlangt Renovate/Dependabot. Bei einem selbst gehosteten GitLab gibt es keine App zum Anklicken -- Renovate laeuft als geplanter CI-Job, siehe den Job 'renovate' in .gitlab-ci.yml.",
     "WARUM DAS MEHR IST ALS HYGIENE: CspScriptHashesTest schlaegt genau in dem Merge Request an, der composer.lock anfasst -- also in einem Renovate-MR, der Filament hebt. Ohne Bot faellt die Abweichung erst auf, wenn jemand von Hand updatet.",
     "TAKT: einmal woechentlich, montags frueh. Ein Verein hat keinen Menschen, der taeglich Merge Requests durchsieht, und ein Bot, der schneller schreibt als jemand liest, wird abgeschaltet statt gelesen.",
-    "NICHTS WIRD AUTOMATISCH ZUSAMMENGEFUEHRT, auch keine Patch-Versionen: Die Pipeline prueft Dinge, die ein Mensch ansehen muss, und ein Automerge auf master waere eine Aenderung an einer oeffentlich erreichbaren Instanz ohne Blick darauf."
+    "NICHTS WIRD AUTOMATISCH ZUSAMMENGEFUEHRT, auch keine Patch-Versionen: Die Pipeline prueft Dinge, die ein Mensch ansehen muss, und ein Automerge auf master waere eine Aenderung an einer oeffentlich erreichbaren Instanz ohne Blick darauf.",
+    "SIGNIERT: Der Bot signiert mit dem Schluessel aus RENOVATE_GIT_PRIVATE_KEY (siehe .gitlab-ci.yml), sonst scheitert jeder MR am Job signatures. rebaseWhen behind-base-branch sorgt dafuer, dass ein MR nach jedem master-Commit neu aufgesetzt wird -- und damit auch ein vor dem Schluessel entstandener Commit nachsigniert wird."
   ],
 
   "timezone": "Europe/Berlin",
+  "rebaseWhen": "behind-base-branch",
   "schedule": ["* 0-6 * * 1"],
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2,
@@ -28,10 +30,11 @@
   },
 
   "vulnerabilityAlerts": {
-    "description": "Sicherheitsluecken kommen sofort, nicht erst am Montag.",
+    "description": "Sicherheitsluecken kommen sofort, nicht erst am Montag. ACHTUNG: Dieser Block allein wirkt nur auf GitHub, denn er liest dessen Dependabot-Warnungen. Auf dem eigenen GitLab liefert erst osvVulnerabilityAlerts (unten) die Treffer -- ohne diese Option waeren die 15 Audit-Meldungen vom 22.10.2026 nur als gewoehnliche Wochen-Updates gekommen.",
     "labels": ["sicherheit"],
     "schedule": ["at any time"]
   },
+  "osvVulnerabilityAlerts": true,
 
   "packageRules": [
     {
@@ -51,8 +54,24 @@
       "matchPackageNames": ["barcode-detector", "zxing-wasm"]
     },
     {
-      "description": "PHP wird NICHT gehoben. Die Mindestversion ist eine Entscheidung ueber den Zielserver und keine Abhaengigkeit: Was hier steht, muss ein Debian-Standardsystem koennen. Ein Bot, der auf die naechste Version hebt, verschiebt still die Systemvoraussetzung fuer jeden Verein.",
+      "description": "PHP wird in composer.json NICHT gehoben. Die Mindestversion ist eine Entscheidung ueber den Zielserver und keine Abhaengigkeit: Was hier steht, muss ein Debian-Standardsystem koennen. Ein Bot, der auf die naechste Version hebt, verschiebt still die Systemvoraussetzung fuer jeden Verein. Gilt nur fuer Composer -- das Docker-Basis-Image hat die zwei Regeln darunter.",
+      "matchManagers": ["composer"],
       "matchPackageNames": ["php"],
+      "enabled": false
+    },
+    {
+      "description": "Das PHP-Basis-Image im Dockerfile DARF gehoben werden, aber nur in der Patch-Stelle: 8.4.27 -> 8.4.28 ist ein Security-Release und soll sofort einen Merge Request erzeugen -- am 21.10.2026 lag das veroeffentlichte Image unbemerkt zwei davon zurueck, weil composer audit nur Pakete prueft und ein gleitendes Tag dem Bot nichts zu vergleichen gibt. Ein gemergter MR hier ist das Signal, eine Fassung zu schneiden: Das Image entsteht nur beim Tag.",
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["php"],
+      "matchUpdateTypes": ["patch"],
+      "schedule": ["at any time"],
+      "labels": ["sicherheit", "release-schneiden"]
+    },
+    {
+      "description": "8.4 -> 8.5 ist dagegen dieselbe Entscheidung ueber die Systemvoraussetzung wie bei Composer und bleibt gesperrt.",
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["php"],
+      "matchUpdateTypes": ["minor", "major"],
       "enabled": false
     },
     {

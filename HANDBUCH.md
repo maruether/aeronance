@@ -1081,7 +1081,10 @@ deploy/docker/update.sh v1.2.0
 Gleiche Reihenfolge, ein Unterschied: Das Image wird *zuerst* geholt —
 bricht das ab, läuft die alte Installation unverändert weiter. Kein
 Watchtower, kein `latest`: Ein Dienst, der Images selbst zieht, aktualisiert
-ohne Sicherung, ohne Wartungsmodus und ohne Migration.
+ohne Sicherung, ohne Wartungsmodus und ohne Migration. Am Ende erneuert das
+Skript sich selbst und `auto-update.sh` aus dem neuen Image; die
+`docker-compose.yml` und `nginx.conf` daneben bleiben unangetastet, und das
+Skript sagt, wenn das Release dort etwas anderes mitbringt.
 
 **Selbsttätig:** `AERONANCE_AUTO_UPDATE=true` in der `.env` plus der
 mitgelieferte systemd-Timer (im LXC bereits installiert):

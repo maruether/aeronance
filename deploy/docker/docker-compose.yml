@@ -19,7 +19,7 @@
 
 services:
   app:
-    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.2.0}
+    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.2.3}
     restart: unless-stopped
     env_file: .env
     volumes:
@@ -35,7 +35,10 @@ services:
         condition: service_healthy
 
   web:
-    image: nginx:1.27-alpine
+    # Die Linie 1.27 wurde seit April 2025 nicht mehr gebaut -- ein Image, das
+    # fuer sein Tag "aktuell" ist, kann trotzdem anderthalb Jahre alt sein.
+    # Deshalb die gepflegte Stable-Linie; Renovate hebt sie weiter.
+    image: nginx:1.30-alpine
     restart: unless-stopped
     ports:
       # Adresse UND Port aus der .env. Die Adresse ist kein Zierat: Steht ein
@@ -73,7 +76,7 @@ services:
       retries: 20
 
   worker:
-    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.2.0}
+    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.2.3}
     restart: unless-stopped
     env_file: .env
     volumes:
@@ -86,7 +89,7 @@ services:
         condition: service_healthy
 
   scheduler:
-    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.2.0}
+    image: ${AERONANCE_IMAGE:?AERONANCE_IMAGE fehlt in .env — z. B. ghcr.io/maruether/aeronance:v0.2.3}
     restart: unless-stopped
     env_file: .env
     volumes:

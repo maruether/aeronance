@@ -83,6 +83,12 @@ drei kommen mit) → warten, bis die Anwendung antwortet → Voraussetzungen →
 Der Schritt in Fettdruck ist der, den der Handbetrieb ausläßt: Der Entrypoint
 spiegelt nur `public/` ins geteilte Volume und migriert nicht.
 
+Zum Schluss zieht das Skript `update.sh` und `auto-update.sh` aus dem gerade
+eingespielten Image nach — die Dateien liegen auf dem Wirt und kämen sonst nie
+aus der Erstinstallation heraus. `docker-compose.yml` und `nginx.conf` bleiben
+unangetastet, weil sie der Installation gehören; weichen sie vom Release ab,
+sagt das Skript es und nennt den Befehl zum Vergleich.
+
 Kein Watchtower und kein `latest`. Ein Dienst, der Images von selbst zieht, tut
 genau das, was hier nicht passieren darf — aktualisieren ohne Sicherung, ohne
 Wartungsmodus, ohne Migration. Automatisch ist die *Benachrichtigung*

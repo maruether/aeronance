@@ -1012,8 +1012,14 @@ offenen Punkte. Fachlich zu bestätigen.
 *Stand 2026-08-02 nachgeführt. „Weitere Hersteller" sind inzwischen 48 Quellen
 (§17–§23); der PDF-Modus ist gebaut und trägt heute vierzehn Übersichtsblätter.
 Was von diesem Abschnitt übrig ist, steht unten — der aktuelle Stand in §23.*
-- **DG: deutsche und englische Fassung** — beide kommen herein (siehe §13). Ob
-  sie zusammengeführt werden sollen, ist eine Entscheidung, keine Ableitung
+- ~~**DG: deutsche und englische Fassung** — beide kommen herein (siehe §13). Ob
+  sie zusammengeführt werden sollen, ist eine Entscheidung, keine Ableitung~~
+  **Entschieden am 2026-10-30 (Marvin): Sie bleiben getrennt.** Beide
+  Fassungen kommen weiterhin als eigene Zeilen herein; zusammengeführt wird
+  nichts. Was damit vermieden wird: Eine Zeile, die zwei Quellen vertritt,
+  müsste bei jeder Abweichung zwischen den Fassungen entscheiden, welche
+  gilt — das wäre eine Beurteilung im Import, und Beurteilungen gehören in
+  die Hand dessen, der beurteilt (§3).
 - **DGs Vollabruf dauert** — 1894 Dokumente sind rund 190 Seiten, mit zweitem
   Durchlauf und Pause etwa zehn Minuten. Für einen Verein irrelevant, weil nur
   die geflogenen Muster abgerufen werden; für einen Vollabgleich merkbar

@@ -14,9 +14,8 @@ Noch nicht gebaut — ein Eintrag wandert nach „Neu", sobald er es ist. Ein
 Changelog beschreibt, was passiert ist; dieser Abschnitt sagt nur, woran als
 Nächstes gearbeitet wird.
 
-Ohne Versionsmarke, und das ist Absicht: Es bleibt bei 0.1.x, bis Marvin den
-Sprung ausdrücklich freigibt. Was hier steht, kann in jeder kommenden 0.1.x
-erscheinen.
+Ohne Versionsmarke, und das ist Absicht: Ob ein Punkt eine 0.2.x oder den
+Sprung auf 0.3 bedeutet, entscheidet Marvin beim Schneiden, nicht die Liste.
 
 - **Ultraleichtflugzeuge.** Die Flotte soll ULs führen können. Sie leben
   regulatorisch in einer anderen Welt als EASA-Luftfahrzeuge — Nachprüfung,
@@ -24,6 +23,126 @@ erscheinen.
   und diese Unterschiede brauchen eigene Antworten statt aufgebogener
   EASA-Felder. Der genaue Zuschnitt wird vor dem Bau entschieden und hier
   begründet.
+
+## [0.2.3] — 2026-10-30
+
+Ein Wartungs-Release ohne Migration: schließt eine Lücke in symfony/mime,
+lässt das Docker-Update-Skript sich selbst erneuern, gibt jedem Bildschirm
+des Panels einen Rechte-Negativtest und bringt die CI-Hygiene der letzten
+Woche mit — Renovate signiert und meldet Lücken auch auf GitLab, das
+PHP-Basis-Image ist auf die Patchversion gepinnt.
+
+**Beim Update beachten:** Es läuft keine Migration mit. Bei **eigenem Server
+und LXC** genügt `deploy/update.sh`. Bei **Docker** genügt
+`deploy/docker/update.sh v0.2.3` — dabei läuft noch das alte Skript, das
+sich nicht selbst erneuert. Danach einmal von Hand nachziehen, ab dann
+geschieht es automatisch:
+
+```
+cd deploy/docker
+for f in update.sh auto-update.sh; do
+  docker run --rm --entrypoint cat ghcr.io/maruether/aeronance:v0.2.3 \
+    /var/www/aeronance/deploy/docker/$f > $f && chmod 0755 $f
+done
+```
+
+Dazu die Zeile `image: nginx:…` in der `docker-compose.yml` einmal auf
+`nginx:1.30-alpine` setzen und `docker compose up -d web` ausführen (siehe
+„Geändert“).
+
+### Sicherheit
+
+- **Jeder Bildschirm des Panels hat jetzt einen Rechte-Negativtest.** CLAUDE.md
+  verlangte seit dem ersten Modul „mindestens AuthZ-Negativtests pro
+  Resource"; gebaut waren sie nur dort, wo ein Modul sie für sich selbst
+  schrieb. `PanelDenyByDefaultTest` kennt die Bildschirme nicht beim Namen,
+  sondern fragt das Panel mit allen acht Modulen, was es einhängt — 23
+  Resources, 15 Seiten — und verlangt für jeden eine Regel: wer die Liste
+  sieht, wer anlegt und bearbeitet. Dann tippt der Test jede Adresse als
+  drei Personen ein: jemand ohne jedes Recht (muss 403 bekommen), der
+  Betrachter (200 auf der Liste, 403 auf Anlegen und Bearbeiten) und der
+  Verwalter (200). Ein neuer Bildschirm ohne Regel lässt die Suite
+  scheitern. Gefunden hat der Lauf keine Lücke; die eine Abweichung — ein
+  Betrachter darf das Wägeblatt öffnen, weil es keine eigene Ansicht hat —
+  ist Absicht und hat jetzt einen eigenen Test dafür, dass sein Speichern-
+  Aufruf ins Leere geht.
+
+- **symfony/mime 8.1.7 → 8.1.10** schließt CVE-2026-45070, eine
+  Header-Injection beim Zusammenbau von E-Mails über Zeichen, die in
+  Kopfzeilen nichts verloren haben. Gefunden vom Audit-Job am 30. Oktober.
+  Bemerkenswert ist, wer es *nicht* gefunden hat: Die OSV-Datenbank, die
+  Renovate befragt, kennt die Lücke nur für die Linien bis 8.0, der
+  Packagist-Katalog hinter `composer audit` auch für 8.1. Zwei Quellen sind
+  deshalb kein Luxus.
+
+### Behoben
+
+- **`deploy/docker/update.sh` erneuert sich jetzt selbst.** Es holte das
+  neue Image und ließ die Skripte daneben stehen, wie sie bei der
+  Erstinstallation lagen — beim Update auf 0.1.3 lief auf dem Server noch
+  die Fassung ohne den nginx-Neustart, und die Instanz antwortete kurz mit
+  502, obwohl das Skript im Release den Fehler längst nicht mehr hatte.
+  Jetzt zieht der letzte Schritt `update.sh` und `auto-update.sh` aus dem
+  gerade eingespielten Image nach (per `mv`, die laufende Shell liest aus
+  der alten Datei weiter). `docker-compose.yml` und `nginx.conf` werden
+  **nicht** ersetzt, weil ein Verein sie angepasst haben kann; weichen sie
+  vom Release ab, sagt das Skript es und nennt den Befehl zum Vergleich.
+
+- **`deploy/publish.sh` lädt das Release-Artefakt auch im zweiten Lauf hoch.**
+  Das Skript rät selbst dazu, es nach dem pack-Job erneut aufzurufen — brach
+  aber vorher mit „Nichts zu tun“ ab, sobald der Baum schon öffentlich war,
+  und kam nie bis zum Tarball. Bei 0.2.2 fiel es auf; das GitHub-Release
+  wurde dort von Hand nachgezogen.
+
+### Geändert
+
+- **Der Renovate-Zeitplan startet nur noch Renovate.** Bisher lief montags
+  die komplette Kette mit, Tests, Schema-Vergleich und Qualitätsjobs, auf
+  einem master, der sich seit dem letzten Push nicht geändert hatte: 45
+  Minuten Runner-Zeit für nichts, und der Merge Request des Bots stand
+  hinter seinem eigenen Auslöser in der Warteschlange. Jetzt laufen im
+  Zeitplan nur `signatures` und `renovate`; jeder Push, Tag und Merge
+  Request wird unverändert vollständig geprüft.
+
+- **Renovate signiert seine Commits.** Der erste Merge Request des Bots
+  scheiterte am Job `signatures`, und das zu Recht: Die Regel „jeder Commit
+  trägt eine Signatur aus `.gitlab/signing-keys.asc`“ kennt keine Ausnahme
+  für Bots, und eine Ausnahme wäre genau das Loch, das die Regel schließen
+  soll. Deshalb hat Renovate jetzt einen eigenen Schlüssel: der öffentliche
+  Teil steht in `.gitlab/signing-keys.asc`, der private als geschützte
+  CI-Variable `RENOVATE_GIT_PRIVATE_KEY`, ohne die der Job gar nicht
+  startet. Dazu `rebaseWhen: behind-base-branch`, damit ein MR nach jedem
+  master-Commit neu aufgesetzt und dabei nachsigniert wird.
+
+- **Der nginx im Docker-Kanal läuft auf der gepflegten Linie 1.30.** Das
+  bisherige `nginx:1.27-alpine` war für sein Tag aktuell, aber das Tag selbst
+  wurde seit April 2025 nicht mehr gebaut — nginx ist inzwischen bei 1.31.
+  Bestehende Installationen: Die Compose-Datei wird beim Update nicht
+  ersetzt, die Zeile `image: nginx:…` dort einmal von Hand auf
+  `nginx:1.30-alpine` setzen und `docker compose up -d web` ausführen.
+
+- **Ein PHP-Release löst jetzt einen Merge Request aus.** Das Basis-Image im
+  Dockerfile ist auf die Patch-Version gepinnt (`php:8.4.27-fpm-bookworm`
+  statt `8.4`), und Renovate darf genau diese Stelle heben, sofort und mit
+  dem Etikett `release-schneiden`. Der Sprung auf 8.5 bleibt gesperrt, das
+  ist eine Entscheidung über die Systemvoraussetzung. Hintergrund: Am
+  21. Oktober 2026 schloss PHP zwei kritische Lücken, und nichts im Projekt
+  hat es bemerkt — `composer audit` prüft Pakete, nicht die Laufzeit, und ein
+  gleitendes Tag gibt dem Bot nichts zu vergleichen. Das veröffentlichte
+  Image lag zu dem Zeitpunkt zwei Security-Releases zurück.
+
+- **Renovate meldet Sicherheitslücken auch auf dem eigenen GitLab sofort.**
+  Der bisherige Block `vulnerabilityAlerts` liest die Dependabot-Warnungen
+  von GitHub und war auf GitLab wirkungslos; `osvVulnerabilityAlerts` fragt
+  stattdessen die offene OSV-Datenbank. Ohne diese Option wären die
+  15 Audit-Treffer zu 0.2.2 nur als gewöhnliche Wochen-Updates gekommen.
+
+  Dazu gehört der Befund, der das überhaupt sichtbar machte: Renovate war
+  seit dem 10. August jede Woche gescheitert („Repository is not found“),
+  weil der Apache-Proxy vor GitLab das `%2F` im Projektpfad dekodierte. Das
+  ist auf dem Server behoben (`AllowEncodedSlashes NoDecode`, `nocanon`) und
+  steht hier nur, damit die Ursache der veralteten Lock-Datei nicht verloren
+  geht — im Repository gab es dafür nichts zu ändern.
 
 ## [0.2.2] — 2026-10-22
 

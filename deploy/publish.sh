@@ -69,6 +69,7 @@ git remote get-url "$FERNZIEL" >/dev/null 2>&1 \
 # freigegeben hat; keine davon ist "irgendein Stand, der gerade herumlag".
 # ──────────────────────────────────────────────────────────────────────────────
 IST_TAG=0
+SCHON_DA=0   # 1, wenn der Baum schon oeffentlich ist: dann nur noch das Artefakt
 if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
     IST_TAG=1
     git tag -v "$TAG" >/dev/null 2>&1 \
@@ -110,8 +111,12 @@ if [ -n "$ELTERN" ]; then
     echo "    bisher oeffentlich: $VORHER"
 
     if [ "$(git rev-parse "${ELTERN}^{tree}")" = "$BAUM" ]; then
-        say "Der oeffentliche Stand ist bereits genau dieser Baum. Nichts zu tun."
-        exit 0
+        # KEIN exit: Das Release-Artefakt kommt weiter unten, und genau dafuer
+        # wird dieses Skript ein zweites Mal aufgerufen, sobald der pack-Job
+        # der CI durch ist. Bei v0.2.2 haette der Abbruch hier das Artefakt
+        # uebersprungen -- und das Skript selbst hatte zum erneuten Lauf geraten.
+        say "Der oeffentliche Stand ist bereits genau dieser Baum. Nichts zu schieben."
+        SCHON_DA=1
     fi
 else
     echo "    noch nichts veroeffentlicht -- es entsteht ein Wurzel-Commit"
@@ -143,6 +148,8 @@ else
     } > "$NACHRICHT"
 fi
 
+if [ "$SCHON_DA" = 0 ]; then
+
 say "Commit bauen"
 COMMIT="$(git commit-tree "$BAUM" ${ELTERN:+-p "$ELTERN"} -S -F "$NACHRICHT")"
 echo "    $(git rev-parse --short "$COMMIT")"
@@ -169,6 +176,8 @@ else
     # die Aktualisierungspruefung wuerde ihn als Fassung anbieten.
     say "Kein Tag -- veroeffentlicht wurde ein Zwischenstand"
 fi
+
+fi   # SCHON_DA
 
 # ──────────────────────────────────────────────────────────────────────────────
 # DAS RELEASE-ARTEFAKT GEHOERT ZUR VEROEFFENTLICHUNG DAZU.
