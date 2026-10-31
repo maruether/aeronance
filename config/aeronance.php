@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Modules\Billing\BillingModule;
 use App\Modules\Directives\DirectivesModule;
 use App\Modules\Fleet\FleetModule;
 use App\Modules\Inspection\InspectionModule;
@@ -36,6 +37,7 @@ return [
         InspectionModule::class,
         ToolingModule::class,
         VereinsfliegerModule::class,
+        BillingModule::class,
         // App\Modules\LdapIdentity\LdapIdentityModule::class,
     ],
 
@@ -82,6 +84,20 @@ return [
         // transitions and keeps audit entries unambiguous. This is the zone
         // they are shown in.
         'timezone' => env('ORGANISATION_TIMEZONE', 'Europe/Berlin'),
+
+        // Anschrift, Register, Steuer und Bank -- auf Ausdrucken und auf jeder
+        // Rechnung des Abrechnungsmoduls. Alles optional; was leer ist, wird
+        // nicht gedruckt.
+        'address' => env('ORGANISATION_ADDRESS', ''),
+        'phone' => env('ORGANISATION_PHONE', ''),
+        'email' => env('ORGANISATION_EMAIL', ''),
+        'register' => env('ORGANISATION_REGISTER', ''),
+        'representative' => env('ORGANISATION_REPRESENTATIVE', ''),
+        'tax_number' => env('ORGANISATION_TAX_NUMBER', ''),
+        'vat_id' => env('ORGANISATION_VAT_ID', ''),
+        'bank_name' => env('ORGANISATION_BANK_NAME', ''),
+        'iban' => env('ORGANISATION_IBAN', ''),
+        'bic' => env('ORGANISATION_BIC', ''),
     ],
 
     /*
@@ -603,6 +619,28 @@ return [
          * der Endpunkt je schreibbar werden, kommt der Schalter MIT der
          * Funktion wieder, nicht vor ihr.
          */
+    ],
+
+    /*
+    |---------------------------------------------------------------------------
+    | Abrechnung
+    |---------------------------------------------------------------------------
+    |
+    | Vorgaben des Abrechnungsmoduls (docs/ABRECHNUNG.md). Steuersatz und
+    | Zahlungsziel ueberschreibt der Kunde, die Rechnung noch einmal. Die
+    | Nummer entsteht als <Praefix>-<JJJJMM>-<NNNN>, der Zaehler laeuft je
+    | Jahr durch.
+    |
+    */
+    'billing' => [
+        'tax_rate' => env('BILLING_TAX_RATE', '19'),
+        'small_business' => (bool) env('BILLING_SMALL_BUSINESS', false),
+        'payment_terms_days' => (int) env('BILLING_PAYMENT_TERMS_DAYS', 14),
+        'number_prefix_invoice' => env('BILLING_NUMBER_PREFIX_INVOICE', 'RE'),
+        'number_prefix_credit_note' => env('BILLING_NUMBER_PREFIX_CREDIT_NOTE', 'GS'),
+        'labour_rounding_minutes' => (int) env('BILLING_LABOUR_ROUNDING_MINUTES', 15),
+        'discount_visible_default' => (bool) env('BILLING_DISCOUNT_VISIBLE_DEFAULT', true),
+        'footer' => env('BILLING_FOOTER', ''),
     ],
 
     'retention' => [

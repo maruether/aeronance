@@ -29,6 +29,7 @@ return [
         'inspection' => 'Eingangsprüfung',
         'tooling' => 'Werkzeuge',
         'part66.logs' => 'Part-66 — Erfahrungsnachweis',
+        'billing' => 'Abrechnung',
     ],
 
     'label' => [
@@ -97,6 +98,12 @@ return [
 
         // Part-66
         'part66.logs.view_all' => 'Erfahrungsnachweise aller Personen einsehen',
+
+        // Abrechnung
+        'billing.view' => 'Kunden und Rechnungen ansehen',
+        'billing.manage' => 'Kunden, Preise und Rechnungsentwürfe bearbeiten',
+        'billing.issue' => 'Rechnungen stellen, stornieren, Gutschriften erteilen',
+        'billing.payments' => 'Zahlungseingänge erfassen',
     ],
 
     'hint' => [

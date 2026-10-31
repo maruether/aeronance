@@ -24,6 +24,88 @@ Sprung auf 0.3 bedeutet, entscheidet Marvin beim Schneiden, nicht die Liste.
   EASA-Felder. Der genaue Zuschnitt wird vor dem Bau entschieden und hier
   begründet.
 
+## [0.3.1] — 2026-10-31
+
+Das Abrechnungsmodul — und damit der Sprung auf 0.3: Kunden, Verkaufspreise,
+Stundensätze, Rechnungen aus freigegebenen Vorgängen, Gutschriften,
+Zahlungen, PDF und XRechnung. Für den gewerblichen Betrieb; ein Verein
+lässt das Modul einfach aus. Inhaltlich identisch mit 0.3.0, siehe dort.
+
+**Beim Update beachten:** Es läuft eine Migration (sieben Tabellen der
+Abrechnung); `deploy/update.sh` bzw. `deploy/docker/update.sh` erledigen das.
+Wer das Modul einschaltet, trägt vorher unter Einstellungen → Organisation
+Anschrift und Steuernummer ein — ohne sie stellt das Modul keine Rechnung.
+Neue Laufzeitanforderung: die PHP-Erweiterung `iconv` (in Debian, Docker und
+CI vorhanden; `php -m | grep iconv` zeigt es).
+
+### Neu
+
+- **Abrechnungsmodul** (`billing`), für den gewerblichen Betrieb — Vorgabe:
+  „die Werften hier möchten ein Abrechnungsmodul haben. Also Kundenstammdaten,
+  Rechnungsstellung, VK-Preise an Teilen, Rabatte (mit der Auswahl ob der
+  Kunde sie sieht oder nicht)." Entwurf und Entscheidungen in
+  `docs/ABRECHNUNG.md`, Bedienung im Handbuch, Kapitel 15.
+
+  **Es dockt an den Arbeitskarten an, nicht am Lager.** E6 bleibt: Das Lager
+  kennt keinen Verkaufspreis. Abgerechnet wird ein freigegebener Vorgang —
+  je Karte die Arbeitszeit (aufgerundet aufs Viertelstundenraster, mal
+  Stundensatz der Tätigkeitsart), je verbautem Teil eine Position aus der
+  Preisliste über die Teilenummer, bei Fremdvergabe eine Position ohne
+  Preis. Teile kommen über eine neue Schnittstelle der Karten (`PartUsed`);
+  das Modul importiert nichts aus dem Lager.
+
+  **Gestellt ist eingefroren.** Die Nummer (`RE-202610-0001`, Zähler je Jahr,
+  Monat zur Orientierung) entsteht erst beim Stellen, damit verworfene
+  Entwürfe keine Lücke reißen. Danach weist das Modell jede Änderung ab,
+  auch von der Konsole; Korrektur ist eine Gutschrift mit eigener Nummer
+  (`GS-…`), die auf das Original zeigt. PDF und XRechnung werden beim
+  Stellen archiviert, das PDF ist der Beleg. Zahlungen sind append-only.
+
+  **Rabatt sichtbar oder nicht** ist eine Wahl je Kunde, je Rechnung und je
+  Position. Das Papier zeigt entweder Listenpreis, Rabattzeile und Netto
+  oder nur den rabattierten Preis; die Datenbank hält immer beides.
+
+  **Steuer als Einstellung, nicht als Freitext:** Regelbesteuerung mit
+  19 % als Vorgabe, dazu Kleinunternehmer, Reverse Charge und die
+  Luftfahrt-Befreiung nach § 4 Nr. 2 / § 8 UStG — jeweils mit dem
+  gesetzlichen Hinweis aus der Sprachdatei. Stellen verweigert, wenn
+  Anschrift oder Steuernummer des Ausstellers fehlen (§ 14 UStG).
+
+  **Mitgeliefert:** Zahlungsstatus mit Überfälligkeit auf Startseite und in
+  der Navigation, CSV-Export für den Steuerberater, Versand per Mail mit
+  PDF (und auf Wunsch XML), Preislisten-Import aus der Zwischenablage,
+  Demo-Bestand mit bezahlter, überfälliger und blockierter Rechnung. Die
+  XRechnung (UBL 2.1, EN 16931, XRechnung 3.0) ist gegen den Aufbau
+  geprüft, nicht gegen die vollständige Schematron-Regelmenge — das bleibt
+  so vermerkt, bis ein Kunde die erste tatsächlich einreicht.
+
+  **Neue Organisationseinstellungen** im Kern: Anschrift, Telefon, E-Mail,
+  Register, Vertretung, Steuernummer, USt-IdNr., Bank. Sie gehören dort hin,
+  nicht ins Modul — eine Freigabebescheinigung ohne Anschrift des Betriebs
+  ist auch ohne Rechnung ein halbes Papier. Nebenbei behoben: Die
+  Einstellungsgruppe eines abgeschalteten Moduls (bisher Vereinsflieger)
+  erschien trotzdem auf der Einstellungsseite; jetzt nicht mehr (D3).
+
+  **Neue Abhängigkeit:** `dompdf/dompdf` (LGPL 2.1) für das PDF. Reines PHP,
+  keine neue Systemabhängigkeit in den drei Kanälen; verlangt die
+  PHP-Erweiterung `iconv`, die alle Kanäle mitbringen.
+
+### Sicherheit
+
+- **vite 8.2.0 → 8.2.4.** Renovates erste Meldung über die am 23. Oktober
+  eingeschalteten OSV-Alerts, gemergt, während 0.2.3 gerade geschnitten
+  wurde — deshalb nicht mehr in dieser Fassung. vite ist ein reines
+  Build-Werkzeug: Es läuft in der CI beim Erzeugen der Assets und auf keinem
+  Server eines Vereins, die Lücke betrifft also den Bau, nicht den Betrieb.
+
+## [0.3.0] — 2026-10-30
+
+**Nie ausgeliefert.** Der Tag existiert, aber der Job `style` hielt die
+Pipeline an einer unsortierten Import-Zeile in `routes/web.php` an, bevor
+Paket oder Image entstanden; nach GitHub ging nichts. Was 0.3.0 bringen
+sollte, bringt 0.3.1. Die Lehre steht in der Arbeitsweise: `pint --test`
+über den ganzen Baum, nicht nur über die angefassten Dateien.
+
 ## [0.2.3] — 2026-10-30
 
 Ein Wartungs-Release ohne Migration: schließt eine Lücke in symfony/mime,

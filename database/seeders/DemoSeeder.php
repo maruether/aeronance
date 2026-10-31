@@ -73,6 +73,7 @@ final class DemoSeeder extends Seeder
             DemoWarehouseSeeder::class,
             DemoWorkshopSeeder::class,
             DemoIdentitySeeder::class,
+            DemoBillingSeeder::class,
         ] as $seeder) {
             $unter = app($seeder);
 
@@ -124,7 +125,7 @@ final class DemoSeeder extends Seeder
             CoreRoles::WORKSHOP_MANAGER => [
                 'core.people', 'fleet.aircraft', 'fleet.airworthiness', 'taskcards.work',
                 'taskcards.report', 'warehouse.stock', 'warehouse.master_data',
-                'directives', 'inspection', 'tooling', 'part66.logs',
+                'directives', 'inspection', 'tooling', 'part66.logs', 'billing',
             ],
             CoreRoles::CERTIFYING_STAFF => [
                 'fleet.aircraft', 'fleet.airworthiness', 'taskcards.work', 'taskcards.certify',
@@ -204,6 +205,18 @@ final class DemoSeeder extends Seeder
 
         $settings->set('organisation.name', 'Luftsportverein Musterhausen e.V.');
         $settings->set('organisation.timezone', 'Europe/Berlin');
+        // Anschrift und Steuernummer, damit die Abrechnung Rechnungen stellen
+        // kann -- ohne beides verweigert IssueInvoice (§ 14 UStG), und die
+        // Demo soll zeigen, wie eine fertige Rechnung aussieht.
+        $settings->set('organisation.address', "Am Flugplatz 1\n79999 Musterhausen");
+        $settings->set('organisation.phone', '07000 123456');
+        $settings->set('organisation.email', 'werkstatt@lsv-musterhausen.example');
+        $settings->set('organisation.register', 'Amtsgericht Musterhausen, VR 4711');
+        $settings->set('organisation.representative', 'Erika Beispiel (1. Vorsitzende)');
+        $settings->set('organisation.tax_number', '06/123/45678');
+        $settings->set('organisation.bank_name', 'Sparkasse Musterhausen');
+        $settings->set('organisation.iban', 'DE02120300000000202051');
+        $settings->set('organisation.bic', 'BYLADEM1001');
         $settings->applyToConfig();
     }
 

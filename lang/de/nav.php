@@ -14,6 +14,7 @@ return [
         'directives' => 'Flotte',
         'inspection' => 'Lager',
         'tooling' => 'Werkstatt',
+        'billing' => 'Abrechnung',
     ],
 
 ];

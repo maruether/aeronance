@@ -54,6 +54,7 @@ return [
         'operation' => 'Betrieb',
         'mail' => 'E-Mail',
         'vereinsflieger' => 'Vereinsflieger',
+        'billing' => 'Abrechnung',
     ],
 
     'group_help' => [
@@ -70,6 +71,9 @@ return [
         'vereinsflieger' => 'Zugang und Rückwege. Welche Rolle jemand bekommt, entscheidet '
             .'die Zuordnung im Kern — die Freigabeberechtigung wird grundsätzlich nicht '
             .'übernommen.',
+        'billing' => 'Vorgaben für Rechnungen. Steuersatz und Zahlungsziel lassen sich je '
+            .'Kunde und je Rechnung überschreiben; die Anschrift und die Steuernummern '
+            .'des Ausstellers stehen oben unter „Organisation“.',
     ],
 
     /*
@@ -101,6 +105,76 @@ return [
                 'help' => 'Die Anwendung rechnet in UTC; Papierdokumente wie der '
                     .'Sperrzettel tragen diese Zeit. Ein Teil, das um 00:30 '
                     .'Ortszeit gesperrt wird, darf nicht den Vortag tragen.',
+            ],
+            'address' => [
+                'label' => 'Anschrift',
+                'help' => 'Straße, PLZ und Ort, je Zeile eine Angabe. Steht auf Rechnungen '
+                    .'und Bescheinigungen.',
+            ],
+            'phone' => ['label' => 'Telefon'],
+            'email' => ['label' => 'E-Mail-Adresse (auf Ausdrucken)'],
+            'register' => [
+                'label' => 'Registereintrag',
+                'help' => 'Zum Beispiel „Amtsgericht Freiburg, HRB 12345“ oder „VR 678“. '
+                    .'Pflichtangabe auf Geschäftsbriefen eingetragener Unternehmen und '
+                    .'Vereine; leer lassen, wenn es keinen gibt.',
+            ],
+            'representative' => [
+                'label' => 'Vertretungsberechtigte',
+                'help' => 'Geschäftsführung oder Vorstand, wie sie auf dem Geschäftsbrief '
+                    .'stehen sollen.',
+            ],
+            'tax_number' => ['label' => 'Steuernummer'],
+            'vat_id' => [
+                'label' => 'USt-IdNr.',
+                'help' => 'Auf einer Rechnung reicht eine von beiden: Steuernummer oder '
+                    .'USt-IdNr. (§ 14 Abs. 4 Nr. 2 UStG).',
+            ],
+            'bank_name' => ['label' => 'Bank'],
+            'iban' => ['label' => 'IBAN'],
+            'bic' => ['label' => 'BIC'],
+        ],
+
+        'billing' => [
+            'tax_rate' => [
+                'label' => 'Umsatzsteuersatz (%)',
+                'help' => 'Vorgabe für neue Positionen; 19 ist der Regelsatz.',
+            ],
+            'small_business' => [
+                'label' => 'Kleinunternehmer (§ 19 UStG)',
+                'help' => 'Dann weist keine Rechnung Umsatzsteuer aus und trägt stattdessen '
+                    .'den Hinweis auf § 19 UStG.',
+            ],
+            'payment_terms_days' => [
+                'label' => 'Zahlungsziel (Tage)',
+                'help' => 'Vorgabe; der Kunde kann ein eigenes haben.',
+            ],
+            'number_prefix_invoice' => [
+                'label' => 'Präfix Rechnungsnummer',
+                'help' => 'Ergibt zum Beispiel RE-202610-0001. Der Zähler läuft je Jahr '
+                    .'durch, der Monat steht zur Orientierung in der Nummer. Nach der '
+                    .'ersten gestellten Rechnung nicht mehr ändern — die Folge muss '
+                    .'lückenlos bleiben.',
+            ],
+            'number_prefix_credit_note' => [
+                'label' => 'Präfix Gutschrift',
+                'help' => 'Eigener Nummernkreis für Gutschriften und Stornorechnungen.',
+            ],
+            'labour_rounding_minutes' => [
+                'label' => 'Arbeitszeit runden auf (Minuten)',
+                'help' => 'Je Arbeitskarte wird auf dieses Raster AUFgerundet. 15 für '
+                    .'Viertelstunden, 1 für minutengenau.',
+            ],
+            'discount_visible_default' => [
+                'label' => 'Rabatt auf der Rechnung ausweisen',
+                'help' => 'Vorgabe für neue Kunden. Ausgewiesen heißt: Listenpreis, '
+                    .'Rabattzeile, Nettopreis. Nicht ausgewiesen heißt: Nur der '
+                    .'rabattierte Preis steht auf dem Papier — im System bleibt beides.',
+            ],
+            'footer' => [
+                'label' => 'Fußtext',
+                'help' => 'Steht unter jeder Rechnung, etwa Zahlungshinweise oder '
+                    .'Geschäftsbedingungen in einem Satz.',
             ],
         ],
 

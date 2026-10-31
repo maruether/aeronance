@@ -26,8 +26,9 @@ Für Entwickler und Beitragende: siehe `README.md` und `CONTRIBUTING.md`.
 12. [Werkzeuge](#12-werkzeuge)
 13. [Erfahrungslogbuch (Part-66)](#13-erfahrungslogbuch-part-66)
 14. [Vereinsflieger-Anbindung](#14-vereinsflieger-anbindung)
-15. [Betrieb: Sicherung, Updates, Notzugang](#15-betrieb-sicherung-updates-notzugang)
-16. [Kommandoreferenz](#16-kommandoreferenz)
+15. [Abrechnung](#15-abrechnung)
+16. [Betrieb: Sicherung, Updates, Notzugang](#16-betrieb-sicherung-updates-notzugang)
+17. [Kommandoreferenz](#17-kommandoreferenz)
 
 ---
 
@@ -84,7 +85,7 @@ Aeronance wird über drei Wege ausgeliefert. Alle drei nutzen dasselbe
 Release-Artefakt; die Wahl ist eine Frage der eigenen Infrastruktur.
 
 **Voraussetzungen (alle Wege):** PHP 8.4+ mit `pdo_mysql`, `intl`, `gd`,
-`zip`, `bcmath`, `fileinfo`; **MariaDB 10.11+** (MySQL wird ausdrücklich nicht
+`zip`, `bcmath`, `fileinfo`, `iconv`, `mbstring`, `dom`; **MariaDB 10.11+** (MySQL wird ausdrücklich nicht
 unterstützt); `poppler-utils` (für die Kennblatt-Suche); `mariadb-client`
 (für Sicherungen); bei Tarball-Installationen `rsync` (für Updates). Ob alles
 da ist, sagt:
@@ -1022,11 +1023,87 @@ nicht — jedes Konto hat ein eigenes Aeronance-Passwort.
 
 ---
 
-## 15. Betrieb: Sicherung, Updates, Notzugang
+## 15. Abrechnung
+
+Für den gewerblichen Betrieb: Kunden, Verkaufspreise, Stundensätze und
+Rechnungen. Braucht Arbeitskarten (und damit Flotte). Rechte: `billing.view`,
+`billing.manage` (Kunden, Preise, Entwürfe), `billing.issue` (stellen,
+stornieren, Gutschrift), `billing.payments` (Zahlungseingänge). Entwurf und
+Begründung: `docs/ABRECHNUNG.md`.
+
+**Vorher einmal einrichten** (Einstellungen → Organisation): Anschrift,
+Steuernummer oder USt-IdNr., nach Wunsch Register, Vertretung und
+Bankverbindung — alles davon steht auf der Rechnung, und ohne Anschrift und
+Steuernummer lässt sich keine stellen (§ 14 UStG). Unter „Abrechnung":
+Steuersatz (Vorgabe 19 %), Kleinunternehmer-Schalter, Zahlungsziel,
+Nummernpräfixe, Rundung der Arbeitszeit, ob Rabatte ausgewiesen werden,
+Fußtext.
+
+- **Kunden:** Name, Rechnungsanschrift, Land, USt-IdNr., E-Mail. Konditionen
+  (Zahlungsziel, Standardrabatt, Rabatt ausweisen ja/nein, steuerliche
+  Behandlung) sind leer = Vorgabe der Organisation. Optional an einen
+  **Halter** der Flotte geknüpft — dann wird der Kunde beim Anlegen aus einem
+  Vorgang vorgeschlagen. Kunden werden nie gelöscht, nur inaktiv gesetzt.
+- **Verkaufspreise** je Teilenummer (die Nummer, wie sie am Bauteiltyp
+  steht: IPC-Nummer, sonst Bestellnummer, sonst Bezeichnung), mit „Gültig
+  ab". Ein neuer Preis ist eine neue Zeile; alte bleiben für alte Rechnungen.
+  „Liste einfügen" nimmt eine Tabelle aus der Zwischenablage:
+  `Teilenummer;Preis;Bezeichnung;Einheit` je Zeile.
+- **Stundensätze** je Tätigkeitsart der Karte (Prüfung, Wartung, Reparatur
+  …), ebenfalls mit „Gültig ab".
+- **Rechnung aus Vorgang** (Rechnungen → „Aus Vorgang"): nur abgeschlossene
+  oder freigegebene Vorgänge ohne gestellte Rechnung. Je Karte eine
+  Arbeitszeit-Position (Minuten auf das Raster **auf**gerundet, mal
+  Stundensatz der Art), je verbautem Teil eine Position aus der Preisliste
+  (Teilenummer, Los), bei Fremdvergabe eine Position ohne Preis. Was die
+  Preisliste nicht kennt, steht mit Preis 0 und **„Preis fehlt"** — das
+  blockiert das Stellen, bis jemand den Preis einträgt. Freie Rechnungen ohne
+  Vorgang gehen über „Neu".
+- **Entwurf:** Positionen mit Menge, Einheit, Listenpreis, Rabatt in Prozent
+  und **„Rabatt ausweisen"**. Ausgewiesen heißt: Listenpreis, Rabatt und
+  Nettopreis stehen auf dem Papier; nicht ausgewiesen heißt: nur der
+  rabattierte Preis. Im System bleibt immer beides. Dazu ein Gesamtrabatt mit
+  derselben Wahl. Beträge werden beim Speichern gerechnet. „Vorschau" zeigt
+  das Blatt mit dem Vermerk ENTWURF.
+- **Stellen** (`billing.issue`): Die Rechnung bekommt die nächste Nummer
+  (`RE-JJJJMM-NNNN`, Zähler je Jahr), das Rechnungsdatum, das Fälligkeitsdatum
+  aus dem Zahlungsziel des Kunden, und ist ab jetzt **eingefroren** — nichts
+  daran ist mehr änderbar, auch nicht von der Konsole aus. PDF und XRechnung
+  werden im selben Moment archiviert; das PDF ist der Beleg. Der Empfänger
+  wird beim Stellen als Kopie auf die Rechnung genommen: Zieht der Kunde
+  später um, bleibt die Rechnung, wie sie war.
+- **Dokumente:** „Drucken" (Blatt im Browser), „PDF" (das archivierte),
+  „XRechnung" (XML nach EN 16931/UBL — mitgeliefert, nicht erzwungen; gegen
+  den Aufbau geprüft, nicht gegen die vollständige Validator-Regelmenge).
+  „Per E-Mail senden" schickt das PDF an die Adresse des Kunden, auf Wunsch
+  mit XML, und vermerkt den Versand.
+- **Zahlung erfassen** (`billing.payments`): Betrag, Datum, Zahlungsweg,
+  Referenz. Zahlungen sind unveränderlich; eine falsche wird mit negativem
+  Betrag gegengebucht. Vollständig bezahlt → Stand „bezahlt". Überzahlung
+  wird abgewiesen. Überfällige Rechnungen zählt die Navigation, die
+  Startseite zeigt offene Summe und Anzahl.
+- **Stornieren** (`billing.issue`): verlangt einen Grund und erzeugt eine
+  **Gutschrift** (`GS-…`) über den vollen Betrag, die auf die Rechnung zeigt;
+  die Rechnung bleibt als „storniert" erhalten. Beide Belege zusammen ergeben
+  null. Eine bezahlte Rechnung lässt sich ebenso stornieren — der Betrag ist
+  dann zu erstatten.
+- **Steuer:** Regelbesteuerung mit Steuersatz je Position; Kleinunternehmer,
+  Reverse Charge und die Luftfahrt-Befreiung (§ 4 Nr. 2, § 8 UStG) sind
+  Einstellungen je Organisation, Kunde oder Rechnung und setzen den
+  gesetzlichen Hinweistext aus der Sprachdatei — keinen Freitext.
+- **CSV-Export** (Rechnungen → „CSV-Export"): alle gestellten Rechnungen und
+  Gutschriften eines Zeitraums, Semikolon, UTF-8 mit BOM — für den
+  Steuerberater.
+- **Nicht im Modul:** Angebote, Mahnungen, Sammel- und Abschlagsrechnungen
+  (vorgemerkt), Einkaufspreise, Lieferscheine, Buchhaltung (bewusst, E6).
+
+---
+
+## 16. Betrieb: Sicherung, Updates, Notzugang
 
 Dieses Kapitel richtet sich an die Person, die den Server betreibt.
 
-### 15.1 Sicherung und Wiederherstellung
+### 16.1 Sicherung und Wiederherstellung
 
 ```
 php artisan aeronance:backup                 # Datenbank + Dokumente
@@ -1055,7 +1132,7 @@ php artisan aeronance:restore storage/app/backups/db-JJJJMMTT-HHMMSS.sql.gz \
 Der Befehl erkennt selbst, ob und wie eine Datei verschlüsselt ist, und
 sagt, was fehlt. Danach Caches neu aufbauen (`php artisan optimize:clear`).
 
-### 15.2 Updates
+### 16.2 Updates
 
 ```
 sudo -u www-data deploy/update.sh            # neuestes Release
@@ -1104,7 +1181,7 @@ Ob es etwas Neues gibt, zeigt das Dashboard (für Inhaber von
 `core.settings.manage`) — die Anwendung schaut nur nach und installiert
 nichts. Abschalten: `AERONANCE_UPDATE_CHECK=false`.
 
-### 15.3 Notzugang (Break-glass)
+### 16.3 Notzugang (Break-glass)
 
 Wenn kein Administrator mehr hineinkommt — nur an der Konsole, absichtlich
 nicht in der Oberfläche:
@@ -1126,7 +1203,7 @@ php artisan aeronance:break-glass-revoke <nummer>
 
 Die Nummer nennt der Befehl beim Gewähren; der Datensatz bleibt erhalten.
 
-### 15.4 Was nachts läuft
+### 16.4 Was nachts läuft
 
 | Zeit | Lauf | Zweck |
 |---|---|---|
@@ -1145,7 +1222,7 @@ bzw. der `scheduler`-Container).
 
 ---
 
-## 16. Kommandoreferenz
+## 17. Kommandoreferenz
 
 Alle Artisan-Befehle laufen im Installationsverzeichnis, im Regelfall als
 Webserver-Benutzer: `sudo -u www-data php artisan …`. In Docker:

@@ -589,6 +589,7 @@ löschen, neu anlegen.
 | Eingangsprüfung | Ware bleibt gesperrt, bis die Prüfung unterschrieben ist | `HANDBUCH.md` Kap. 8 |
 | Werkzeuge | Kalibrierfristen, Nachprüfzeiträume, Ausgabe | `HANDBUCH.md` Kap. 12 |
 | Vereinsflieger | Mitgliederabgleich, Luftfahrzeugzeiten, Arbeitsstunden | `IDENTITAETEN.md`, `ANALYSE.md` §6 |
+| Abrechnung | Kunden, Verkaufspreise, Stundensätze, Rechnung aus Vorgang, Gutschrift, Zahlungen, PDF, XRechnung, CSV | `ABRECHNUNG.md` |
 
 ### Was noch aussteht
 

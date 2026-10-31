@@ -52,6 +52,8 @@ final class SettingsCatalogue
 
     public const GROUP_VEREINSFLIEGER = 'vereinsflieger';
 
+    public const GROUP_BILLING = 'billing';
+
     /**
      * @return list<SettingDefinition>
      */
@@ -79,6 +81,81 @@ final class SettingsCatalogue
                 envVar: 'ORGANISATION_TIMEZONE',
                 group: self::GROUP_ORGANISATION,
                 default: 'Europe/Berlin',
+            ),
+
+            /*
+             * ── Anschrift, Register, Steuer, Bank ───────────────────────────
+             *
+             * Hinzugekommen mit dem Abrechnungsmodul, aber ABSICHTLICH im Kern:
+             * Anschrift und Register gehoeren nach §37a HGB auf jeden
+             * Geschaeftsbrief eines Kaufmanns, und eine Freigabebescheinigung
+             * ohne Anschrift des Betriebs ist auch ohne Rechnung ein halbes
+             * Papier. Die Bankverbindung steht hier, weil sie zur Organisation
+             * gehoert und nicht zu einer einzelnen Rechnung.
+             *
+             * Alles optional: Ein Verein ohne Handelsregister laesst das Feld
+             * leer, und der Ausdruck laesst die Zeile weg.
+             */
+            new SettingDefinition(
+                key: 'organisation.address',
+                configPath: 'aeronance.organisation.address',
+                envVar: 'ORGANISATION_ADDRESS',
+                group: self::GROUP_ORGANISATION,
+                type: 'text',
+            ),
+            new SettingDefinition(
+                key: 'organisation.phone',
+                configPath: 'aeronance.organisation.phone',
+                envVar: 'ORGANISATION_PHONE',
+                group: self::GROUP_ORGANISATION,
+            ),
+            new SettingDefinition(
+                key: 'organisation.email',
+                configPath: 'aeronance.organisation.email',
+                envVar: 'ORGANISATION_EMAIL',
+                group: self::GROUP_ORGANISATION,
+            ),
+            new SettingDefinition(
+                key: 'organisation.register',
+                configPath: 'aeronance.organisation.register',
+                envVar: 'ORGANISATION_REGISTER',
+                group: self::GROUP_ORGANISATION,
+            ),
+            new SettingDefinition(
+                key: 'organisation.representative',
+                configPath: 'aeronance.organisation.representative',
+                envVar: 'ORGANISATION_REPRESENTATIVE',
+                group: self::GROUP_ORGANISATION,
+            ),
+            new SettingDefinition(
+                key: 'organisation.tax_number',
+                configPath: 'aeronance.organisation.tax_number',
+                envVar: 'ORGANISATION_TAX_NUMBER',
+                group: self::GROUP_ORGANISATION,
+            ),
+            new SettingDefinition(
+                key: 'organisation.vat_id',
+                configPath: 'aeronance.organisation.vat_id',
+                envVar: 'ORGANISATION_VAT_ID',
+                group: self::GROUP_ORGANISATION,
+            ),
+            new SettingDefinition(
+                key: 'organisation.bank_name',
+                configPath: 'aeronance.organisation.bank_name',
+                envVar: 'ORGANISATION_BANK_NAME',
+                group: self::GROUP_ORGANISATION,
+            ),
+            new SettingDefinition(
+                key: 'organisation.iban',
+                configPath: 'aeronance.organisation.iban',
+                envVar: 'ORGANISATION_IBAN',
+                group: self::GROUP_ORGANISATION,
+            ),
+            new SettingDefinition(
+                key: 'organisation.bic',
+                configPath: 'aeronance.organisation.bic',
+                envVar: 'ORGANISATION_BIC',
+                group: self::GROUP_ORGANISATION,
             ),
 
             /*
@@ -457,6 +534,80 @@ final class SettingsCatalogue
                 group: self::GROUP_OPERATION,
                 type: 'bool',
                 default: true,
+            ),
+
+            /*
+             * ── Abrechnung ──────────────────────────────────────────────────
+             *
+             * Gehoert dem Abrechnungsmodul; steht hier, weil der Katalog die
+             * eine Stelle fuer Einstellungen ist (so wie Vereinsflieger oben).
+             * Ist das Modul aus, zeigt die Oberflaeche die Gruppe nicht.
+             *
+             * Steuersatz und Zahlungsziel sind VORGABEN: Der Kunde kann beides
+             * ueberschreiben, die einzelne Rechnung noch einmal. Die Rundung
+             * der Arbeitszeit gilt je Karte und rundet AUF -- angefangene
+             * Viertelstunden sind in der Werkstatt ueblich, und wer anders
+             * will, stellt 1 ein.
+             */
+            new SettingDefinition(
+                key: 'billing.tax_rate',
+                configPath: 'aeronance.billing.tax_rate',
+                envVar: 'BILLING_TAX_RATE',
+                group: self::GROUP_BILLING,
+                default: '19',
+            ),
+            new SettingDefinition(
+                key: 'billing.small_business',
+                configPath: 'aeronance.billing.small_business',
+                envVar: 'BILLING_SMALL_BUSINESS',
+                group: self::GROUP_BILLING,
+                type: 'bool',
+                default: false,
+            ),
+            new SettingDefinition(
+                key: 'billing.payment_terms_days',
+                configPath: 'aeronance.billing.payment_terms_days',
+                envVar: 'BILLING_PAYMENT_TERMS_DAYS',
+                group: self::GROUP_BILLING,
+                type: 'int',
+                default: 14,
+            ),
+            new SettingDefinition(
+                key: 'billing.number_prefix_invoice',
+                configPath: 'aeronance.billing.number_prefix_invoice',
+                envVar: 'BILLING_NUMBER_PREFIX_INVOICE',
+                group: self::GROUP_BILLING,
+                default: 'RE',
+            ),
+            new SettingDefinition(
+                key: 'billing.number_prefix_credit_note',
+                configPath: 'aeronance.billing.number_prefix_credit_note',
+                envVar: 'BILLING_NUMBER_PREFIX_CREDIT_NOTE',
+                group: self::GROUP_BILLING,
+                default: 'GS',
+            ),
+            new SettingDefinition(
+                key: 'billing.labour_rounding_minutes',
+                configPath: 'aeronance.billing.labour_rounding_minutes',
+                envVar: 'BILLING_LABOUR_ROUNDING_MINUTES',
+                group: self::GROUP_BILLING,
+                type: 'int',
+                default: 15,
+            ),
+            new SettingDefinition(
+                key: 'billing.discount_visible_default',
+                configPath: 'aeronance.billing.discount_visible_default',
+                envVar: 'BILLING_DISCOUNT_VISIBLE_DEFAULT',
+                group: self::GROUP_BILLING,
+                type: 'bool',
+                default: true,
+            ),
+            new SettingDefinition(
+                key: 'billing.footer',
+                configPath: 'aeronance.billing.footer',
+                envVar: 'BILLING_FOOTER',
+                group: self::GROUP_BILLING,
+                type: 'text',
             ),
         ];
     }

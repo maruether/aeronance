@@ -9,7 +9,7 @@ Verzeichnis), **Docker** (`deploy/docker/`) und das **Proxmox-LXC-Skript**
 
 | | |
 |---|---|
-| PHP | 8.4+ mit `pdo_mysql`, `intl`, `gd`, `zip`, `bcmath`, `fileinfo` |
+| PHP | 8.4+ mit `pdo_mysql`, `intl`, `gd`, `zip`, `bcmath`, `fileinfo`, `iconv`, `mbstring`, `dom` |
 | MariaDB | 10.11+ (**kein MySQL** — siehe CLAUDE.md, Leitplanken) |
 | `poppler-utils` | `pdftotext`, für die Kennblatt-Listen des LBA |
 | `mariadb-client` | `mariadb-dump`, für Sicherungen |
@@ -163,9 +163,17 @@ unzip storage/app/backups/documents-JJJJMMTT-HHMMSS.zip -d storage/app/
 #    "Beim Update beachten" ausfüllen, committen
 # 2. Signiertes, annotiertes Tag -- ein leichtgewichtiges Tag trägt keine
 #    Signatur, und deploy/update.sh verweigert dann den Dienst
+git fetch origin && git status -sb          # "behind"? Dann erst integrieren.
 git tag -s v1.2.0 -m "Aeronance 1.2.0"
-git push origin v1.2.0
+git push --atomic origin master v1.2.0
 ```
+
+`--atomic`, weil beim Schnitt von 0.2.3 das Tag durchging und master
+abgewiesen wurde: Renovate hatte Minuten vorher gemergt. Ohne `--atomic`
+läuft die Pipeline dann auf einem Tag, das nicht auf master liegt, und das
+Löschen eines Tags auf der Gegenstelle ist genau der Schritt, den man nicht
+mehr gern tut, wenn ein Bau darauf läuft. Mit `--atomic` kommt entweder beides
+an oder nichts.
 
 Die Pipeline baut daraufhin `aeronance-v1.2.0.tar.gz` samt SHA-256. Das Archiv
 enthält `vendor/` und die gebauten Assets und wird vor dem Hochladen geprüft:

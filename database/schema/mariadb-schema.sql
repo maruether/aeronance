@@ -297,6 +297,37 @@ CREATE TABLE `counter_readings` (
   CONSTRAINT `counter_readings_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `customers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `customers` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `customer_number` varchar(32) DEFAULT NULL,
+  `name` varchar(160) NOT NULL,
+  `address` text DEFAULT NULL,
+  `country` char(2) NOT NULL DEFAULT 'DE',
+  `vat_id` varchar(32) DEFAULT NULL,
+  `tax_number` varchar(32) DEFAULT NULL,
+  `contact_name` varchar(160) DEFAULT NULL,
+  `email` varchar(191) DEFAULT NULL,
+  `phone` varchar(64) DEFAULT NULL,
+  `payment_terms_days` smallint(5) unsigned DEFAULT NULL,
+  `default_discount_percent` decimal(5,2) DEFAULT NULL,
+  `discount_visible` tinyint(1) DEFAULT NULL,
+  `tax_treatment` varchar(24) DEFAULT NULL,
+  `buyer_reference` varchar(64) DEFAULT NULL,
+  `holder_id` bigint(20) unsigned DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `note` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `customers_customer_number_unique` (`customer_number`),
+  KEY `customers_is_active_name_index` (`is_active`,`name`),
+  KEY `customers_holder_id_index` (`holder_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `directive_applications`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -687,6 +718,127 @@ CREATE TABLE `installations` (
   CONSTRAINT `installations_transcribed_by_foreign` FOREIGN KEY (`transcribed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `invoice_lines`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `invoice_lines` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `invoice_id` bigint(20) unsigned NOT NULL,
+  `position` smallint(5) unsigned NOT NULL DEFAULT 0,
+  `origin` varchar(16) NOT NULL DEFAULT 'manual',
+  `source_reference` varchar(64) DEFAULT NULL,
+  `description` text NOT NULL,
+  `quantity` decimal(12,3) NOT NULL DEFAULT 1.000,
+  `unit` varchar(16) NOT NULL DEFAULT 'Stk',
+  `list_unit_price` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `discount_percent` decimal(5,2) DEFAULT NULL,
+  `discount_visible` tinyint(1) NOT NULL DEFAULT 1,
+  `unit_price` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `tax_rate` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `net_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `tax_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `gross_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `needs_price` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `invoice_lines_invoice_id_position_index` (`invoice_id`,`position`),
+  CONSTRAINT `invoice_lines_invoice_id_foreign` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `invoice_number_ranges`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `invoice_number_ranges` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `kind` varchar(16) NOT NULL,
+  `year` smallint(5) unsigned NOT NULL,
+  `last_number` int(10) unsigned NOT NULL DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `invoice_number_ranges_kind_year_unique` (`kind`,`year`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `invoice_payments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `invoice_payments` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `invoice_id` bigint(20) unsigned NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `paid_on` date NOT NULL,
+  `method` varchar(32) DEFAULT NULL,
+  `reference` varchar(128) DEFAULT NULL,
+  `note` text DEFAULT NULL,
+  `recorded_by_id` bigint(20) unsigned DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `invoice_payments_recorded_by_id_foreign` (`recorded_by_id`),
+  KEY `invoice_payments_invoice_id_paid_on_index` (`invoice_id`,`paid_on`),
+  CONSTRAINT `invoice_payments_invoice_id_foreign` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `invoice_payments_recorded_by_id_foreign` FOREIGN KEY (`recorded_by_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `invoices`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `invoices` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `kind` varchar(16) NOT NULL DEFAULT 'invoice',
+  `state` varchar(16) NOT NULL DEFAULT 'draft',
+  `number` varchar(32) DEFAULT NULL,
+  `customer_id` bigint(20) unsigned NOT NULL,
+  `customer_name` varchar(160) NOT NULL,
+  `customer_address` text DEFAULT NULL,
+  `customer_country` char(2) NOT NULL DEFAULT 'DE',
+  `customer_vat_id` varchar(32) DEFAULT NULL,
+  `customer_number` varchar(32) DEFAULT NULL,
+  `buyer_reference` varchar(64) DEFAULT NULL,
+  `work_order_id` bigint(20) unsigned DEFAULT NULL,
+  `work_order_number` varchar(32) DEFAULT NULL,
+  `aircraft_registration` varchar(32) DEFAULT NULL,
+  `service_from` date DEFAULT NULL,
+  `service_to` date DEFAULT NULL,
+  `issued_at` date DEFAULT NULL,
+  `due_at` date DEFAULT NULL,
+  `tax_treatment` varchar(24) NOT NULL DEFAULT 'standard',
+  `discount_percent` decimal(5,2) DEFAULT NULL,
+  `discount_visible` tinyint(1) NOT NULL DEFAULT 1,
+  `net_total` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `tax_total` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `gross_total` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `paid_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `paid_at` date DEFAULT NULL,
+  `sent_at` timestamp NULL DEFAULT NULL,
+  `issued_by` bigint(20) unsigned DEFAULT NULL,
+  `issued_by_name` varchar(160) DEFAULT NULL,
+  `corrects_invoice_id` bigint(20) unsigned DEFAULT NULL,
+  `cancelled_at` timestamp NULL DEFAULT NULL,
+  `cancellation_reason` text DEFAULT NULL,
+  `cancelled_by_id` bigint(20) unsigned DEFAULT NULL,
+  `intro` text DEFAULT NULL,
+  `note` text DEFAULT NULL,
+  `internal_note` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `invoices_number_unique` (`number`),
+  KEY `invoices_issued_by_foreign` (`issued_by`),
+  KEY `invoices_corrects_invoice_id_foreign` (`corrects_invoice_id`),
+  KEY `invoices_cancelled_by_id_foreign` (`cancelled_by_id`),
+  KEY `invoices_state_due_at_index` (`state`,`due_at`),
+  KEY `invoices_customer_id_issued_at_index` (`customer_id`,`issued_at`),
+  KEY `invoices_state_index` (`state`),
+  KEY `invoices_work_order_id_index` (`work_order_id`),
+  CONSTRAINT `invoices_cancelled_by_id_foreign` FOREIGN KEY (`cancelled_by_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `invoices_corrects_invoice_id_foreign` FOREIGN KEY (`corrects_invoice_id`) REFERENCES `invoices` (`id`),
+  CONSTRAINT `invoices_customer_id_foreign` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`),
+  CONSTRAINT `invoices_issued_by_foreign` FOREIGN KEY (`issued_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `job_batches`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -717,6 +869,21 @@ CREATE TABLE `jobs` (
   `created_at` int(10) unsigned NOT NULL,
   PRIMARY KEY (`id`),
   KEY `jobs_queue_index` (`queue`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `labour_rates`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `labour_rates` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `activity_kind` varchar(32) NOT NULL,
+  `net_rate_per_hour` decimal(12,2) NOT NULL,
+  `valid_from` date NOT NULL,
+  `note` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `labour_rates_activity_kind_valid_from_index` (`activity_kind`,`valid_from`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `lot_state_changes`;
@@ -857,6 +1024,24 @@ CREATE TABLE `modules` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `modules_name_unique` (`name`),
   KEY `modules_enabled_at_index` (`enabled_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `part_prices`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `part_prices` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `part_number` varchar(128) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `unit` varchar(16) NOT NULL DEFAULT 'Stk',
+  `net_price` decimal(12,2) NOT NULL,
+  `valid_from` date NOT NULL,
+  `note` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `part_prices_part_number_valid_from_index` (`part_number`,`valid_from`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `part_types`;
@@ -1817,5 +2002,6 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (74,'2026_08_15_120
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (75,'2026_08_16_090000_add_powered_sheet_fields',1);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (76,'2026_08_17_100000_add_sheet_defaults_to_aircraft_types',1);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (77,'2026_08_17_140000_add_finding_report_to_work_orders',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (78,'2026_10_30_120000_create_billing_tables',1);
 COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;

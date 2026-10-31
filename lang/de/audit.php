@@ -40,6 +40,7 @@ return [
         'directives' => 'LTA/TM',
         'directive_credentials' => 'LTA-Zugänge',
         'vereinsflieger' => 'Vereinsflieger',
+        'billing' => 'Abrechnung',
         'default' => 'Allgemein',
     ],
 

@@ -9,6 +9,8 @@ use App\Core\Demo\DemoMode;
 use App\Core\Documents\ClamAvScanner;
 use App\Core\Mail\Postman;
 use App\Core\Mail\TestMail;
+use App\Core\Modules\ModuleManager;
+use App\Core\Modules\ModuleRegistry;
 use App\Core\Settings\SettingDefinition;
 use App\Core\Settings\SettingOptions;
 use App\Core\Settings\Settings;
@@ -370,6 +372,18 @@ class SettingsPage extends Page implements HasForms
         $abschnitte = [];
 
         foreach (SettingsCatalogue::byGroup() as $gruppe => $definitionen) {
+            /*
+             * Eine Gruppe, die den Namen eines Moduls traegt, gehoert dem
+             * Modul -- und ein abgeschaltetes Modul zeigt nichts (D3). Vorher
+             * standen die Vereinsflieger-Felder auch dann da, wenn es die
+             * Anbindung gar nicht gab; mit der Abrechnung kam die zweite
+             * solche Gruppe, und damit die Regel.
+             */
+            $registry = app(ModuleRegistry::class);
+            if ($registry->has($gruppe) && ! app(ModuleManager::class)->isEnabled($gruppe)) {
+                continue;
+            }
+
             $felder = [];
 
             foreach ($definitionen as $definition) {

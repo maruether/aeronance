@@ -15,6 +15,15 @@ use App\Core\Filament\Resources\Roles\RoleResource;
 use App\Core\Filament\Resources\Users\UserResource;
 use App\Core\Identity\RoleMapping;
 use App\Models\User;
+use App\Modules\Billing\Filament\Resources\Customers\CustomerResource;
+use App\Modules\Billing\Filament\Resources\Invoices\InvoiceResource;
+use App\Modules\Billing\Filament\Resources\LabourRates\LabourRateResource;
+use App\Modules\Billing\Filament\Resources\PartPrices\PartPriceResource;
+use App\Modules\Billing\Models\Customer;
+use App\Modules\Billing\Models\Invoice;
+use App\Modules\Billing\Models\LabourRate;
+use App\Modules\Billing\Models\PartPrice;
+use App\Modules\Billing\Permissions as BillingPermissions;
 use App\Modules\Directives\Enums\DirectiveKind;
 use App\Modules\Directives\Enums\SubjectKind;
 use App\Modules\Directives\Filament\Pages\AircraftDirectivesPage;
@@ -43,6 +52,7 @@ use App\Modules\Inspection\Filament\Resources\IncomingInspections\IncomingInspec
 use App\Modules\Inspection\Permissions as InspectionPermissions;
 use App\Modules\Part66\Filament\Pages\ExperienceLogPage;
 use App\Modules\TaskCards\Actions\ManageWorkOrder;
+use App\Modules\TaskCards\Enums\ActivityKind;
 use App\Modules\TaskCards\Filament\Resources\Findings\FindingResource;
 use App\Modules\TaskCards\Filament\Resources\WorkOrders\WorkOrderResource;
 use App\Modules\TaskCards\Permissions as CardPermissions;
@@ -133,7 +143,7 @@ final class PanelDenyByDefaultTest extends TestCase
 
     protected function modulesUnderTest(): array
     {
-        return ['warehouse', 'fleet', 'directives', 'taskcards', 'inspection', 'tooling', 'part66', 'vereinsflieger'];
+        return ['warehouse', 'fleet', 'directives', 'taskcards', 'inspection', 'tooling', 'part66', 'vereinsflieger', 'billing'];
     }
 
     protected function setUp(): void
@@ -180,6 +190,39 @@ final class PanelDenyByDefaultTest extends TestCase
                 // is refused on purpose (see UserResource::canEdit), and that is
                 // a different test.
                 'record' => fn (): Model => User::factory()->create(['is_active' => true]),
+            ],
+
+            // ── Billing ──────────────────────────────────────────────────────
+            CustomerResource::class => [
+                'view' => [BillingPermissions::VIEW],
+                'manage' => [BillingPermissions::MANAGE],
+                'record' => fn (): Model => Customer::create([
+                    'name' => 'Kunde '.Str::random(4),
+                    'address' => "Weg 1\n79100 Freiburg",
+                ]),
+            ],
+            InvoiceResource::class => [
+                'view' => [BillingPermissions::VIEW],
+                'manage' => [BillingPermissions::MANAGE],
+                'record' => fn (): Model => $this->draftInvoice(),
+            ],
+            PartPriceResource::class => [
+                'view' => [BillingPermissions::VIEW],
+                'manage' => [BillingPermissions::MANAGE],
+                'record' => fn (): Model => PartPrice::create([
+                    'part_number' => 'AN3-'.Str::random(3),
+                    'net_price' => '1.50',
+                    'valid_from' => now()->toDateString(),
+                ]),
+            ],
+            LabourRateResource::class => [
+                'view' => [BillingPermissions::VIEW],
+                'manage' => [BillingPermissions::MANAGE],
+                'record' => fn (): Model => LabourRate::create([
+                    'activity_kind' => ActivityKind::Maintenance,
+                    'net_rate_per_hour' => '80.00',
+                    'valid_from' => now()->toDateString(),
+                ]),
             ],
 
             // ── Directives ───────────────────────────────────────────────────
@@ -583,6 +626,17 @@ final class PanelDenyByDefaultTest extends TestCase
         return Aircraft::create([
             'registration' => 'D-'.strtoupper(Str::random(4)),
             'model' => 'ASK 21',
+        ]);
+    }
+
+    private function draftInvoice(): Invoice
+    {
+        $customer = Customer::create(['name' => 'Kunde '.Str::random(4), 'address' => "Weg 1\n79100 Freiburg"]);
+
+        return Invoice::create([
+            'customer_id' => $customer->getKey(),
+            'customer_name' => $customer->name,
+            'customer_address' => $customer->address,
         ]);
     }
 

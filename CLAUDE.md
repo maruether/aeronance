@@ -45,7 +45,8 @@ Phase 1 (Analyse des Bestandscodes) und Phase 2 (Grundgerüst) sind
 abgeschlossen; seit v0.1.0 läuft das System im Feldtest bei der Akaflieg.
 Technik: **Laravel 13, Filament 5, PHP ≥ 8.4, MariaDB ≥ 10.11.** Laufzeit-
 abhängigkeiten außerdem `poppler-utils` (Kennblätter, LTA-Listen) und
-`mariadb-client` (Sicherung).
+`mariadb-client` (Sicherung); PDF-Erzeugung über `dompdf` (reines PHP, braucht
+`ext-iconv`).
 
 **Kern** (`app/Core/`): lokales Login mit optionaler 2FA, Rollen und Rechte
 (`spatie/laravel-permission`), Qualifikationen als eigenes Konzept (E8),
@@ -69,6 +70,7 @@ Schnittstelle mit providerunabhängiger Rollenzuordnung (E4).
 | Werkzeuge | `tooling` | — | — | — |
 | Part-66-Logbuch | `part66` | `taskcards`, `fleet` | — | `PART66.md` |
 | Vereinsflieger | `vereinsflieger` | — | `identity-provider` | `IDENTITAETEN.md`, `ANALYSE.md` §6 |
+| Abrechnung | `billing` | `taskcards`, `fleet` | — | `ABRECHNUNG.md` |
 
 `provides` ist eine Fähigkeit, keine Voraussetzung: Arbeitskarten entnehmen
 Teile nur, wenn das Lager aktiv ist, und laufen ohne. LDAP/AD und OIDC sind
@@ -314,8 +316,10 @@ Fehlerklassen strukturell auszuschließen:
   landet sofort unter `[Unveröffentlicht]` — mit dem Warum, und unter „Beim
   Update beachten", falls der Betreiber etwas tun muss.
 - **Tests gehören dazu**, gegen echtes MariaDB. Vor jedem Abschluss:
-  `./vendor/bin/pint`, `./vendor/bin/phpunit`, bei UI-Änderungen zusätzlich
-  `--group rendering`. Bringt eine Änderung eine Migration mit:
+  `./vendor/bin/pint --test` **über den ganzen Baum** (nicht nur über die
+  angefassten Dateien — 0.3.0 scheiterte an einer Import-Zeile in
+  `routes/web.php`, die niemand mitgeprüft hatte), `./vendor/bin/phpunit`,
+  bei UI-Änderungen zusätzlich `--group rendering`. Bringt eine Änderung eine Migration mit:
   `php artisan schema:dump` auf leerer DB und `aeronance:schema-verify`, sonst
   wird die Pipeline langsam oder der Job `schema` rot.
 - **Release schneiden:** `[Unveröffentlicht]` umbenennen, „Beim Update

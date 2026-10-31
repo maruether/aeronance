@@ -152,4 +152,15 @@ einen gab — nur als Lesehilfe beim Nachschlagen in
 | `amount` | `quantity` | |
 | `group` für Rollen | `role` | „Gruppe" ist im Identity-Kontext die *externe* Gruppe |
 | `admin`-Flag | Rolle + Break-glass | siehe E2 |
-| Lieferschein, Bestellung, Rechnung | — | Warenwirtschaft, ausdrücklich außerhalb (E6) |
+| Lieferschein, Bestellung | — | Warenwirtschaft, ausdrücklich außerhalb (E6) |
+| Rechnung | `invoice` | — | Abrechnungsmodul (`billing`), dockt an den Arbeitskarten an — nicht am Lager (E6 bleibt). `docs/ABRECHNUNG.md` |
+| Kunde | `customer` | — | Abrechnung; optional an einen `holder` der Flotte geknüpft |
+| Rechnungsposition | `invoice_line` | — | Snapshot: Listenpreis, Rabatt, Sichtbarkeit, Netto, Steuersatz |
+| Gutschrift, Stornorechnung | `credit_note` | — | `invoice` mit `kind = credit_note` und `corrects_invoice_id` |
+| Nummernkreis | `invoice_number_range` | — | je Art und Jahr; `RE-JJJJMM-NNNN` |
+| Verkaufspreis | `part_price` | — | je Teilenummer, gültig ab Datum |
+| Stundensatz | `labour_rate` | — | je Tätigkeitsart (`activity_kind` der Karte) |
+| Rabatt, Rabatt ausweisen | `discount_percent`, `discount_visible` | — | ausgewiesen = Listenpreis und Rabatt auf dem Papier; sonst nur der Nettopreis |
+| Zahlungseingang | `invoice_payment` | — | append-only; Korrektur durch Gegenbuchung |
+| Steuerliche Behandlung | `tax_treatment` | — | standard, small_business, reverse_charge, exempt_aviation, exempt_other |
+| Leitweg-ID, Käuferreferenz | `buyer_reference` | — | BT-10 der XRechnung |

@@ -7,6 +7,7 @@ namespace App\Modules\TaskCards\Actions;
 use App\Core\Modules\ModuleManager;
 use App\Models\User;
 use App\Modules\TaskCards\Models\TaskCard;
+use App\Modules\TaskCards\Support\PartUsed;
 use App\Modules\Warehouse\Actions\IssueStock;
 use App\Modules\Warehouse\Models\PartType;
 use App\Modules\Warehouse\Models\StockLot;
@@ -114,6 +115,28 @@ final readonly class IssuePartToCard
      *
      * @return Collection<int, StockMovement>
      */
+    /**
+     * The parts on a card as plain data -- the answer for other modules.
+     *
+     * Billing prices what was built in, and it may neither import the
+     * warehouse's models nor know that the warehouse is a module. It asks the
+     * card, and the card answers with PartUsed. The part number is what a
+     * price list is keyed by; the lot number is what the customer sees.
+     *
+     * @return Collection<int, PartUsed>
+     */
+    public function usedOn(TaskCard $card): Collection
+    {
+        return $this->issuedTo($card)->map(static fn (StockMovement $movement): PartUsed => new PartUsed(
+            name: (string) ($movement->partType?->name ?? ''),
+            partNumber: $movement->partType?->ipc_part_number ?: ($movement->partType?->order_code ?: null),
+            lotNumber: $movement->lot?->lot_number,
+            quantity: abs((float) $movement->quantity),
+            unit: (string) ($movement->partType?->unit_of_measure ?: 'Stk'),
+            reference: 'movement:'.$movement->getKey(),
+        ))->values();
+    }
+
     public function issuedTo(TaskCard $card)
     {
         if (! $this->isAvailable()) {

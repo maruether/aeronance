@@ -9,6 +9,7 @@ use App\Core\Access\CorePermissions;
 use App\Core\Documents\ClamAvScanner;
 use App\Core\Documents\VirusScanner;
 use App\Core\Filament\Pages\SettingsPage;
+use App\Core\Modules\ModuleManager;
 use App\Core\Settings\SettingOptions;
 use App\Core\Settings\Settings;
 use App\Core\Settings\SettingsCatalogue;
@@ -72,6 +73,9 @@ final class SettingsPageTest extends TestCase
     #[Test]
     public function a_module_supplied_option_list_turns_the_field_into_a_select(): void
     {
+        // Die Gruppe eines Moduls erscheint nur, wenn das Modul an ist (D3).
+        $this->enableVereinsflieger();
+
         app(SettingOptions::class)->provide(
             'vereinsflieger.workhours.category',
             static fn (): array => ['7265' => 'Wartung/Werkstatt (7265)'],
@@ -89,6 +93,7 @@ final class SettingsPageTest extends TestCase
     #[Test]
     public function a_stored_value_missing_from_the_list_stays_visible(): void
     {
+        $this->enableVereinsflieger();
         app(Settings::class)->set('vereinsflieger.workhours.category', '9999');
 
         app(SettingOptions::class)->provide(
@@ -393,5 +398,33 @@ final class SettingsPageTest extends TestCase
     private function userWithout(): User
     {
         return User::factory()->create(['is_active' => true])->fresh();
+    }
+
+    /**
+     * Die Einstellungsgruppe eines abgeschalteten Moduls ist nicht da.
+     *
+     * Vorher standen die Vereinsflieger-Felder auch ohne Anbindung auf der
+     * Seite; mit der Abrechnung kam die zweite Modulgruppe, und damit die
+     * Regel: Was aus ist, zeigt nichts (D3).
+     */
+    #[Test]
+    public function a_disabled_modules_settings_group_is_not_shown(): void
+    {
+        Livewire::actingAs($this->userWith())
+            ->test(SettingsPage::class)
+            ->assertDontSee(__('settings.group.vereinsflieger'))
+            ->assertDontSee(__('settings.group.billing'));
+
+        $this->enableVereinsflieger();
+
+        Livewire::actingAs($this->userWith())
+            ->test(SettingsPage::class)
+            ->assertSee(__('settings.group.vereinsflieger'));
+    }
+
+    private function enableVereinsflieger(): void
+    {
+        app(ModuleManager::class)->enable('vereinsflieger');
+        app(ModuleManager::class)->forgetCache();
     }
 }

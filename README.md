@@ -20,6 +20,7 @@ lässt sich einzeln aktivieren; Abschalten löscht keine Daten.
 | **Werkzeuge** | Kalibrierfristen, Nachprüfzeiträume, Ausgabe |
 | **Erfahrungslogbuch** | Part-66-Nachweis, vollständig aus den Karten abgeleitet |
 | **Vereinsflieger** | Mitgliederabgleich, Betriebszeiten, Arbeitsstunden |
+| **Abrechnung** | Kunden, Preise, Rechnungen aus Vorgängen, Gutschriften, XRechnung — für die Werft |
 
 ## Installation
 

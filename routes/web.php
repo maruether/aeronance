@@ -8,6 +8,8 @@ use App\Core\Setup\SetupController;
 use App\Http\Middleware\BlockSetupWhenInstalled;
 use App\Http\Middleware\RedirectToSetupWhenNotInstalled;
 use App\Http\Middleware\RequireSetupAuthority;
+use App\Modules\Billing\Http\InvoiceDocumentController;
+use App\Modules\Billing\Http\InvoicePrintController;
 use App\Modules\Directives\Http\OverviewController;
 use App\Modules\Fleet\Http\AircraftDocumentFileController;
 use App\Modules\Fleet\Http\AircraftRecordController;
@@ -190,6 +192,11 @@ Route::middleware(['web', 'auth'])->group(function (): void {
 
     // LTA/TM-Uebersicht eines Luftfahrzeugs als Papier fuer die Bordunterlagen.
     Route::get('/lta/{aircraft}', OverviewController::class)->name('directives.overview');
+
+    // Rechnung: Blatt im Browser (auch Entwurf), archiviertes PDF, XRechnung.
+    Route::get('/rechnung/{invoice}', InvoicePrintController::class)->name('billing.invoice');
+    Route::get('/rechnung/{invoice}/pdf', [InvoiceDocumentController::class, 'pdf'])->name('billing.invoice.pdf');
+    Route::get('/rechnung/{invoice}/xrechnung', [InvoiceDocumentController::class, 'xml'])->name('billing.invoice.xml');
 });
 
 /*

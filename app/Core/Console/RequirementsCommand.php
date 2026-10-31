@@ -133,7 +133,9 @@ final class RequirementsCommand extends Command
             ],
         ];
 
-        foreach (['pdo_mysql', 'intl', 'gd', 'zip', 'bcmath', 'fileinfo'] as $extension) {
+        // iconv seit dem Abrechnungsmodul: dompdf verlangt es, und Composer
+        // prueft die Plattform bei jedem Autoload -- ohne iconv startet nichts.
+        foreach (['pdo_mysql', 'intl', 'gd', 'zip', 'bcmath', 'fileinfo', 'iconv', 'mbstring', 'dom'] as $extension) {
             $checks[] = [
                 'label' => 'PHP-Erweiterung '.$extension,
                 'run' => fn (): array => [
