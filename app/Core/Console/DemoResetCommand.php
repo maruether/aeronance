@@ -34,13 +34,30 @@ use Throwable;
  */
 final class DemoResetCommand extends Command
 {
-    protected $signature = 'aeronance:demo-reset';
+    protected $signature = 'aeronance:demo-reset
+        {--scheduled : Aus dem Zeitplan aufgerufen -- auf einer Nicht-Demo leise mit 0 enden statt als Fehlschlag}';
 
     protected $description = 'Setzt eine Demo-Instanz auf den Ausgangsstand zurück (löscht alle Daten).';
 
     public function handle(DemoMode $demo): int
     {
         if (! $demo->isActive()) {
+            /*
+             * Der Zeitplan ruft diesen Befehl auf JEDER Instanz auf -- die
+             * Bedingung steht absichtlich hier und nicht in routes/console.php.
+             * Aber ein Rueckgabewert 1 liess den Scheduler jede Nacht
+             * "Scheduled command failed" ins Protokoll jedes Vereins schreiben,
+             * der keine Demo betreibt. Mit --scheduled ist Nichtstun das
+             * erwartete Ergebnis und endet mit 0; von Hand aufgerufen bleibt
+             * es der Fehlschlag, der jemandem sagt, dass hier nichts geloescht
+             * wird.
+             */
+            if ($this->option('scheduled')) {
+                $this->line('Keine Demo -- nichts zu tun.');
+
+                return self::SUCCESS;
+            }
+
             $this->error('Diese Installation läuft nicht im Demomodus -- es wird nichts gelöscht.');
             $this->line('Die Marke '.$demo->markerPath().' fehlt. Das ist die Sicherung, und sie greift.');
 

@@ -6,6 +6,7 @@ namespace Tests\Feature\Core;
 
 use App\Core\Updates\ReleaseCheck;
 use App\Core\Version;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\Test;
@@ -333,6 +334,29 @@ final class UpdateCheckTest extends TestCase
     {
         file_put_contents(base_path('VERSION'), $inhalt."\n");
         Version::forget();
+    }
+
+    /**
+     * Der Zeitplan ruft die Tag-Form auf. Die Vollausgabe endet mit 1, sobald
+     * es etwas Neueres gibt -- fuer den Scheduler ein "failed" im Protokoll,
+     * jede Nacht, genau dann, wenn alles in Ordnung ist.
+     */
+    #[Test]
+    public function the_schedule_runs_the_tag_form_that_never_fails(): void
+    {
+        $befehle = array_map(
+            static fn ($event): string => (string) $event->command,
+            app(Schedule::class)->events(),
+        );
+
+        $treffer = array_values(array_filter(
+            $befehle,
+            static fn (string $c): bool => str_contains($c, 'aeronance:update-check'),
+        ));
+
+        $this->assertNotEmpty($treffer, 'aeronance:update-check steht in keinem Zeitplan.');
+        $this->assertStringContainsString('--tag', $treffer[0]);
+        $this->assertStringContainsString('--fresh', $treffer[0]);
     }
 
     private function removeVersionFile(): void

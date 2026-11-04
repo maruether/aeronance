@@ -140,8 +140,15 @@ Schedule::command('aeronance:vereinsflieger-sync')
  *
  * Um 03:40, also vor der Sicherung und nach der Nacht. Ein Fehlschlag ist kein
  * Fehler (siehe ReleaseCheck), der Lauf meldet dann schlicht nichts.
+ *
+ * Mit --tag --fresh, nicht nackt: Die Vollausgabe des Befehls endet mit 1,
+ * sobald es etwas Neueres gibt -- fuer einen Menschen am Terminal das
+ * richtige Signal, fuer den Scheduler ein "Scheduled command failed" im
+ * Protokoll, jede Nacht, genau dann, wenn alles in Ordnung ist. --tag
+ * schreibt den Zwischenspeicher fuer die Startseite genauso und endet
+ * immer mit 0; --fresh sorgt dafuer, dass er nachts wirklich erneuert wird.
  */
-Schedule::command('aeronance:update-check')
+Schedule::command('aeronance:update-check --tag --fresh')
     ->dailyAt('03:40')
     ->onOneServer();
 
@@ -154,6 +161,6 @@ Schedule::command('aeronance:update-check')
  * Stelle wäre eine ZWEITE Wahrheit darüber, ob gelöscht werden darf -- und die
  * gefährlichere, weil sie beim Lesen der Datei überzeugend aussieht.
  */
-Schedule::command('aeronance:demo-reset')
+Schedule::command('aeronance:demo-reset --scheduled')
     ->dailyAt((string) config('aeronance.demo.reset_at', '03:00'))
     ->withoutOverlapping();

@@ -7,6 +7,7 @@ namespace App\Core\Modules;
 use App\Core\Modules\Contracts\AeronanceModule;
 use App\Core\Modules\Events\ModuleDisabled;
 use App\Core\Modules\Events\ModuleEnabled;
+use App\Core\Setup\InstallationState;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -54,8 +55,23 @@ final class ModuleManager
                 ->whereNotNull('enabled_at')
                 ->pluck('name')
                 ->all();
-        } catch (QueryException) {
-            // Table not migrated yet -- the state before the setup wizard has run.
+        } catch (QueryException $e) {
+            /*
+             * Table not migrated yet -- the state before the setup wizard has
+             * run -- is the ONLY case in which "nothing active" is the truth.
+             *
+             * On an installed instance a database error here is not an empty
+             * module list, it is an outage, and answering [] would be the
+             * quietest possible lie: the demo's route cache was once built in
+             * exactly that moment (database container still coming up during
+             * an update), came out without a single module route, and every
+             * page answered 500 until somebody rebuilt it by hand. The
+             * installation marker is a file, so this check needs no database.
+             */
+            if (app(InstallationState::class)->isInstalled()) {
+                throw $e;
+            }
+
             return $this->cache = [];
         }
 

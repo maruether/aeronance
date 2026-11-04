@@ -24,6 +24,40 @@ Sprung auf 0.3 bedeutet, entscheidet Marvin beim Schneiden, nicht die Liste.
   EASA-Felder. Der genaue Zuschnitt wird vor dem Bau entschieden und hier
   begründet.
 
+## [0.3.2] — 2026-10-31
+
+Ein Korrektur-Release nach dem Feldtest von 0.3.1 auf der Demo.
+
+**Beim Update beachten:** Es läuft keine Migration mit; `deploy/update.sh`
+bzw. `deploy/docker/update.sh v0.3.2` genügt. Wer nach dem Update auf 0.3.1
+auf jeder Seite 500 sieht, baut einmal den Routen-Cache neu
+(`php artisan route:cache` im App-Container) — ab dieser Fassung bricht das
+Update in dem Fall ab, statt ihn kaputt auszuliefern.
+
+### Behoben
+
+- **Eine installierte Instanz meldet einen Datenbankfehler, statt „keine
+  Module“ zu behaupten.** `ModuleManager` beantwortete jeden
+  Datenbankfehler mit einer leeren Modulliste — richtig vor dem
+  Setup-Assistenten, wenn es die Tabelle noch nicht gibt, falsch danach.
+  Beim Update der Demo auf 0.3.1 traf `route:cache` genau einen solchen
+  Moment, der Routen-Cache entstand ohne ein einziges Modul, und jede
+  Seite antwortete 500, bis jemand ihn von Hand neu baute. Jetzt wirft der
+  Fehler durch, sobald der Installationsmarker liegt; `update.sh` bricht
+  dann ab und hebt den Wartungsmodus auf, statt einen kaputten Cache
+  auszuliefern. Wer 0.3.1 schon eingespielt hat und 500 sieht:
+  `php artisan route:cache` im App-Container.
+- **Zwei nächtliche Fehlmeldungen, die keine waren.** Der Zeitplan rief
+  `aeronance:demo-reset` auf jeder Instanz auf; der Befehl weigert sich ohne
+  Demo-Marke mit Rückgabewert 1, und der Scheduler schrieb dafür jede Nacht
+  „Scheduled command failed“ ins Protokoll jedes Vereins. Mit `--scheduled`
+  endet Nichtstun jetzt mit 0; von Hand aufgerufen bleibt es der laute
+  Fehlschlag. Ebenso `aeronance:update-check`: Die Vollausgabe endet mit 1,
+  sobald es etwas Neueres gibt — für den Scheduler ein Fehler genau dann,
+  wenn alles in Ordnung ist. Der Plan ruft jetzt `--tag --fresh` auf, das
+  den Zwischenspeicher für die Startseite genauso erneuert und immer mit 0
+  endet.
+
 ## [0.3.1] — 2026-10-31
 
 Das Abrechnungsmodul — und damit der Sprung auf 0.3: Kunden, Verkaufspreise,

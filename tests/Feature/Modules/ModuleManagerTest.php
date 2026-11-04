@@ -12,7 +12,9 @@ use App\Core\Modules\Events\ModuleEnabled;
 use App\Core\Modules\Manifest;
 use App\Core\Modules\ModuleManager;
 use App\Core\Modules\ModuleRegistry;
+use App\Core\Setup\InstallationState;
 use Filament\Panel;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
@@ -137,6 +139,42 @@ final class ModuleManagerTest extends TestCase
         $this->assertSame([], $manager->enabled());
         $this->assertFalse($manager->isEnabled('warehouse'));
         $this->assertFalse($manager->isInstalled());
+    }
+
+    /**
+     * Eine installierte Instanz tut nicht so, als haette sie keine Module.
+     *
+     * Vor dem Setup ist "nichts aktiv" bei fehlender Tabelle die Wahrheit.
+     * Danach ist ein Datenbankfehler ein Ausfall -- und die leise Antwort []
+     * baute einmal einen Routen-Cache ohne ein einziges Modul, mit dem jede
+     * Seite der Demo 500 antwortete.
+     */
+    #[Test]
+    public function an_installed_instance_reports_a_database_failure_instead_of_an_empty_list(): void
+    {
+        $state = app(InstallationState::class);
+        $state->markInstalled();
+
+        try {
+            Schema::drop('modules');
+
+            $this->expectException(QueryException::class);
+            $this->manager()->enabled();
+        } finally {
+            if (file_exists($state->markerPath())) {
+                unlink($state->markerPath());
+            }
+        }
+    }
+
+    #[Test]
+    public function before_the_setup_a_missing_table_still_means_nothing_is_active(): void
+    {
+        $this->assertFalse(app(InstallationState::class)->isInstalled());
+
+        Schema::drop('modules');
+
+        $this->assertSame([], $this->manager()->enabled());
     }
 
     private function manager(): ModuleManager

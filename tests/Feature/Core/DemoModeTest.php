@@ -17,6 +17,7 @@ use App\Modules\TaskCards\Models\WorkOrder;
 use App\Modules\Vereinsflieger\Models\Connection;
 use App\Providers\DemoServiceProvider;
 use Database\Seeders\DemoSeeder;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\RateLimiter;
@@ -58,6 +59,31 @@ final class DemoModeTest extends TestCase
 
         $this->assertSame(1, $code, 'Ohne Demo-Marke darf der Reset nicht laufen.');
         $this->assertDatabaseHas('users', ['id' => $user->id]);
+    }
+
+    /**
+     * Aus dem Zeitplan heraus ist Nichtstun das erwartete Ergebnis: Der Plan
+     * ruft den Befehl auf jeder Instanz auf, und ein Rueckgabewert 1 schrieb
+     * jede Nacht "Scheduled command failed" ins Protokoll jedes Vereins.
+     */
+    #[Test]
+    public function the_scheduled_reset_is_quiet_where_there_is_no_demo(): void
+    {
+        $user = User::factory()->create(['is_active' => true]);
+
+        $code = Artisan::call('aeronance:demo-reset', ['--scheduled' => true]);
+
+        $this->assertSame(0, $code);
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+
+        $befehle = array_map(
+            static fn ($event): string => (string) $event->command,
+            app(Schedule::class)->events(),
+        );
+        $this->assertNotEmpty(array_filter(
+            $befehle,
+            static fn (string $c): bool => str_contains($c, 'aeronance:demo-reset') && str_contains($c, '--scheduled'),
+        ), 'Der Zeitplan ruft den Reset ohne --scheduled auf.');
     }
 
     #[Test]
